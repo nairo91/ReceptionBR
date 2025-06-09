@@ -5,7 +5,7 @@ const exportCsvBtn = document.getElementById("exportCsvBtn");
 let numero = 1;
 
 const lotsListe = [
-  "A", "A1", "A2", "A3", "B", "C1", "C2", "D", "E", "F", "G", "H", "I", "PMR"
+  "Installation Chantier","Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie", "Revetement SDB", "Peinture", "Revetement de sol", "Repose", "F", "G", "H", "I", "PMR"
 ];
 
 let pressTimer = null;
