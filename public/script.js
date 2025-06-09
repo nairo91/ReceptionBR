@@ -4,11 +4,11 @@ const chambreSelect = document.getElementById("chambreSelect");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
 let numero = 1;
 
-// Liste des lots (à modifier si besoin)
 const lotsListe = [
   "A", "A1", "A2", "A3", "B", "C1", "C2", "D", "E", "F", "G", "H", "I", "PMR"
 ];
 
+let pressTimer = null;
 
 function loadBulles() {
   bullesContainer.innerHTML = "";
@@ -36,7 +36,6 @@ function createBulle(bulle) {
     const form = document.createElement("form");
     form.enctype = "multipart/form-data";
 
-    // Générer options du select lot avec sélection actuelle
     const lotOptions = lotsListe.map(lot =>
       `<option value="${lot}" ${lot === bulle.lot ? "selected" : ""}>${lot}</option>`
     ).join("");
@@ -139,28 +138,36 @@ function zoomImage(src) {
   document.body.appendChild(overlay);
 }
 
+// Gestion appui long
+plan.addEventListener("touchstart", e => {
+  if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
+
+  const touch = e.touches[0];
+  const rect = plan.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+
+  pressTimer = setTimeout(() => {
+    showBulleCreationForm(x, y);
+  }, 2000); // 2 secondes d'appui long
+});
+
+plan.addEventListener("touchend", e => {
+  clearTimeout(pressTimer); // Annule si on relâche avant 2s
+});
+
 plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
   const rect = plan.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  showBulleCreationForm(x, y);
-});
-
-plan.addEventListener("touchstart", e => {
-  if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
-  const touch = e.touches[0];
-  const rect = plan.getBoundingClientRect();
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-  showBulleCreationForm(x, y);
+  // On ne crée pas de bulle au clic, pour éviter conflits avec appui long
 });
 
 function showBulleCreationForm(x, y) {
   const form = document.createElement("form");
   form.enctype = "multipart/form-data";
 
-  // Options lots
   const lotOptions = lotsListe.map(lot => `<option value="${lot}">${lot}</option>`).join("");
 
   form.innerHTML = `
