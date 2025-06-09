@@ -10,6 +10,7 @@ const lotsListe = [
 
 let pressTimer = null;
 let mousePressTimer = null;
+let longPressTriggered = false;
 
 function loadBulles() {
   bullesContainer.innerHTML = "";
@@ -148,7 +149,9 @@ plan.addEventListener("touchstart", e => {
   const x = touch.clientX - rect.left;
   const y = touch.clientY - rect.top;
 
+  longPressTriggered = false;
   pressTimer = setTimeout(() => {
+    longPressTriggered = true;
     showBulleCreationForm(x, y);
   }, 2000); // 2 secondes appui long
 });
@@ -165,7 +168,9 @@ plan.addEventListener("mousedown", e => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
+  longPressTriggered = false;
   mousePressTimer = setTimeout(() => {
+    longPressTriggered = true;
     showBulleCreationForm(x, y);
   }, 2000); // 2 secondes appui long
 });
@@ -178,10 +183,21 @@ plan.addEventListener("mouseleave", e => {
   clearTimeout(mousePressTimer); // Annule si souris sort de la zone
 });
 
-// Désactive la création au clic simple pour éviter conflits avec appui long
+// Clic simple PC : crée une bulle seulement si appui long n'a pas déclenché
 plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
-  // Ne rien faire au clic simple
+
+  if (longPressTriggered) {
+    // Reset le flag, ne fait rien car appui long a déjà créé la bulle
+    longPressTriggered = false;
+    return;
+  }
+
+  const rect = plan.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  showBulleCreationForm(x, y);
 });
 
 function showBulleCreationForm(x, y) {
