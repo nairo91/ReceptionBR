@@ -21,6 +21,7 @@ function loadBulles() {
     .then(data => {
       data.forEach(bulle => createBulle(bulle));
       numero = data.length > 0 ? Math.max(...data.map(b => b.numero)) + 1 : 1;
+        ajusterTailleBulles();
     });
 }
 
