@@ -4,6 +4,12 @@ const chambreSelect = document.getElementById("chambreSelect");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
 let numero = 1;
 
+// Liste des lots (à modifier si besoin)
+const lotsListe = [
+  "Lot 1", "Lot 2", "Lot 3", "Lot 4", "Lot 5", "Lot 6", "Lot 7", "Lot 8",
+  "Lot 9", "Lot 10", "Lot 11", "Lot 12", "Lot 13", "Lot 14", "Lot 15"
+];
+
 function loadBulles() {
   bullesContainer.innerHTML = "";
   const etage = encodeURIComponent("R+5");
@@ -30,6 +36,11 @@ function createBulle(bulle) {
     const form = document.createElement("form");
     form.enctype = "multipart/form-data";
 
+    // Générer options du select lot avec sélection actuelle
+    const lotOptions = lotsListe.map(lot =>
+      `<option value="${lot}" ${lot === bulle.lot ? "selected" : ""}>${lot}</option>`
+    ).join("");
+
     form.innerHTML = `
       <strong>Bulle ${bulle.numero}</strong><br>
       <input type="text" name="intitule" value="${bulle.intitule || ''}" placeholder="Intitulé" /><br>
@@ -43,7 +54,12 @@ function createBulle(bulle) {
           <option value="abandonnee" ${bulle.etat === "abandonnee" ? "selected" : ""}>⚫ Abandonné</option>
         </select>
       </label><br>
-      <input type="text" name="lot" placeholder="Lot" value="${bulle.lot || ''}" /><br>
+      <label>Lot :
+        <select name="lot">
+          <option value="">-- Sélectionner un lot --</option>
+          ${lotOptions}
+        </select>
+      </label><br>
       <input type="text" name="entreprise" placeholder="Entreprise" value="${bulle.entreprise || ''}" /><br>
       <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
       <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
@@ -144,7 +160,9 @@ function showBulleCreationForm(x, y) {
   const form = document.createElement("form");
   form.enctype = "multipart/form-data";
 
-  // Formulaire complet avec champs identiques à la modification
+  // Options lots
+  const lotOptions = lotsListe.map(lot => `<option value="${lot}">${lot}</option>`).join("");
+
   form.innerHTML = `
     <strong>Nouvelle bulle</strong><br>
     <input type="text" name="intitule" placeholder="Intitulé" /><br>
@@ -158,7 +176,12 @@ function showBulleCreationForm(x, y) {
         <option value="abandonnee">⚫ Abandonné</option>
       </select>
     </label><br>
-    <input type="text" name="lot" placeholder="Lot" /><br>
+    <label>Lot :
+      <select name="lot">
+        <option value="" selected>-- Sélectionner un lot --</option>
+        ${lotOptions}
+      </select>
+    </label><br>
     <input type="text" name="entreprise" placeholder="Entreprise" /><br>
     <input type="text" name="localisation" placeholder="Localisation" /><br>
     <input type="text" name="observation" placeholder="Observation" /><br>
