@@ -124,14 +124,24 @@ function zoomImage(src) {
 
 plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
-
   const rect = plan.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+  showBulleCreationForm(x, y);
+});
 
+plan.addEventListener("touchstart", e => {
+  if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
+  const touch = e.touches[0];
+  const rect = plan.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  showBulleCreationForm(x, y);
+});
+
+function showBulleCreationForm(x, y) {
   const form = document.createElement("form");
   form.enctype = "multipart/form-data";
-
   form.innerHTML = `
     <strong>Nouvelle bulle</strong><br>
     <input type="text" name="intitule" placeholder="Intitulé" /><br>
@@ -166,7 +176,7 @@ plan.addEventListener("click", e => {
   };
 
   showPopup(x, y, form);
-});
+}
 
 chambreSelect.addEventListener("change", loadBulles);
 window.onload = loadBulles;
