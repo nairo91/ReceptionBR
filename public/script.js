@@ -15,15 +15,20 @@ let longPressTriggered = false;
 function loadBulles() {
   bullesContainer.innerHTML = "";
   const etage = encodeURIComponent("R+5");
-
-  fetch(`/api/bulles?etage=${etage}&chambre=${chambreSelect.value}`)
+  let url = `/api/bulles?etage=${etage}`;
+  if (chambreSelect.value !== "total") {
+    url += `&chambre=${chambreSelect.value}`;
+  }
+  
+  fetch(url)
     .then(res => res.json())
     .then(data => {
       data.forEach(bulle => createBulle(bulle));
       numero = data.length > 0 ? Math.max(...data.map(b => b.numero)) + 1 : 1;
-        ajusterTailleBulles();
+      ajusterTailleBulles();
     });
 }
+
 
 function createBulle(bulle) {
   const div = document.createElement("div");

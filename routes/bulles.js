@@ -34,12 +34,24 @@ router.post("/", upload.single("photo"), async (req, res) => {
 
 router.get("/", async (req, res) => {
   const { etage, chambre } = req.query;
-  const result = await pool.query(
-    "SELECT * FROM bulles WHERE etage = $1 AND chambre = $2",
-    [etage, chambre]
-  );
+  let result;
+
+  if (!chambre || chambre === "total") {
+    // Pas de filtre chambre, on affiche toutes les bulles de l'étage
+    result = await pool.query(
+      "SELECT * FROM bulles WHERE etage = $1",
+      [etage]
+    );
+  } else {
+    // Filtre par chambre
+    result = await pool.query(
+      "SELECT * FROM bulles WHERE etage = $1 AND chambre = $2",
+      [etage, chambre]
+    );
+  }
   res.json(result.rows);
 });
+
 
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
