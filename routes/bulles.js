@@ -91,10 +91,22 @@ router.get("/export/csv", async (req, res) => {
       "date_butoir", "photo", "x", "y", "etage", "chambre"
     ];
 
-    const json2csvParser = new Parser({ fields });
-    const csv = json2csvParser.parse(result.rows);
+    const opts = {
+      fields,
+      delimiter: ";",
+      header: true,
+      quote: '"',
+      eol: "\r\n"
+    };
 
-    res.header("Content-Type", "text/csv");
+    const json2csvParser = new Parser(opts);
+    let csv = json2csvParser.parse(result.rows);
+
+    // Ajout du BOM UTF-8 pour Excel (évite les problèmes d'accents)
+    const BOM = '\uFEFF';
+    csv = BOM + csv;
+
+    res.header("Content-Type", "text/csv; charset=utf-8");
     res.attachment(`bulles_${etage}_${chambre}.csv`);
     return res.send(csv);
   } catch (err) {
