@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 const multer = require("multer");
 const path = require("path");
+const { Parser } = require("json2csv"); // Installe json2csv avec npm install json2csv
 
 const storage = multer.diskStorage({
   destination: "uploads/",
@@ -74,4 +75,31 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
   res.json({ success: true });
 });
 
+
+// Route export CSV
+router.get("/export/csv", async (req, res) => {
+  try {
+    const { etage, chambre } = req.query;
+    const result = await pool.query(
+      "SELECT * FROM bulles WHERE etage = $1 AND chambre = $2",
+      [etage, chambre]
+    );
+
+    const fields = [
+      "id", "numero", "intitule", "description", "etat",
+      "lot", "entreprise", "localisation", "observation",
+      "date_butoir", "photo", "x", "y", "etage", "chambre"
+    ];
+
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(result.rows);
+
+    res.header("Content-Type", "text/csv");
+    res.attachment(`bulles_${etage}_${chambre}.csv`);
+    return res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de l'export CSV");
+  }
+});
 module.exports = router;

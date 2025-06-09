@@ -178,5 +178,15 @@ function showBulleCreationForm(x, y) {
   showPopup(x, y, form);
 }
 
+const exportCsvBtn = document.getElementById("exportCsvBtn");
+
+exportCsvBtn.addEventListener("click", () => {
+  const etage = encodeURIComponent("R+5");
+  const chambre = encodeURIComponent(chambreSelect.value);
+
+  // Ouvre un nouvel onglet pour télécharger le CSV
+  window.open(`/api/bulles/export/csv?etage=${etage}&chambre=${chambre}`, "_blank");
+});
+
 chambreSelect.addEventListener("change", loadBulles);
 window.onload = loadBulles;
