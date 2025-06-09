@@ -76,6 +76,41 @@ router.put("/:id", upload.single("photo"), async (req, res) => {
 });
 
 
+// Export CSV complet : toutes les bulles, sans filtre
+router.get("/export/csv/all", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM bulles");
+
+    const fields = [
+      "id", "numero", "intitule", "description", "etat",
+      "lot", "entreprise", "localisation", "observation",
+      "date_butoir", "photo", "x", "y", "etage", "chambre"
+    ];
+
+    const opts = {
+      fields,
+      delimiter: ";",
+      header: true,
+      quote: '"',
+      eol: "\r\n"
+    };
+
+    const json2csvParser = new Parser(opts);
+    let csv = json2csvParser.parse(result.rows);
+
+    // Ajout du BOM UTF-8 pour Excel (évite les problèmes d'accents)
+    const BOM = '\uFEFF';
+    csv = BOM + csv;
+
+    res.header("Content-Type", "text/csv; charset=utf-8");
+    res.attachment(`bulles_all.csv`);
+    return res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur lors de l'export CSV complet");
+  }
+});
+
 // Route export CSV
 router.get("/export/csv", async (req, res) => {
   try {
