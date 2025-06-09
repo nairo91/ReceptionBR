@@ -188,9 +188,8 @@ plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
   if (longPressTriggered) {
-    // Reset le flag, ne fait rien car appui long a déjà créé la bulle
-    longPressTriggered = false;
-    return;
+    longPressTriggered = false; // Reset flag
+    return; // Ne rien faire car bulle déjà créée au long press
   }
 
   const rect = plan.getBoundingClientRect();
@@ -254,6 +253,31 @@ function showBulleCreationForm(x, y) {
 
   showPopup(x, y, form);
 }
+
+// Fonction pour obtenir le facteur de zoom actuel du navigateur
+function getZoomFactor() {
+  return window.devicePixelRatio || 1;
+}
+
+// Ajuste la taille des bulles pour compenser le zoom
+function ajusterTailleBulles() {
+  const zoom = getZoomFactor();
+  const bulles = document.querySelectorAll(".bulle");
+
+  bulles.forEach(bulle => {
+    // taille fixe multipliée par 1/zoom pour compenser
+    const taille = 32 / zoom; // taille base 32px ajustée
+    bulle.style.width = `${taille}px`;
+    bulle.style.height = `${taille}px`;
+    bulle.style.lineHeight = `${taille}px`;
+    bulle.style.fontSize = `${16 / zoom}px`;
+  });
+}
+
+// Appelle à chaque chargement et redimensionnement / zoom
+window.addEventListener("resize", ajusterTailleBulles);
+window.addEventListener("load", ajusterTailleBulles);
+window.addEventListener("orientationchange", ajusterTailleBulles);
 
 chambreSelect.addEventListener("change", loadBulles);
 window.onload = loadBulles;
