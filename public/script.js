@@ -6,9 +6,9 @@ let numero = 1;
 
 // Liste des lots (à modifier si besoin)
 const lotsListe = [
-  "Lot 1", "Lot 2", "Lot 3", "Lot 4", "Lot 5", "Lot 6", "Lot 7", "Lot 8",
-  "Lot 9", "Lot 10", "Lot 11", "Lot 12", "Lot 13", "Lot 14", "Lot 15"
+  "A", "A1", "A2", "A3", "B", "C1", "C2", "D", "E", "F", "G", "H", "I", "PMR"
 ];
+
 
 function loadBulles() {
   bullesContainer.innerHTML = "";
