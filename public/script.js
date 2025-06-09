@@ -9,6 +9,7 @@ const lotsListe = [
 ];
 
 let pressTimer = null;
+let mousePressTimer = null;
 
 function loadBulles() {
   bullesContainer.innerHTML = "";
@@ -138,7 +139,7 @@ function zoomImage(src) {
   document.body.appendChild(overlay);
 }
 
-// Gestion appui long
+// Gestion appui long touch (mobile)
 plan.addEventListener("touchstart", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -149,19 +150,38 @@ plan.addEventListener("touchstart", e => {
 
   pressTimer = setTimeout(() => {
     showBulleCreationForm(x, y);
-  }, 2000); // 2 secondes d'appui long
+  }, 2000); // 2 secondes appui long
 });
 
 plan.addEventListener("touchend", e => {
   clearTimeout(pressTimer); // Annule si on relâche avant 2s
 });
 
-plan.addEventListener("click", e => {
+// Gestion appui long souris (PC)
+plan.addEventListener("mousedown", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
+
   const rect = plan.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  // On ne crée pas de bulle au clic, pour éviter conflits avec appui long
+
+  mousePressTimer = setTimeout(() => {
+    showBulleCreationForm(x, y);
+  }, 2000); // 2 secondes appui long
+});
+
+plan.addEventListener("mouseup", e => {
+  clearTimeout(mousePressTimer); // Annule si on relâche avant 2s
+});
+
+plan.addEventListener("mouseleave", e => {
+  clearTimeout(mousePressTimer); // Annule si souris sort de la zone
+});
+
+// Désactive la création au clic simple pour éviter conflits avec appui long
+plan.addEventListener("click", e => {
+  if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
+  // Ne rien faire au clic simple
 });
 
 function showBulleCreationForm(x, y) {
