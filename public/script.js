@@ -19,8 +19,8 @@ function loadBulles() {
 function createBulle(bulle) {
   const div = document.createElement("div");
   div.className = "bulle";
-  div.style.left = `${bulled.x}px`;
-  div.style.top = `${bulled.y}px`;
+  div.style.left = `${bulle.x}px`;
+  div.style.top = `${bulle.y}px`;
   div.innerText = bulle.numero;
   div.style.backgroundColor = getColorByEtat(bulle.etat);
 
@@ -32,33 +32,33 @@ function createBulle(bulle) {
 
     form.innerHTML = `
       <strong>Bulle ${bulle.numero}</strong><br>
-      <input type="text" name="intitule" value="${bulled.intitule || ''}" placeholder="Intitulé" /><br>
-      <textarea name="description" placeholder="Description">${bulled.description || ''}</textarea><br>
+      <input type="text" name="intitule" value="${bulle.intitule || ''}" placeholder="Intitulé" /><br>
+      <textarea name="description" placeholder="Description">${bulle.description || ''}</textarea><br>
       <label>État :
         <select name="etat">
-          <option value="attente" ${bulled.etat === "attente" ? "selected" : ""}>🟡 En attente</option>
-          <option value="a_corriger" ${bulled.etat === "a_corriger" ? "selected" : ""}>🔴 À corriger</option>
-          <option value="corrige" ${bulled.etat === "corrige" ? "selected" : ""}>🔵 Corrigé</option>
-          <option value="validee" ${bulled.etat === "validee" ? "selected" : ""}>🟢 Validé</option>
-          <option value="abandonnee" ${bulled.etat === "abandonnee" ? "selected" : ""}>⚫ Abandonné</option>
+          <option value="attente" ${bulle.etat === "attente" ? "selected" : ""}>🟡 En attente</option>
+          <option value="a_corriger" ${bulle.etat === "a_corriger" ? "selected" : ""}>🔴 À corriger</option>
+          <option value="corrige" ${bulle.etat === "corrige" ? "selected" : ""}>🔵 Corrigé</option>
+          <option value="validee" ${bulle.etat === "validee" ? "selected" : ""}>🟢 Validé</option>
+          <option value="abandonnee" ${bulle.etat === "abandonnee" ? "selected" : ""}>⚫ Abandonné</option>
         </select>
       </label><br>
-      <input type="text" name="lot" placeholder="Lot" value="${bulled.lot || ''}" /><br>
-      <input type="text" name="entreprise" placeholder="Entreprise" value="${bulled.entreprise || ''}" /><br>
-      <input type="text" name="localisation" placeholder="Localisation" value="${bulled.localisation || ''}" /><br>
-      <input type="text" name="observation" placeholder="Observation" value="${bulled.observation || ''}" /><br>
-      <input type="date" name="date_butoir" value="${bulled.date_butoir ? bulled.date_butoir.substring(0,10) : ''}" /><br>
+      <input type="text" name="lot" placeholder="Lot" value="${bulle.lot || ''}" /><br>
+      <input type="text" name="entreprise" placeholder="Entreprise" value="${bulle.entreprise || ''}" /><br>
+      <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
+      <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
+      <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
       <input type="file" name="photo" accept="image/*" /><br>
-      ${bulled.photo ? `<img src="${bulled.photo}" class="preview" onclick="zoomImage('${bulled.photo}')" /><br>` : ""}
+      ${bulle.photo ? `<img src="${bulle.photo}" class="preview" onclick="zoomImage('${bulle.photo}')" /><br>` : ""}
       <button type="submit">💾 Enregistrer</button>
-      <button type="button" onclick="confirmDelete(${bulled.id})">🗑️ Supprimer</button>
+      <button type="button" onclick="confirmDelete(${bulle.id})">🗑️ Supprimer</button>
       <button type="button" onclick="closePopups()">Fermer</button>
     `;
 
     form.onsubmit = (e) => {
       e.preventDefault();
       const formData = new FormData(form);
-      fetch(`/api/bulles/${bulled.id}`, {
+      fetch(`/api/bulles/${bulle.id}`, {
         method: "PUT",
         body: formData
       }).then(() => {
@@ -67,7 +67,7 @@ function createBulle(bulle) {
       });
     };
 
-    showPopup(bulled.x, bulled.y, form);
+    showPopup(bulle.x, bulle.y, form);
   };
 
   bullesContainer.appendChild(div);
