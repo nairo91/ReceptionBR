@@ -2,16 +2,65 @@ const plan = document.getElementById("plan");
 const bullesContainer = document.getElementById("bulles-container");
 const chambreSelect = document.getElementById("chambreSelect");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
+
+const loginContainer = document.getElementById("login-container");
+const loginForm = document.getElementById("login-form");
+const loginError = document.getElementById("login-error");
+const appContainer = document.getElementById("app-container");
+const logoutBtn = document.getElementById("logoutBtn");
+
 let numero = 1;
+let user = null; // utilisateur connecté
 
 const lotsListe = [
-  "Installation Chantier","Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie", "Revetement SDB", "Peinture", "Revetement de sol", "Repose", "F", "G", "H", "I", "PMR"
+  "Installation Chantier","Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie",
+  "Revetement SDB", "Peinture", "Revetement de sol", "Repose", "F", "G", "H", "I", "PMR"
 ];
 
 let pressTimer = null;
 let mousePressTimer = null;
 let longPressTriggered = false;
 
+// --- Gestion du login/logout ---
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  loginError.textContent = "";
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      loginError.textContent = data.message || "Erreur connexion";
+      return;
+    }
+
+    user = data.user;
+    loginContainer.style.display = "none";
+    appContainer.style.display = "block";
+    loadBulles();
+  } catch (err) {
+    loginError.textContent = "Erreur serveur";
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  user = null;
+  appContainer.style.display = "none";
+  loginContainer.style.display = "block";
+});
+
+// --- Chargement des bulles ---
 function loadBulles() {
   bullesContainer.innerHTML = "";
   const etage = encodeURIComponent("R+5");
@@ -19,8 +68,8 @@ function loadBulles() {
   if (chambreSelect.value !== "total") {
     url += `&chambre=${chambreSelect.value}`;
   }
-  
-  fetch(url)
+
+  fetch(url, { credentials: "include" })
     .then(res => res.json())
     .then(data => {
       data.forEach(bulle => createBulle(bulle));
@@ -29,7 +78,7 @@ function loadBulles() {
     });
 }
 
-
+// --- Création d’une bulle ---
 function createBulle(bulle) {
   const div = document.createElement("div");
   div.className = "bulle";
@@ -80,9 +129,14 @@ function createBulle(bulle) {
 
     form.onsubmit = (e) => {
       e.preventDefault();
+      if (!user) {
+        alert("Vous devez être connecté pour modifier.");
+        return;
+      }
       const formData = new FormData(form);
       fetch(`/api/bulles/${bulle.id}`, {
         method: "PUT",
+        credentials: "include",
         body: formData
       }).then(() => {
         loadBulles();
@@ -96,6 +150,7 @@ function createBulle(bulle) {
   bullesContainer.appendChild(div);
 }
 
+// --- Couleurs état ---
 function getColorByEtat(etat) {
   switch (etat) {
     case "attente": return "#f1c40f";
@@ -107,6 +162,7 @@ function getColorByEtat(etat) {
   }
 }
 
+// --- Popup ---
 function showPopup(x, y, content) {
   closePopups();
   const popup = document.createElement("div");
@@ -123,13 +179,17 @@ function closePopups() {
 }
 
 function confirmDelete(id) {
+  if (!user) {
+    alert("Vous devez être connecté pour supprimer.");
+    return;
+  }
   if (confirm("Voulez-vous vraiment supprimer cette bulle ?")) {
     deleteBulle(id);
   }
 }
 
 function deleteBulle(id) {
-  fetch(`/api/bulles/${id}`, { method: "DELETE" }).then(() => loadBulles());
+  fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => loadBulles());
 }
 
 function zoomImage(src) {
@@ -146,7 +206,7 @@ function zoomImage(src) {
   document.body.appendChild(overlay);
 }
 
-// Gestion appui long touch (mobile)
+// --- Gestion appui long touch (mobile) ---
 plan.addEventListener("touchstart", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -159,14 +219,14 @@ plan.addEventListener("touchstart", e => {
   pressTimer = setTimeout(() => {
     longPressTriggered = true;
     showBulleCreationForm(x, y);
-  }, 2000); // 2 secondes appui long
+  }, 2000);
 });
 
 plan.addEventListener("touchend", e => {
-  clearTimeout(pressTimer); // Annule si on relâche avant 2s
+  clearTimeout(pressTimer);
 });
 
-// Gestion appui long souris (PC)
+// --- Gestion appui long souris (PC) ---
 plan.addEventListener("mousedown", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -178,24 +238,24 @@ plan.addEventListener("mousedown", e => {
   mousePressTimer = setTimeout(() => {
     longPressTriggered = true;
     showBulleCreationForm(x, y);
-  }, 2000); // 2 secondes appui long
+  }, 2000);
 });
 
 plan.addEventListener("mouseup", e => {
-  clearTimeout(mousePressTimer); // Annule si on relâche avant 2s
+  clearTimeout(mousePressTimer);
 });
 
 plan.addEventListener("mouseleave", e => {
-  clearTimeout(mousePressTimer); // Annule si souris sort de la zone
+  clearTimeout(mousePressTimer);
 });
 
-// Clic simple PC : crée une bulle seulement si appui long n'a pas déclenché
+// --- Clic simple PC ---
 plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
   if (longPressTriggered) {
-    longPressTriggered = false; // Reset flag
-    return; // Ne rien faire car bulle déjà créée au long press
+    longPressTriggered = false;
+    return;
   }
 
   const rect = plan.getBoundingClientRect();
@@ -206,6 +266,11 @@ plan.addEventListener("click", e => {
 });
 
 function showBulleCreationForm(x, y) {
+  if (!user) {
+    alert("Vous devez être connecté pour ajouter une bulle.");
+    return;
+  }
+
   const form = document.createElement("form");
   form.enctype = "multipart/form-data";
 
@@ -241,6 +306,12 @@ function showBulleCreationForm(x, y) {
 
   form.onsubmit = (ev) => {
     ev.preventDefault();
+
+    if (!user) {
+      alert("Vous devez être connecté pour ajouter une bulle.");
+      return;
+    }
+
     const formData = new FormData(form);
     formData.append("etage", "R+5");
     formData.append("chambre", chambreSelect.value);
@@ -250,6 +321,7 @@ function showBulleCreationForm(x, y) {
 
     fetch("/api/bulles", {
       method: "POST",
+      credentials: "include",
       body: formData
     }).then(() => {
       loadBulles();
@@ -260,19 +332,17 @@ function showBulleCreationForm(x, y) {
   showPopup(x, y, form);
 }
 
-// Fonction pour obtenir le facteur de zoom actuel du navigateur
+// --- Ajustement taille bulles ---
 function getZoomFactor() {
   return window.devicePixelRatio || 1;
 }
 
-// Ajuste la taille des bulles pour compenser le zoom
 function ajusterTailleBulles() {
   const zoom = getZoomFactor();
   const bulles = document.querySelectorAll(".bulle");
 
   bulles.forEach(bulle => {
-    // taille fixe multipliée par 1/zoom pour compenser
-    const taille = 32 / zoom; // taille base 32px ajustée
+    const taille = 32 / zoom;
     bulle.style.width = `${taille}px`;
     bulle.style.height = `${taille}px`;
     bulle.style.lineHeight = `${taille}px`;
@@ -280,10 +350,20 @@ function ajusterTailleBulles() {
   });
 }
 
-// Appelle à chaque chargement et redimensionnement / zoom
 window.addEventListener("resize", ajusterTailleBulles);
 window.addEventListener("load", ajusterTailleBulles);
 window.addEventListener("orientationchange", ajusterTailleBulles);
 
 chambreSelect.addEventListener("change", loadBulles);
-window.onload = loadBulles;
+
+// Au chargement, on affiche soit login soit app
+window.onload = () => {
+  if (user) {
+    loginContainer.style.display = "none";
+    appContainer.style.display = "block";
+    loadBulles();
+  } else {
+    loginContainer.style.display = "block";
+    appContainer.style.display = "none";
+  }
+};

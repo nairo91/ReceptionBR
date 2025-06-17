@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 const multer = require("multer");
 const path = require("path");
-const { Parser } = require("json2csv"); // Installe json2csv avec npm install json2csv
+const { Parser } = require("json2csv");
 
 const storage = multer.diskStorage({
   destination: "uploads/",
@@ -13,82 +13,106 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-router.post("/", upload.single("photo"), async (req, res) => {
-  const {
-    etage, chambre, x, y, numero, description,
-    intitule, etat, lot, entreprise, localisation, observation, date_butoir
-  } = req.body;
+// Middleware d'authentification désactivé (dev)
+function isAuthenticated(req, res, next) {
+  // Toujours passer, sans vérifier la session
+  next();
+}
 
-  const safeDate = date_butoir === "" ? null : date_butoir;
-  const photo = req.file ? `/uploads/${req.file.filename}` : null;
+// POST : création bulle avec created_by = null (pas d'utilisateur connecté)
+router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res) => {
+  try {
+    const {
+      etage, chambre, x, y, numero, description,
+      intitule, etat, lot, entreprise, localisation, observation, date_butoir
+    } = req.body;
 
-  await pool.query(
-    `INSERT INTO bulles 
-    (etage, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise, localisation, observation, date_butoir)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-    [etage, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate]
-  );
+    // Pas de session user, on met null pour created_by
+    const userId = null;
 
-  res.json({ success: true });
+    const safeDate = date_butoir === "" ? null : date_butoir;
+    const photo = req.file ? `/uploads/${req.file.filename}` : null;
+
+    await pool.query(
+      `INSERT INTO bulles 
+      (etage, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise, localisation, observation, date_butoir, created_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+      [etage, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate, userId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur création bulle" });
+  }
 });
 
+// GET bulles (aucun changement)
 router.get("/", async (req, res) => {
   const { etage, chambre } = req.query;
   let result;
-
   if (!chambre || chambre === "total") {
-    // Pas de filtre chambre, on affiche toutes les bulles de l'étage
-    result = await pool.query(
-      "SELECT * FROM bulles WHERE etage = $1",
-      [etage]
-    );
+    result = await pool.query("SELECT * FROM bulles WHERE etage = $1", [etage]);
   } else {
-    // Filtre par chambre
-    result = await pool.query(
-      "SELECT * FROM bulles WHERE etage = $1 AND chambre = $2",
-      [etage, chambre]
-    );
+    result = await pool.query("SELECT * FROM bulles WHERE etage = $1 AND chambre = $2", [etage, chambre]);
   }
   res.json(result.rows);
 });
 
-
+// DELETE bulle (toujours sans authentification)
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   await pool.query("DELETE FROM bulles WHERE id = $1", [id]);
   res.json({ success: true });
 });
 
-router.put("/:id", upload.single("photo"), async (req, res) => {
-  const { id } = req.params;
-  const {
-    description, intitule, etat, lot, entreprise, localisation, observation, date_butoir
-  } = req.body;
+// PUT : modification bulle sans authentification, modified_by et levee_par à null
+router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      description, intitule, etat, lot, entreprise, localisation, observation, date_butoir
+    } = req.body;
 
-  const safeDate = date_butoir === "" ? null : date_butoir;
-  const photo = req.file ? `/uploads/${req.file.filename}` : null;
+    // Pas d'utilisateur connecté
+    const userId = null;
 
-  if (photo) {
-    await pool.query(
-      `UPDATE bulles 
-       SET description = $1, photo = $2, intitule = $3, etat = $4, lot = $5, entreprise = $6, localisation = $7, observation = $8, date_butoir = $9
-       WHERE id = $10`,
-      [description || null, photo, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate, id]
-    );
-  } else {
-    await pool.query(
-      `UPDATE bulles 
-       SET description = $1, intitule = $2, etat = $3, lot = $4, entreprise = $5, localisation = $6, observation = $7, date_butoir = $8
-       WHERE id = $9`,
-      [description || null, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate, id]
-    );
+    const safeDate = date_butoir === "" ? null : date_butoir;
+    const photo = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // Récupérer l'état actuel pour détecter changement
+    const oldRes = await pool.query("SELECT etat FROM bulles WHERE id = $1", [id]);
+    if (oldRes.rowCount === 0) return res.status(404).json({ error: "Bulle non trouvée" });
+    const oldEtat = oldRes.rows[0].etat;
+
+    // Comme pas d'auth, on ne met jamais levee_par
+    const leveeParClause = "";
+    const leveeParValue = null;
+
+    if (photo) {
+      await pool.query(
+        `UPDATE bulles 
+         SET description = $1, photo = $2, intitule = $3, etat = $4, lot = $5, entreprise = $6, localisation = $7, observation = $8, date_butoir = $9, modified_by = $10${leveeParClause}
+         WHERE id = $11`,
+        [description || null, photo, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate, userId, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE bulles 
+         SET description = $1, intitule = $2, etat = $3, lot = $4, entreprise = $5, localisation = $6, observation = $7, date_butoir = $8, modified_by = $9${leveeParClause}
+         WHERE id = $10`,
+        [description || null, intitule || null, etat, lot || null, entreprise || null, localisation || null, observation || null, safeDate, userId, id]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur modification bulle" });
   }
-
-  res.json({ success: true });
 });
 
-
-// Export CSV complet : toutes les bulles, sans filtre
+// Export CSV complet
 router.get("/export/csv/all", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM bulles");
@@ -96,7 +120,8 @@ router.get("/export/csv/all", async (req, res) => {
     const fields = [
       "id", "numero", "intitule", "description", "etat",
       "lot", "entreprise", "localisation", "observation",
-      "date_butoir", "photo", "x", "y", "etage", "chambre"
+      "date_butoir", "photo", "x", "y", "etage", "chambre",
+      "created_by", "modified_by", "levee_par"
     ];
 
     const opts = {
@@ -110,7 +135,6 @@ router.get("/export/csv/all", async (req, res) => {
     const json2csvParser = new Parser(opts);
     let csv = json2csvParser.parse(result.rows);
 
-    // Ajout du BOM UTF-8 pour Excel (évite les problèmes d'accents)
     const BOM = '\uFEFF';
     csv = BOM + csv;
 
@@ -123,7 +147,7 @@ router.get("/export/csv/all", async (req, res) => {
   }
 });
 
-// Route export CSV
+// Export CSV filtré
 router.get("/export/csv", async (req, res) => {
   try {
     const { etage, chambre } = req.query;
@@ -135,7 +159,8 @@ router.get("/export/csv", async (req, res) => {
     const fields = [
       "id", "numero", "intitule", "description", "etat",
       "lot", "entreprise", "localisation", "observation",
-      "date_butoir", "photo", "x", "y", "etage", "chambre"
+      "date_butoir", "photo", "x", "y", "etage", "chambre",
+      "created_by", "modified_by", "levee_par"
     ];
 
     const opts = {
@@ -149,7 +174,6 @@ router.get("/export/csv", async (req, res) => {
     const json2csvParser = new Parser(opts);
     let csv = json2csvParser.parse(result.rows);
 
-    // Ajout du BOM UTF-8 pour Excel (évite les problèmes d'accents)
     const BOM = '\uFEFF';
     csv = BOM + csv;
 
@@ -161,4 +185,5 @@ router.get("/export/csv", async (req, res) => {
     res.status(500).send("Erreur lors de l'export CSV");
   }
 });
+
 module.exports = router;
