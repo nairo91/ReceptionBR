@@ -27,8 +27,7 @@ router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res)
       intitule, etat, lot, entreprise, localisation, observation, date_butoir
     } = req.body;
 
-    // Pas de session user, on met null pour created_by
-    const userId = null;
+    const userId = null; // Pas de session user
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? `/uploads/${req.file.filename}` : null;
@@ -59,7 +58,7 @@ router.get("/", async (req, res) => {
   res.json(result.rows);
 });
 
-// DELETE bulle (toujours sans authentification)
+// DELETE bulle (sans authentification)
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   await pool.query("DELETE FROM bulles WHERE id = $1", [id]);
@@ -74,8 +73,7 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
       description, intitule, etat, lot, entreprise, localisation, observation, date_butoir
     } = req.body;
 
-    // Pas d'utilisateur connecté
-    const userId = null;
+    const userId = null; // Pas d'utilisateur connecté
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? `/uploads/${req.file.filename}` : null;
@@ -85,7 +83,7 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
     if (oldRes.rowCount === 0) return res.status(404).json({ error: "Bulle non trouvée" });
     const oldEtat = oldRes.rows[0].etat;
 
-    // Comme pas d'auth, on ne met jamais levee_par
+    // Pas de levee_par sans authentification
     const leveeParClause = "";
     const leveeParValue = null;
 
