@@ -9,8 +9,8 @@ const loginError = document.getElementById("login-error");
 const appContainer = document.getElementById("app-container");
 const logoutBtn = document.getElementById("logoutBtn");
 
-let numero = 1;
-let user = null; // utilisateur connecté
+// Simule un utilisateur connecté pour bypasser le login
+let user = { id: 1, username: "test" };
 
 const lotsListe = [
   "Installation Chantier","Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie",
@@ -21,44 +21,8 @@ let pressTimer = null;
 let mousePressTimer = null;
 let longPressTriggered = false;
 
-// --- Gestion du login/logout ---
-
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  loginError.textContent = "";
-
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
-
-  try {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      loginError.textContent = data.message || "Erreur connexion";
-      return;
-    }
-
-    user = data.user;
-    loginContainer.style.display = "none";
-    appContainer.style.display = "block";
-    loadBulles();
-  } catch (err) {
-    loginError.textContent = "Erreur serveur";
-  }
-});
-
-logoutBtn.addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-  user = null;
-  appContainer.style.display = "none";
-  loginContainer.style.display = "block";
-});
+// -- La gestion du login/logout est inactive ici (tu peux la garder commentée ou supprimée) --
+// Si tu souhaites la remettre, il faudra gérer la variable user correctement
 
 // --- Chargement des bulles ---
 function loadBulles() {
