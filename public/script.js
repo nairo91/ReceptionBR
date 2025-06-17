@@ -14,7 +14,7 @@ const logoutBtn = document.getElementById("logoutBtn");
 let user = { id: 1, username: "test" };
 
 const lotsListe = [
-  "Installation Chantier","Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie",
+  "Installation Chantier", "Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie",
   "Revetement SDB", "Peinture", "Revetement de sol", "Repose", "F", "G", "H", "I", "PMR"
 ];
 
@@ -25,22 +25,24 @@ let numero = 1;
 
 // Fonction pour changer le plan selon l'étage sélectionné
 function changePlan(etage) {
-  const cleanEtage = etage.toLowerCase().replace('+', '');
+  // "R+5" => "5", "R+4" => "4", "R+0" => "0"
+  const cleanEtage = etage.toLowerCase().replace('r', '').replace('+', '');
   plan.src = `plan-r${cleanEtage}.png`;
+  // Optionnel : console log pour debug
+  // console.log("Plan changé en :", plan.src);
 }
 
-// Fonction pour adapter les chambres selon l'étage sélectionné
+// Fonction pour adapter les chambres selon l'étage sélectionné (actuellement statique)
 function updateChambreOptions(etage) {
-  // Ici tu peux adapter dynamiquement la liste des chambres selon l'étage
-  // Pour l'exemple, on laisse les mêmes chambres, mais tu peux modifier selon ta logique
   chambreSelect.dataset.etage = etage;
-
-  // Exemple simple : pour R+5 on affiche chambres 501 à 515
-  // Tu peux rajouter une condition pour changer les options selon étage si besoin
-  // Pour l'instant on ne modifie rien
+  // Ici tu peux modifier dynamiquement la liste des chambres si besoin
+  // Exemple : 
+  // if (etage === "R+5") { ... afficher chambres 501 à 515 ... }
+  // else if (etage === "R+4") { ... autres chambres ... }
+  // Sinon laisser la liste telle quelle
 }
 
-// --- Chargement des bulles ---
+// Chargement des bulles en fonction étage + chambre
 function loadBulles() {
   bullesContainer.innerHTML = "";
 
@@ -62,7 +64,7 @@ function loadBulles() {
     });
 }
 
-// --- Création d’une bulle ---
+// Création et affichage d’une bulle
 function createBulle(bulle) {
   const div = document.createElement("div");
   div.className = "bulle";
@@ -134,7 +136,7 @@ function createBulle(bulle) {
   bullesContainer.appendChild(div);
 }
 
-// --- Couleurs état ---
+// Couleurs des bulles selon état
 function getColorByEtat(etat) {
   switch (etat) {
     case "attente": return "#f1c40f";
@@ -146,7 +148,7 @@ function getColorByEtat(etat) {
   }
 }
 
-// --- Popup ---
+// Popup de formulaire
 function showPopup(x, y, content) {
   closePopups();
   const popup = document.createElement("div");
@@ -190,7 +192,7 @@ function zoomImage(src) {
   document.body.appendChild(overlay);
 }
 
-// --- Gestion appui long touch (mobile) ---
+// Gestion appui long touch (mobile)
 plan.addEventListener("touchstart", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -210,7 +212,7 @@ plan.addEventListener("touchend", e => {
   clearTimeout(pressTimer);
 });
 
-// --- Gestion appui long souris (PC) ---
+// Gestion appui long souris (PC)
 plan.addEventListener("mousedown", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -233,7 +235,7 @@ plan.addEventListener("mouseleave", e => {
   clearTimeout(mousePressTimer);
 });
 
-// --- Clic simple PC ---
+// Clic simple PC
 plan.addEventListener("click", e => {
   if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
@@ -316,7 +318,7 @@ function showBulleCreationForm(x, y) {
   showPopup(x, y, form);
 }
 
-// --- Ajustement taille bulles ---
+// Ajustement taille bulles
 function getZoomFactor() {
   return window.devicePixelRatio || 1;
 }
@@ -340,9 +342,7 @@ window.addEventListener("orientationchange", ajusterTailleBulles);
 
 chambreSelect.addEventListener("change", loadBulles);
 etageSelect.addEventListener("change", () => {
-  // Met à jour l'attribut data-etage du select chambre (utile si tu veux adapter la liste chambres selon étage)
   chambreSelect.dataset.etage = etageSelect.value;
-  // Recharge les bulles avec le nouvel étage sélectionné
   loadBulles();
 });
 
