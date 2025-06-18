@@ -130,8 +130,19 @@ router.get("/export/csv/all", async (req, res) => {
       eol: "\r\n"
     };
 
+    const baseUrl = req.protocol + "://" + req.get("host");
+    const photoFormula = (photo) => {
+      if (!photo) return "";
+      const url = /^https?:\/\//.test(photo) ? photo : baseUrl + photo;
+      return `=IMAGE("${url}")`;
+    };
+    const rowsWithFullPhoto = result.rows.map(row => ({
+      ...row,
+      photo: photoFormula(row.photo)
+    }));
+
     const json2csvParser = new Parser(opts);
-    let csv = json2csvParser.parse(result.rows);
+    let csv = json2csvParser.parse(rowsWithFullPhoto);
 
     const BOM = '\uFEFF';
     csv = BOM + csv;
@@ -159,12 +170,15 @@ router.get("/export/csv", async (req, res) => {
 
     // Convertir chemins photo en URL complètes (exemple ici : base URL à adapter)
     const baseUrl = req.protocol + "://" + req.get("host");
-    const rowsWithFullPhoto = result.rows.map(row => {
-      return {
-        ...row,
-        photo: row.photo ? `${baseUrl}${row.photo}` : ""
-      };
-    });
+    const photoFormula = (photo) => {
+      if (!photo) return "";
+      const url = /^https?:\/\//.test(photo) ? photo : baseUrl + photo;
+      return `=IMAGE("${url}")`;
+    };
+    const rowsWithFullPhoto = result.rows.map(row => ({
+      ...row,
+      photo: photoFormula(row.photo)
+    }));
 
     const fields = [
       "id", "numero", "intitule", "description", "etat",

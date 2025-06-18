@@ -15,7 +15,8 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+// Servir les fichiers uploadés (chemin absolu pour éviter les 404)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // Configuration express-session
@@ -30,8 +31,6 @@ app.use(session({
   },
 }));
 
-// Servir les fichiers uploadés
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Servir les fichiers statiques front (html, css, js)
 app.use(express.static(path.join(__dirname, "public")));
 
