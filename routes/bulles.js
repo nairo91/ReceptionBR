@@ -149,10 +149,22 @@ router.get("/export/csv/all", async (req, res) => {
 router.get("/export/csv", async (req, res) => {
   try {
     const { etage, chambre } = req.query;
-    const result = await pool.query(
-      "SELECT * FROM bulles WHERE etage = $1 AND chambre = $2",
-      [etage, chambre]
-    );
+
+    let result;
+    if (!chambre || chambre === "total") {
+      result = await pool.query("SELECT * FROM bulles WHERE etage = $1", [etage]);
+    } else {
+      result = await pool.query("SELECT * FROM bulles WHERE etage = $1 AND chambre = $2", [etage, chambre]);
+    }
+
+    // Convertir chemins photo en URL complètes (exemple ici : base URL à adapter)
+    const baseUrl = req.protocol + "://" + req.get("host");
+    const rowsWithFullPhoto = result.rows.map(row => {
+      return {
+        ...row,
+        photo: row.photo ? `${baseUrl}${row.photo}` : ""
+      };
+    });
 
     const fields = [
       "id", "numero", "intitule", "description", "etat",
@@ -170,7 +182,7 @@ router.get("/export/csv", async (req, res) => {
     };
 
     const json2csvParser = new Parser(opts);
-    let csv = json2csvParser.parse(result.rows);
+    let csv = json2csvParser.parse(rowsWithFullPhoto);
 
     const BOM = '\uFEFF';
     csv = BOM + csv;
