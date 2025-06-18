@@ -130,8 +130,16 @@ router.get("/export/csv/all", async (req, res) => {
       eol: "\r\n"
     };
 
+    const baseUrl = req.protocol + "://" + req.get("host");
+    const rowsWithFullPhoto = result.rows.map(row => {
+      return {
+        ...row,
+        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : ""
+      };
+    });
+
     const json2csvParser = new Parser(opts);
-    let csv = json2csvParser.parse(result.rows);
+    let csv = json2csvParser.parse(rowsWithFullPhoto);
 
     const BOM = '\uFEFF';
     csv = BOM + csv;
@@ -162,7 +170,7 @@ router.get("/export/csv", async (req, res) => {
     const rowsWithFullPhoto = result.rows.map(row => {
       return {
         ...row,
-        photo: row.photo ? `${baseUrl}${row.photo}` : ""
+        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : ""
       };
     });
 
