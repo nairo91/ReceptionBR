@@ -15,6 +15,8 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
 
 // Configuration express-session
 app.use(session({
