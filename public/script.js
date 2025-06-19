@@ -155,6 +155,13 @@
     popup.className = "popup";
     popup.style.left = `${x + 40}px`;
     popup.style.top = `${y}px`;
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      const vv = window.visualViewport;
+      if (vv && vv.scale && vv.scale !== 1) {
+        popup.style.transformOrigin = "top left";
+        popup.style.transform = `scale(${1 / vv.scale})`;
+      }
+    }
     if (typeof content === "string") popup.innerHTML = content;
     else popup.appendChild(content);
     document.body.appendChild(popup);
