@@ -21,6 +21,8 @@
   let pressTimer = null;
   let mousePressTimer = null;
   let longPressTriggered = false;
+  const isTouchDevice =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
   let numero = 1;
 
   // Fonction pour changer le plan selon l'étage sélectionné
@@ -241,6 +243,11 @@
 
     if (longPressTriggered) {
       longPressTriggered = false;
+      return;
+    }
+
+    if (isTouchDevice) {
+      // Sur mobile, la creation se fait uniquement via l'appui long
       return;
     }
 
