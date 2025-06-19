@@ -20,9 +20,6 @@
 
   let pressTimer = null;
   let mousePressTimer = null;
-  let longPressTriggered = false;
-  const isTouchDevice =
-    "ontouchstart" in window || navigator.maxTouchPoints > 0;
   let numero = 1;
 
   // Fonction pour changer le plan selon l'étage sélectionné
@@ -203,9 +200,7 @@
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
 
-    longPressTriggered = false;
     pressTimer = setTimeout(() => {
-      longPressTriggered = true;
       showBulleCreationForm(x, y);
     }, 2000);
   });
@@ -222,9 +217,7 @@
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    longPressTriggered = false;
     mousePressTimer = setTimeout(() => {
-      longPressTriggered = true;
       showBulleCreationForm(x, y);
     }, 2000);
   });
@@ -237,26 +230,6 @@
     clearTimeout(mousePressTimer);
   });
 
-  // Clic simple PC
-  plan.addEventListener("click", e => {
-    if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
-
-    if (longPressTriggered) {
-      longPressTriggered = false;
-      return;
-    }
-
-    if (isTouchDevice) {
-      // Sur mobile, la creation se fait uniquement via l'appui long
-      return;
-    }
-
-    const rect = plan.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    showBulleCreationForm(x, y);
-  });
 
   function showBulleCreationForm(x, y) {
     if (!user) {
