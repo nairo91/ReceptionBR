@@ -127,6 +127,7 @@ button:hover {
   font-size: 14px;
   animation: fade-slide-in 0.2s ease-out;
   transition: transform 0.3s ease;
+  box-sizing: border-box;
 }
 
 .popup input,
@@ -187,7 +188,7 @@ button:hover {
 }
 
 /* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   body {
     padding: 10px;
   }
@@ -209,7 +210,8 @@ button:hover {
     top: 0 !important;
     bottom: 0 !important;
     width: 100% !important;
-    height: 100vh !important;
+    min-height: 100vh !important;
+    height: 100dvh !important;
     max-width: none;
     max-height: none;
     margin: 0;
