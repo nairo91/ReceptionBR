@@ -207,6 +207,13 @@
 
   // Gestion appui long touch (mobile)
   plan.addEventListener("touchstart", e => {
+    if (e.touches.length > 1) {
+      // More than one finger implies a pinch gesture; do not trigger bubble
+      clearTimeout(pressTimer);
+      touchStartX = null;
+      touchStartY = null;
+      return;
+    }
     if (e.target.closest(".bulle") || e.target.closest(".popup")) return;
 
     const touch = e.touches[0];
@@ -222,6 +229,10 @@
   });
 
   plan.addEventListener("touchmove", e => {
+    if (e.touches.length > 1) {
+      clearTimeout(pressTimer);
+      return;
+    }
     if (touchStartX === null || touchStartY === null) return;
     const touch = e.touches[0];
     if (Math.abs(touch.clientX - touchStartX) > MOVE_CANCEL_THRESHOLD ||
@@ -232,8 +243,10 @@
 
   plan.addEventListener("touchend", e => {
     clearTimeout(pressTimer);
-    touchStartX = null;
-    touchStartY = null;
+    if (e.touches.length === 0) {
+      touchStartX = null;
+      touchStartY = null;
+    }
   });
 
   // Gestion appui long souris (PC)
