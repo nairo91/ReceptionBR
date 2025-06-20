@@ -157,6 +157,17 @@
     if (typeof content === "string") popup.innerHTML = content;
     else popup.appendChild(content);
     document.body.appendChild(popup);
+
+    // If the user has pinch-zoomed on mobile, the popup would normally
+    // appear scaled as well. Use the visual viewport API to compensate so
+    // the popup shows at normal size even when the page is zoomed.
+    if (window.visualViewport && window.visualViewport.scale) {
+      const zoom = window.visualViewport.scale;
+      if (zoom !== 1) {
+        popup.style.transformOrigin = "top left";
+        popup.style.transform = `scale(${1 / zoom})`;
+      }
+    }
   }
 
   function closePopups() {
