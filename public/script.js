@@ -21,6 +21,9 @@
   let pressTimer = null;
   let mousePressTimer = null;
   let numero = 1;
+  let touchStartX = null;
+  let touchStartY = null;
+  const MOVE_CANCEL_THRESHOLD = 10; // pixels
 
   // Fonction pour changer le plan selon l'étage sélectionné
   function changePlan(etage) {
@@ -210,14 +213,27 @@
     const rect = plan.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
 
     pressTimer = setTimeout(() => {
       showBulleCreationForm(x, y);
     }, 2000);
   });
 
+  plan.addEventListener("touchmove", e => {
+    if (touchStartX === null || touchStartY === null) return;
+    const touch = e.touches[0];
+    if (Math.abs(touch.clientX - touchStartX) > MOVE_CANCEL_THRESHOLD ||
+        Math.abs(touch.clientY - touchStartY) > MOVE_CANCEL_THRESHOLD) {
+      clearTimeout(pressTimer);
+    }
+  });
+
   plan.addEventListener("touchend", e => {
     clearTimeout(pressTimer);
+    touchStartX = null;
+    touchStartY = null;
   });
 
   // Gestion appui long souris (PC)
