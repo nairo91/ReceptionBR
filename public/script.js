@@ -177,18 +177,19 @@
     } else {
       popup.style.left = "0";
       popup.style.top = "0";
-      popup.style.transform = "none";
     }
 
     if (typeof content === "string") popup.innerHTML = content;
     else popup.appendChild(content);
     document.body.appendChild(popup);
 
-    if (window.innerWidth > 768 && window.visualViewport && window.visualViewport.scale) {
+    if (window.visualViewport && window.visualViewport.scale) {
       const zoom = window.visualViewport.scale;
       if (zoom !== 1) {
         popup.style.transformOrigin = "top left";
         popup.style.transform = `scale(${1 / zoom})`;
+      } else {
+        popup.style.transform = "none";
       }
     }
   }
