@@ -153,9 +153,16 @@
         <input type="file" name="photo" accept="image/*" /><br>
         ${bulle.photo ? `<img src="${bulle.photo}" class="preview" onclick="zoomImage('${bulle.photo}')" /><br>` : ""}
         <button type="submit">💾 Enregistrer</button>
-        <button type="button" onclick="confirmDelete(${bulle.id}, '${bulle.etage}', '${bulle.chambre}', ${div.dataset.x}, ${div.dataset.y})">🗑️ Supprimer</button>
+        <button type="button" id="deleteBtn">🗑️ Supprimer</button>
         <button type="button" onclick="closePopups()">Fermer</button>
       `;
+
+      const deleteBtn = form.querySelector('#deleteBtn');
+      const encodedName = encodeURIComponent(bulle.intitule || '');
+      const encodedDesc = encodeURIComponent(bulle.description || '');
+      deleteBtn.onclick = () => {
+        confirmDelete(bulle.id, bulle.etage, bulle.chambre, div.dataset.x, div.dataset.y, bulle.numero, encodedName, encodedDesc);
+      };
 
       form.onsubmit = (e) => {
         e.preventDefault();
@@ -164,13 +171,23 @@
           return;
         }
         const formData = new FormData(form);
+        const name = formData.get('intitule') || '';
+        const desc = formData.get('description') || '';
+        const nomBulle = name ? `Bulle ${bulle.numero}, ${name}` : `Bulle ${bulle.numero}`;
         fetch(`/api/bulles/${bulle.id}`, {
           method: "PUT",
           credentials: "include",
           body: formData
           }).then(() => {
             loadBulles();
-            recordAction("modification", { etage: bulle.etage, chambre: bulle.chambre, x: div.dataset.x, y: div.dataset.y });
+            recordAction("modification", {
+              etage: bulle.etage,
+              chambre: bulle.chambre,
+              x: div.dataset.x,
+              y: div.dataset.y,
+              nomBulle,
+              description: desc
+            });
             closePopups();
           });
       };
@@ -252,19 +269,22 @@
       p.remove();
     });
   }
-  function confirmDelete(id, etage, chambre, x, y) {
+  function confirmDelete(id, etage, chambre, x, y, numero, encName, encDesc) {
     if (!user) {
       alert("Vous devez être connecté pour supprimer.");
       return;
     }
     if (confirm("Voulez-vous vraiment supprimer cette bulle ?")) {
-      deleteBulle(id, etage, chambre, x, y);
+      const name = decodeURIComponent(encName || '');
+      const desc = decodeURIComponent(encDesc || '');
+      deleteBulle(id, etage, chambre, x, y, numero, name, desc);
     }
   }
-  function deleteBulle(id, etage, chambre, x, y) {
+  function deleteBulle(id, etage, chambre, x, y, numero, name, desc) {
     fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => {
       loadBulles();
-      recordAction("suppression", { etage, chambre, x, y });
+      const nomBulle = name ? `Bulle ${numero}, ${name}` : `Bulle ${numero}`;
+      recordAction("suppression", { etage, chambre, x, y, nomBulle, description: desc });
     });
   }
   function zoomImage(src) {
@@ -290,6 +310,8 @@
       chambre: loc.chambre,
       x: loc.x,
       y: loc.y,
+      nomBulle: loc.nomBulle || '',
+      description: loc.description || '',
       timestamp: new Date().toISOString()
     };
     actions.push(entry);
@@ -421,13 +443,23 @@
       formData.append("x", xRatio);
       formData.append("y", yRatio);
       formData.append("numero", numero);
+      const name = form.querySelector('[name=intitule]').value || '';
+      const desc = form.querySelector('[name=description]').value || '';
+      const nomBulle = name ? `Bulle ${numero}, ${name}` : `Bulle ${numero}`;
       fetch("/api/bulles", {
         method: "POST",
         credentials: "include",
         body: formData
       }).then(() => {
         loadBulles();
-        recordAction("creation", { etage: etageSelect.value, chambre: chambreSelect.value, x: xRatio, y: yRatio });
+        recordAction("creation", {
+          etage: etageSelect.value,
+          chambre: chambreSelect.value,
+          x: xRatio,
+          y: yRatio,
+          nomBulle,
+          description: desc
+        });
         closePopups();
       });
     };
