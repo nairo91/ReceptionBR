@@ -4,20 +4,38 @@
   const exportCsvBtn = document.getElementById("exportCsvBtn");
   const etageSelect = document.getElementById("etageSelect");
 
+  const userSelect = document.getElementById("userSelect");
+  const historiqueBtn = document.getElementById("historiqueBtn");
   const loginContainer = document.getElementById("login-container");
   const loginForm = document.getElementById("login-form");
   const loginError = document.getElementById("login-error");
   const appContainer = document.getElementById("app-container");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  // Simule un utilisateur connecté pour bypasser le login
-  let user = { id: 1, username: "test" };
+  let user = null;
+  const actions = JSON.parse(localStorage.getItem("actions") || "[]");
 
   const lotsListe = [
     "Installation Chantier", "Depose", "Platerie", "Electricite", "Plomberie", "Menuiserie",
     "Revetement SDB", "Peinture", "Revetement de sol", "Repose", "F", "G", "H", "I", "PMR"
   ];
 
+  const storedUser = localStorage.getItem("selectedUser");
+  if (storedUser) {
+    user = storedUser;
+    userSelect.value = storedUser;
+  }
+
+  userSelect.addEventListener("change", () => {
+    user = userSelect.value || null;
+    if (user) {
+      localStorage.setItem("selectedUser", user);
+    } else {
+      localStorage.removeItem("selectedUser");
+    }
+  });
+
+  historiqueBtn.addEventListener("click", showHistorique);
   let pressTimer = null;
   let mousePressTimer = null;
   let numero = 1;
@@ -133,7 +151,7 @@
         <input type="file" name="photo" accept="image/*" /><br>
         ${bulle.photo ? `<img src="${bulle.photo}" class="preview" onclick="zoomImage('${bulle.photo}')" /><br>` : ""}
         <button type="submit">💾 Enregistrer</button>
-        <button type="button" onclick="confirmDelete(${bulle.id})">🗑️ Supprimer</button>
+        <button type="button" onclick="confirmDelete(${bulle.id}, '${bulle.etage}', '${bulle.chambre}', ${div.dataset.x}, ${div.dataset.y})">🗑️ Supprimer</button>
         <button type="button" onclick="closePopups()">Fermer</button>
       `;
 
@@ -148,10 +166,11 @@
           method: "PUT",
           credentials: "include",
           body: formData
-        }).then(() => {
-          loadBulles();
-          closePopups();
-        });
+          }).then(() => {
+            loadBulles();
+            recordAction("modification", { etage: bulle.etage, chambre: bulle.chambre, x: div.dataset.x, y: div.dataset.y });
+            closePopups();
+          });
       };
 
       const r = plan.getBoundingClientRect();
@@ -231,21 +250,21 @@
       p.remove();
     });
   }
-
-  function confirmDelete(id) {
+  function confirmDelete(id, etage, chambre, x, y) {
     if (!user) {
       alert("Vous devez être connecté pour supprimer.");
       return;
     }
     if (confirm("Voulez-vous vraiment supprimer cette bulle ?")) {
-      deleteBulle(id);
+      deleteBulle(id, etage, chambre, x, y);
     }
   }
-
-  function deleteBulle(id) {
-    fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => loadBulles());
+  function deleteBulle(id, etage, chambre, x, y) {
+    fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => {
+      loadBulles();
+      recordAction("suppression", { etage, chambre, x, y });
+    });
   }
-
   function zoomImage(src) {
     closePopups();
     const overlay = document.createElement("div");
@@ -260,6 +279,32 @@
     document.body.appendChild(overlay);
   }
 
+  function recordAction(action, loc) {
+    if (!user) return;
+    const entry = {
+      user,
+      action,
+      etage: loc.etage,
+      chambre: loc.chambre,
+      x: loc.x,
+      y: loc.y,
+      timestamp: new Date().toISOString()
+    };
+    actions.push(entry);
+    localStorage.setItem("actions", JSON.stringify(actions));
+  }
+
+  function showHistorique() {
+    const hist = actions;
+    let html = "<strong>Historique</strong><ul>";
+    if (hist.length === 0) {
+      html += "<li>Aucune action enregistrée.</li>";
+    } else {
+      html += hist.map(h => `<li>${h.timestamp} - ${h.user} - ${h.action} - ${h.etage}/${h.chambre} (${Number(h.x).toFixed(2)}, ${Number(h.y).toFixed(2)})</li>`).join("");
+    }
+    html += "</ul><button onclick=\"closePopups()\">Fermer</button>";
+    showPopup(50, 50, html);
+  }
   // Gestion appui long touch (mobile)
   plan.addEventListener("touchstart", e => {
     if (e.touches.length > 1) {
@@ -385,13 +430,13 @@
       formData.append("x", xRatio);
       formData.append("y", yRatio);
       formData.append("numero", numero);
-
       fetch("/api/bulles", {
         method: "POST",
         credentials: "include",
         body: formData
       }).then(() => {
         loadBulles();
+        recordAction("creation", { etage: etageSelect.value, chambre: chambreSelect.value, x: xRatio, y: yRatio });
         closePopups();
       });
     };
