@@ -70,12 +70,19 @@
   function createBulle(bulle) {
     const div = document.createElement("div");
     div.className = "bulle";
-    div.dataset.x = bulle.x;
-    div.dataset.y = bulle.y;
-
     const rect = plan.getBoundingClientRect();
-    const x = bulle.x * rect.width;
-    const y = bulle.y * rect.height;
+
+    // Anciennes bulles stockaient des positions en pixels. Pour les rendre
+    // compatibles, on detecte ce cas et convertit en coordonnées relatives.
+    const isLegacy = bulle.x > 1 || bulle.y > 1;
+    const relX = isLegacy ? bulle.x / rect.width : bulle.x;
+    const relY = isLegacy ? bulle.y / rect.height : bulle.y;
+
+    div.dataset.x = relX;
+    div.dataset.y = relY;
+
+    const x = relX * rect.width;
+    const y = relY * rect.height;
     div.style.left = `${x}px`;
     div.style.top = `${y}px`;
     div.innerText = bulle.numero;
