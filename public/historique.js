@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (actions.length === 0) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 4;
+    cell.colSpan = 6;
     cell.textContent = 'Aucune action enregistrée.';
     row.appendChild(cell);
     tbody.appendChild(row);
@@ -17,7 +17,14 @@ window.addEventListener('DOMContentLoaded', () => {
         ? `${a.etage} / ${a.chambre}`
         : `${a.etage} (${Number(a.x).toFixed(2)}, ${Number(a.y).toFixed(2)})`;
 
-      const values = [a.user, a.action, emplacement, new Date(a.timestamp).toLocaleString()];
+      const values = [
+        a.user,
+        a.action,
+        emplacement,
+        a.nomBulle || '',
+        a.description || '',
+        new Date(a.timestamp).toLocaleString()
+      ];
       values.forEach((val, idx) => {
         const td = document.createElement('td');
         td.textContent = val;
