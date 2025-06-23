@@ -401,7 +401,10 @@
 
   // Ajustement taille bulles
   function getZoomFactor() {
-    return window.devicePixelRatio || 1;
+    if (window.visualViewport) {
+      return window.visualViewport.scale || 1;
+    }
+    return 1;
   }
 
   function ajusterTailleBulles() {
@@ -420,6 +423,9 @@
   window.addEventListener("resize", ajusterTailleBulles);
   window.addEventListener("load", ajusterTailleBulles);
   window.addEventListener("orientationchange", ajusterTailleBulles);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", ajusterTailleBulles);
+  }
 
   chambreSelect.addEventListener("change", loadBulles);
   etageSelect.addEventListener("change", () => {
