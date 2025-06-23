@@ -73,7 +73,7 @@
     const rect = plan.getBoundingClientRect();
 
     // Anciennes bulles stockaient des positions en pixels. Pour les rendre
-    // compatibles, on detecte ce cas et convertit en coordonnées relatives.
+    // compatibles, on détecte ce cas et convertit en coordonnées relatives.
     const isLegacy = bulle.x > 1 || bulle.y > 1;
     const relX = isLegacy ? bulle.x / rect.width : bulle.x;
     const relY = isLegacy ? bulle.y / rect.height : bulle.y;
@@ -81,10 +81,9 @@
     div.dataset.x = relX;
     div.dataset.y = relY;
 
-    const x = relX * rect.width;
-    const y = relY * rect.height;
-    div.style.left = `${x}px`;
-    div.style.top = `${y}px`;
+    // Position en pourcentage pour s'adapter automatiquement aux changements de taille du plan
+    div.style.left = `${relX * 100}%`;
+    div.style.top = `${relY * 100}%`;
     div.innerText = bulle.numero;
     div.style.backgroundColor = getColorByEtat(bulle.etat);
 
@@ -145,7 +144,10 @@
         });
       };
 
-      showPopup(bulle.x, bulle.y, form);
+      const r = plan.getBoundingClientRect();
+      const px = parseFloat(div.dataset.x) * r.width;
+      const py = parseFloat(div.dataset.y) * r.height;
+      showPopup(px, py, form);
     };
 
     bullesContainer.appendChild(div);
@@ -368,7 +370,6 @@
   function ajusterTailleBulles() {
     const zoom = getZoomFactor();
     const bulles = document.querySelectorAll(".bulle");
-    const rect = plan.getBoundingClientRect();
 
     bulles.forEach(bulle => {
       const taille = 32 / zoom;
@@ -376,13 +377,6 @@
       bulle.style.height = `${taille}px`;
       bulle.style.lineHeight = `${taille}px`;
       bulle.style.fontSize = `${16 / zoom}px`;
-
-      if (bulle.dataset.x && bulle.dataset.y) {
-        const x = parseFloat(bulle.dataset.x) * rect.width;
-        const y = parseFloat(bulle.dataset.y) * rect.height;
-        bulle.style.left = `${x}px`;
-        bulle.style.top = `${y}px`;
-      }
     });
   }
 
