@@ -35,7 +35,9 @@
     }
   });
 
-  historiqueBtn.addEventListener("click", showHistorique);
+  historiqueBtn.addEventListener("click", () => {
+    window.location.href = "historique.html";
+  });
   let pressTimer = null;
   let mousePressTimer = null;
   let numero = 1;
@@ -294,17 +296,6 @@
     localStorage.setItem("actions", JSON.stringify(actions));
   }
 
-  function showHistorique() {
-    const hist = actions;
-    let html = "<strong>Historique</strong><ul>";
-    if (hist.length === 0) {
-      html += "<li>Aucune action enregistrée.</li>";
-    } else {
-      html += hist.map(h => `<li>${h.timestamp} - ${h.user} - ${h.action} - ${h.etage}/${h.chambre} (${Number(h.x).toFixed(2)}, ${Number(h.y).toFixed(2)})</li>`).join("");
-    }
-    html += "</ul><button onclick=\"closePopups()\">Fermer</button>";
-    showPopup(50, 50, html);
-  }
   // Gestion appui long touch (mobile)
   plan.addEventListener("touchstart", e => {
     if (e.touches.length > 1) {
