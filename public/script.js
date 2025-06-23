@@ -25,6 +25,16 @@
   let touchStartY = null;
   const MOVE_CANCEL_THRESHOLD = 10; // pixels
 
+  function showClickMarker(x, y) {
+    const rect = plan.getBoundingClientRect();
+    const dot = document.createElement('div');
+    dot.className = 'click-dot';
+    dot.style.left = `${(x / rect.width) * 100}%`;
+    dot.style.top = `${(y / rect.height) * 100}%`;
+    bullesContainer.appendChild(dot);
+    setTimeout(() => dot.remove(), 2000);
+  }
+
   // Fonction pour changer le plan selon l'étage sélectionné
   function changePlan(etage) {
     // "R+5" => "5", "R+4" => "4", "R+0" => "0"
@@ -321,6 +331,8 @@
       alert("Vous devez être connecté pour ajouter une bulle.");
       return;
     }
+
+    showClickMarker(x, y);
 
     const form = document.createElement("form");
     form.enctype = "multipart/form-data";
