@@ -401,10 +401,9 @@
 
   // Ajustement taille bulles
   function getZoomFactor() {
-    if (window.visualViewport) {
-      return window.visualViewport.scale || 1;
-    }
-    return 1;
+    const dpr = window.devicePixelRatio || 1;
+    const scale = window.visualViewport ? (window.visualViewport.scale || 1) : 1;
+    return dpr * scale;
   }
 
   function ajusterTailleBulles() {
