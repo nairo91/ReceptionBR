@@ -70,8 +70,14 @@
   function createBulle(bulle) {
     const div = document.createElement("div");
     div.className = "bulle";
-    div.style.left = `${bulle.x}px`;
-    div.style.top = `${bulle.y}px`;
+    div.dataset.x = bulle.x;
+    div.dataset.y = bulle.y;
+
+    const rect = plan.getBoundingClientRect();
+    const x = bulle.x * rect.width;
+    const y = bulle.y * rect.height;
+    div.style.left = `${x}px`;
+    div.style.top = `${y}px`;
     div.innerText = bulle.numero;
     div.style.backgroundColor = getColorByEtat(bulle.etat);
 
@@ -326,8 +332,12 @@
       const formData = new FormData(form);
       formData.append("etage", etageSelect.value);
       formData.append("chambre", chambreSelect.value);
-      formData.append("x", parseInt(x));
-      formData.append("y", parseInt(y));
+
+      const rect = plan.getBoundingClientRect();
+      const xRatio = x / rect.width;
+      const yRatio = y / rect.height;
+      formData.append("x", xRatio);
+      formData.append("y", yRatio);
       formData.append("numero", numero);
 
       fetch("/api/bulles", {
@@ -351,6 +361,7 @@
   function ajusterTailleBulles() {
     const zoom = getZoomFactor();
     const bulles = document.querySelectorAll(".bulle");
+    const rect = plan.getBoundingClientRect();
 
     bulles.forEach(bulle => {
       const taille = 32 / zoom;
@@ -358,6 +369,13 @@
       bulle.style.height = `${taille}px`;
       bulle.style.lineHeight = `${taille}px`;
       bulle.style.fontSize = `${16 / zoom}px`;
+
+      if (bulle.dataset.x && bulle.dataset.y) {
+        const x = parseFloat(bulle.dataset.x) * rect.width;
+        const y = parseFloat(bulle.dataset.y) * rect.height;
+        bulle.style.left = `${x}px`;
+        bulle.style.top = `${y}px`;
+      }
     });
   }
 
