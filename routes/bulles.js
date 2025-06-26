@@ -204,4 +204,35 @@ router.get("/export/csv", async (req, res) => {
   }
 });
 
+// GET /api/bulles/stats
+//   renvoie {attente: X, a_corriger: Y, corrige: Z, validee: W}
+router.get('/stats', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT etat, COUNT(*) FROM bulles GROUP BY etat");
+    const stats = { attente: 0, a_corriger: 0, corrige: 0, validee: 0 };
+    result.rows.forEach(r => {
+      stats[r.etat] = parseInt(r.count, 10);
+    });
+    res.json(stats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur stats' });
+  }
+});
+
+// GET /api/bulles/urgent
+//   renvoie un tableau des 5 bulles où etat != 'validee'
+//   triées par due_date ASC
+router.get('/urgent', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, description, date_butoir FROM bulles WHERE etat <> 'validee' ORDER BY date_butoir ASC LIMIT 5"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur urgent' });
+  }
+});
+
 module.exports = router;

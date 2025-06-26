@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Dashboard</h1>
+    <nav>
+      <a href="index.html">Accueil</a>
+    </nav>
+  </header>
+  <main>
+    <section id="cards" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+      <div class="card" data-etat="attente">Attente: <span class="value">0</span></div>
+      <div class="card" data-etat="a_corriger">A corriger: <span class="value">0</span></div>
+      <div class="card" data-etat="corrige">Corrigé: <span class="value">0</span></div>
+      <div class="card" data-etat="validee">Validée: <span class="value">0</span></div>
+    </section>
+    <section id="urgent" style="margin-top:30px;">
+      <h2>Bulles urgentes</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Description</th><th>Date butoir</th><th>Détail</th></tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script src="dashboard.js"></script>
+</body>
+</html>
