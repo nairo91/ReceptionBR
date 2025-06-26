@@ -6,6 +6,9 @@ const session = require("express-session");
 const bullesRoutes = require("./routes/bulles");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
+const usersRoutes = require("./routes/users");
+const floorsRoutes = require("./routes/floors");
+const roomsRoutes = require("./routes/rooms");
 
 const app = express();
 
@@ -37,6 +40,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Routes API
+app.use("/api/users", usersRoutes);
+app.use("/api/floors", floorsRoutes);
+app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bulles", bullesRoutes);
 app.use("/api", interventionsRoutes);
