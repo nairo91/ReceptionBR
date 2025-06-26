@@ -50,7 +50,7 @@ async function loadUsers() {
   const users = await res.json();
   userSelect.innerHTML =
     '<option value="">-- Choisir un employé --</option>' +
-    users.map(u => `<option value="${u.id}">${u.fullName}</option>`).join('');
+    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
 }
 
 async function loadFloors() {
