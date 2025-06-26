@@ -1,10 +1,3 @@
-const floorSelect = document.getElementById('floor-select');
-const roomSelect = document.getElementById('room-select');
-const userSelect = document.getElementById('user-select');
-const lotSelect = document.getElementById('lot-select');
-const taskSelect = document.getElementById('task-select');
-const submitBtn = document.getElementById('submit-selection');
-
 const lotTasks = {
   DEPOSE: [
     "Dépose Matelas / Sommier","Bureau","Chaise / Tabouret","Penderie",
@@ -44,6 +37,13 @@ const lotTasks = {
   "Revêtement de sol": ["RAGREAGE","Pose revêtement sol","Butées de portes"],
   Repose: ["Sommier + matelat","TV","Patere SDB (x2)","Porte papier WC (x2)"]
 };
+
+const userSelect  = document.getElementById('user-select');
+const floorSelect = document.getElementById('floor-select');
+const roomSelect  = document.getElementById('room-select');
+const lotSelect   = document.getElementById('lot-select');
+const taskSelect  = document.getElementById('task-select');
+const submitBtn   = document.getElementById('submit-selection');
 
 async function loadUsers() {
   const res = await fetch('/api/users');
