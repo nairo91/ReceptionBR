@@ -5,6 +5,7 @@ const cors = require("cors");
 const session = require("express-session");
 const bullesRoutes = require("./routes/bulles");
 const authRoutes = require("./routes/auth");
+const interventionsRoutes = require("./routes/interventions");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // Routes API
 app.use("/api/auth", authRoutes);
 app.use("/api/bulles", bullesRoutes);
+app.use("/api", interventionsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));

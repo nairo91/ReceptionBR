@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Gestion tâche</title></head>
+<body>
+  <h1>Gestion tâche</h1>
+  <label>Étage :
+    <select id="floor-select"></select>
+  </label>
+  <label>Chambre :
+    <select id="room-select"></select>
+  </label>
+  <label>Employé :
+    <select id="user-select"></select>
+  </label>
+  <label>Lot :
+    <select id="lot-select">
+      <option value="">--Choisir un lot--</option>
+      <option value="DEPOSE">DEPOSE</option>
+      <option value="Platrerie">Plâtrerie</option>
+      <option value="Electricite">Électricité</option>
+      <option value="Plomberie">Plomberie</option>
+      <option value="Menuiserie">Menuiserie</option>
+      <option value="Revêtement SDB">Revêtement SDB</option>
+      <option value="Peinture">Peinture</option>
+      <option value="Revêtement de sol">Revêtement de sol</option>
+      <option value="Repose">Repose</option>
+    </select>
+  </label>
+  <label>Tâche :
+    <select id="task-select"><option value="">--D'abord choisir un lot--</option></select>
+  </label>
+  <button id="submit-selection">Valider</button>
+  <script src="selection.js"></script>
+</body>
+</html>
