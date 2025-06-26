@@ -48,9 +48,9 @@ const submitBtn   = document.getElementById('submit-selection');
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
-  userSelect.innerHTML = users
-    .map(u => `<option value="${u.id}">${u.fullName}</option>`)
-    .join('');
+  userSelect.innerHTML =
+    '<option value="">-- Choisir un employé --</option>' +
+    users.map(u => `<option value="${u.id}">${u.fullName}</option>`).join('');
 }
 
 async function loadFloors() {
@@ -72,6 +72,7 @@ async function loadRooms(floorId) {
   const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
   const rooms = await res.json();
   roomSelect.innerHTML =
+    '<option value="">-- Choisir une chambre --</option>' +
     rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
 }
 
