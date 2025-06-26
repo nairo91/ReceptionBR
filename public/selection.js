@@ -45,23 +45,34 @@ const lotTasks = {
   Repose: ["Sommier + matelat","TV","Patere SDB (x2)","Porte papier WC (x2)"]
 };
 
-async function loadFloors() {
-  const res = await fetch('/api/floors');
-  const floors = await res.json();
-  floorSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
-  if (floors[0]) loadRooms(floors[0].id);
-}
-
-async function loadRooms(floorId) {
-  const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
-  const rooms = await res.json();
-  roomSelect.innerHTML = rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-}
-
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
-  userSelect.innerHTML = users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+  userSelect.innerHTML = users
+    .map(u => `<option value="${u.id}">${u.fullName}</option>`)
+    .join('');
+}
+
+async function loadFloors() {
+  const res = await fetch('/api/floors');
+  const floors = await res.json();
+  floorSelect.innerHTML =
+    '<option value="">-- Choisir un étage --</option>' +
+    floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+  if (floors.length) {
+    loadRooms(floors[0].id);
+  }
+}
+
+async function loadRooms(floorId) {
+  if (!floorId) {
+    roomSelect.innerHTML = '<option value="">-- Choisir une chambre --</option>';
+    return;
+  }
+  const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
+  const rooms = await res.json();
+  roomSelect.innerHTML =
+    rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
 }
 
 floorSelect.addEventListener('change', () => {
@@ -92,7 +103,7 @@ submitBtn.addEventListener('click', async () => {
   });
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadFloors();
-  loadUsers();
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadUsers();
+  await loadFloors();
 });
