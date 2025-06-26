@@ -31,7 +31,8 @@ function loadUrgent() {
       tbody.innerHTML = '';
       data.forEach(bulle => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${bulle.id}</td><td>${bulle.description || ''}</td><td>${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}</td><td><a href="detail.html?id=${bulle.id}">Voir</a></td>`;
+        const link = `detail.html?id=${encodeURIComponent(bulle.id)}`;
+        tr.innerHTML = `<td>${bulle.id}</td><td>${bulle.description || ''}</td><td>${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}</td><td><a href="${link}">Voir</a></td>`;
         tbody.appendChild(tr);
       });
     })
