@@ -3,9 +3,9 @@ const router = express.Router();
 const pool = require("../db");
 
 // GET /api/users
-// Sélectionne id et fullName depuis la table "users"
+// Sélectionne id et username depuis la table "users"
 router.get('/', async (req, res) => {
-  const { rows } = await pool.query('SELECT id, fullName FROM users');
+  const { rows } = await pool.query('SELECT id, username FROM users');
   res.json(rows);
 });
 
