@@ -65,4 +65,12 @@ router.get('/interventions', async (req, res) => {
   res.json(rows);
 });
 
+// GET /api/interventions — liste toutes les interventions
+router.get('/', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, user_id, floor_id, room_id, lot, task, created_at FROM interventions ORDER BY created_at DESC'
+  );
+  res.json(rows);
+});
+
 module.exports = router;
