@@ -34,6 +34,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Gestion des interventions (POST + GET /api/interventions)
+app.use('/api/interventions', interventionsRoutes);
 app.use('/uploads', express.static('uploads'));
 
 
@@ -60,7 +63,6 @@ app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/bulles", bullesRoutes);
-app.use("/api", interventionsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));
