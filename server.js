@@ -9,6 +9,21 @@ const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
 const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
+const pool = require("./db");
+
+(async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interventions (
+      id         SERIAL       PRIMARY KEY,
+      user_id    TEXT         NOT NULL,
+      floor_id   TEXT         NOT NULL,
+      room_id    TEXT         NOT NULL,
+      lot        TEXT         NOT NULL,
+      task       TEXT         NOT NULL,
+      created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+    );
+  `);
+})().catch(console.error);
 
 const app = express();
 
