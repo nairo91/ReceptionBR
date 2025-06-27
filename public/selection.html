@@ -1,41 +1,50 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="UTF-8"><title>Gestion tâche</title></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion tâche</title>
+  <link rel="stylesheet" href="selection.css">
+</head>
 <body>
-  <h1>Gestion tâche</h1>
-  <label>Étage :
-    <select id="floor-select">
-      <option value="">-- Choisir un étage --</option>
-    </select>
-  </label>
-  <label>Chambre :
-    <select id="room-select">
-      <option value="">-- Choisir une chambre --</option>
-    </select>
-  </label>
-  <label>Employé :
-    <select id="user-select">
-      <option value="">-- Choisir un employé --</option>
-    </select>
-  </label>
-  <label>Lot :
-    <select id="lot-select">
-      <option value="">--Choisir un lot--</option>
-      <option value="DEPOSE">DEPOSE</option>
-      <option value="Platrerie">Plâtrerie</option>
-      <option value="Electricite">Électricité</option>
-      <option value="Plomberie">Plomberie</option>
-      <option value="Menuiserie">Menuiserie</option>
-      <option value="Revêtement SDB">Revêtement SDB</option>
-      <option value="Peinture">Peinture</option>
-      <option value="Revêtement de sol">Revêtement de sol</option>
-      <option value="Repose">Repose</option>
-    </select>
-  </label>
-  <label>Tâche :
-    <select id="task-select"><option value="">--D'abord choisir un lot--</option></select>
-  </label>
-  <button id="submit-selection">Valider</button>
+  <main class="container">
+    <h1>Gestion tâche</h1>
+    <div class="form-grid">
+      <label>Étage :
+        <select id="floor-select">
+          <option value="">-- Choisir un étage --</option>
+        </select>
+      </label>
+      <label>Chambre :
+        <select id="room-select">
+          <option value="">-- Choisir une chambre --</option>
+        </select>
+      </label>
+      <label>Employé :
+        <select id="user-select">
+          <option value="">-- Choisir un employé --</option>
+        </select>
+      </label>
+      <label>Lot :
+        <select id="lot-select">
+          <option value="">--Choisir un lot--</option>
+          <option value="DEPOSE">DEPOSE</option>
+          <option value="Platrerie">Plâtrerie</option>
+          <option value="Electricite">Électricité</option>
+          <option value="Plomberie">Plomberie</option>
+          <option value="Menuiserie">Menuiserie</option>
+          <option value="Revêtement SDB">Revêtement SDB</option>
+          <option value="Peinture">Peinture</option>
+          <option value="Revêtement de sol">Revêtement de sol</option>
+          <option value="Repose">Repose</option>
+        </select>
+      </label>
+      <label>Tâche :
+        <select id="task-select"><option value="">--D'abord choisir un lot--</option></select>
+      </label>
+      <button id="submit-selection">Valider</button>
+    </div>
+  </main>
   <script src="selection.js"></script>
 </body>
 </html>
