@@ -46,14 +46,19 @@ const taskSelect  = document.getElementById('task-select');
 const submitBtn   = document.getElementById('submit-selection');
 
 async function loadInterventions() {
+  console.log('Appel loadInterventions');
   const res = await fetch('/api/interventions');
+  console.log('GET /api/interventions status:', res.status);
   if (!res.ok) {
     console.error('Erreur fetch historique', res.status);
     return;
   }
   const data = await res.json();
-  const tbody = document.querySelector('#interventions-table tbody');
-  tbody.innerHTML = data
+  console.log('Données reçues:', data);
+  const interventions = Array.isArray(data) ? data : data.rows || [];
+  const tbody = document.getElementById('interventions-table').querySelector('tbody');
+  console.log('tbody trouvé:', tbody);
+  tbody.innerHTML = interventions
     .map(i => `
       <tr>
         <td>${i.id}</td>
