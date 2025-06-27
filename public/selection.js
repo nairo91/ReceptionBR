@@ -116,11 +116,14 @@ submitBtn.addEventListener('click', async () => {
     lot: lotSelect.value,
     task: taskSelect.value
   };
-  await fetch('/api/interventions', {
+  const res = await fetch('/api/interventions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  if (res.ok) {
+    alert('Intervention enregistrée !');
+  }
   await loadInterventions();
 });
 
