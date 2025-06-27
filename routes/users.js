@@ -14,7 +14,16 @@ router.get('/', (req, res) => {
     const name = cols[1].trim();
     return { id, username: name };
   });
-  res.json(users);
+  const excluded = [
+    "MIRONA",
+    "MONTEIRO",
+    "SIMON",
+    "GUEGAN",
+    "GRECO",
+    "MURCY"
+  ];
+  const filtered = users.filter(u => !excluded.includes(u.username));
+  res.json(filtered);
 });
 
 module.exports = router;
