@@ -47,6 +47,10 @@ const submitBtn   = document.getElementById('submit-selection');
 
 async function loadInterventions() {
   const res = await fetch('/api/interventions');
+  if (!res.ok) {
+    console.error('Erreur fetch historique', res.status);
+    return;
+  }
   const data = await res.json();
   const tbody = document.querySelector('#interventions-table tbody');
   tbody.innerHTML = data
