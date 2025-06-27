@@ -57,4 +57,12 @@ router.post('/interventions', async (req, res) => {
   }
 });
 
+// GET /api/interventions
+router.get('/interventions', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT * FROM interventions ORDER BY created_at DESC'
+  );
+  res.json(rows);
+});
+
 module.exports = router;

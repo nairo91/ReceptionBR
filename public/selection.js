@@ -45,6 +45,25 @@ const lotSelect   = document.getElementById('lot-select');
 const taskSelect  = document.getElementById('task-select');
 const submitBtn   = document.getElementById('submit-selection');
 
+async function loadInterventions() {
+  const res = await fetch('/api/interventions');
+  const data = await res.json();
+  const tbody = document.querySelector('#interventions-table tbody');
+  tbody.innerHTML = data
+    .map(i => `
+      <tr>
+        <td>${i.id}</td>
+        <td>${i.user_id}</td>
+        <td>${i.floor_id}</td>
+        <td>${i.room_id}</td>
+        <td>${i.lot}</td>
+        <td>${i.task}</td>
+        <td>${new Date(i.created_at).toLocaleString()}</td>
+      </tr>
+    `)
+    .join('');
+}
+
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
@@ -102,9 +121,11 @@ submitBtn.addEventListener('click', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  await loadInterventions();
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
+  await loadInterventions();
 });
