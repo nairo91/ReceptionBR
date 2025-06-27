@@ -14,15 +14,11 @@ router.get('/', (req, res) => {
     const name = cols[1].trim();
     return { id, username: name };
   });
-  const excluded = [
-    "MIRONA",
-    "MONTEIRO",
-    "SIMON",
-    "GUEGAN",
-    "GRECO",
-    "MURCY"
-  ];
-  const filtered = users.filter(u => !excluded.includes(u.username));
+  const excluded = ["MIRONA", "MONTEIRO", "SIMON", "GUEGAN", "GRECO", "MURCY"];
+  const filtered = users.filter(u => {
+    const lastName = u.username.split(' ')[0].toUpperCase();
+    return !excluded.includes(lastName);
+  });
   res.json(filtered);
 });
 
