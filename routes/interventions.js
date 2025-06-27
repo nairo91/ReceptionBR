@@ -40,7 +40,7 @@ router.get('/users', async (req, res) => {
 });
 
 // POST new intervention
-router.post('/interventions', async (req, res) => {
+router.post('/', async (req, res) => {
   const { floorId, roomId, userId, lot, task } = req.body;
   if (!floorId || !roomId || !userId || !lot || !task) {
     return res.status(400).json({ error: 'Données manquantes' });
