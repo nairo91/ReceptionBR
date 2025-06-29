@@ -43,6 +43,7 @@ const floorSelect = document.getElementById('floor-select');
 const roomSelect  = document.getElementById('room-select');
 const lotSelect   = document.getElementById('lot-select');
 const taskSelect  = document.getElementById('task-select');
+const statusSelect = document.getElementById('status-select');
 const submitBtn   = document.getElementById('submit-selection');
 
 async function loadInterventions() {
@@ -62,11 +63,12 @@ async function loadInterventions() {
     .map(i => `
       <tr>
         <td>${i.id}</td>
-        <td>${i.user_id}</td>
+        <td>${window.userMap[i.user_id] || i.user_id}</td>
         <td>${i.floor_id}</td>
         <td>${i.room_id}</td>
         <td>${i.lot}</td>
         <td>${i.task}</td>
+        <td>${i.status}</td>
         <td>${new Date(i.created_at).toLocaleString()}</td>
       </tr>
     `)
@@ -76,6 +78,7 @@ async function loadInterventions() {
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
+  window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
   userSelect.innerHTML =
     '<option value="">-- Choisir un employé --</option>' +
     users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
@@ -123,7 +126,8 @@ submitBtn.addEventListener('click', async () => {
     roomId: roomSelect.value,
     userId: userSelect.value,
     lot: lotSelect.value,
-    task: taskSelect.value
+    task: taskSelect.value,
+    status: statusSelect.value
   };
   const res = await fetch('/api/interventions', {
     method: 'POST',
