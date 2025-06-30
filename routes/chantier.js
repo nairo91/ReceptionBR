@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated: ensureAuthenticated } = require('../middlewares/auth');
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 // Export PDF route
 router.get('/export-pdf', ensureAuthenticated, async (req, res, next) => {
@@ -12,11 +11,7 @@ router.get('/export-pdf', ensureAuthenticated, async (req, res, next) => {
     const url = `${protocol}://${host}/chantier?` + Object.entries(req.query)
       .map(([k,v])=>`${k}=${encodeURIComponent(v)}`)
       .join('&');
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
-    });
+    const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
