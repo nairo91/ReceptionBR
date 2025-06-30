@@ -77,33 +77,18 @@ function escapePdf(str) {
 function interventionsToPdf(rows) {
   const header = '%PDF-1.3\n';
   const objects = [];
-
   const lines = rows.map(r =>
     `${r.id} - ${r.user_id} - ${r.floor_id} - ${r.room_id} - ${r.lot} - ${r.task} - ${r.status} - ${new Date(r.created_at).toLocaleString()}`
   );
-
   const text = lines
     .map((l, idx) => `${idx === 0 ? '' : 'T* '}(${escapePdf(l)}) Tj`)
     .join('\n');
-
   const stream = `BT /F1 12 Tf 50 750 Td ${text} ET`;
-
-  objects.push(['1 0 obj', '<< /Type /Catalog /Pages 2 0 R >>', 'endobj'].join('\n'));
-  objects.push(['2 0 obj', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', 'endobj'].join('\n'));
-  objects.push([
-    '3 0 obj',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
-    'endobj'
-  ].join('\n'));
-  objects.push([
-    '4 0 obj',
-    `<< /Length ${Buffer.byteLength(stream, 'binary')} >>`,
-    'stream',
-    stream,
-    'endstream',
-    'endobj'
-  ].join('\n'));
-  objects.push(['5 0 obj', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>', 'endobj'].join('\n'));
+  objects.push('1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj');
+  objects.push('2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj');
+  objects.push('3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj');
+  objects.push(`4 0 obj<< /Length ${stream.length} >>stream\n${stream}\nendstream endobj`);
+  objects.push('5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj');
 
   let body = header;
   const offsets = [];
@@ -111,7 +96,6 @@ function interventionsToPdf(rows) {
     offsets.push(body.length);
     body += obj + '\n';
   }
-
   const xref = body.length;
   body += `xref\n0 ${objects.length + 1}\n`;
   body += '0000000000 65535 f \n';
@@ -119,8 +103,7 @@ function interventionsToPdf(rows) {
     body += off.toString().padStart(10, '0') + ' 00000 n \n';
   }
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-
-  return Buffer.from(body, 'binary');
+  return Buffer.from(body);
 }
 
 router.get('/export/csv', async (req, res) => {
