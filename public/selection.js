@@ -45,6 +45,15 @@ const lotSelect   = document.getElementById('lot-select');
 const taskSelect  = document.getElementById('task-select');
 const statusSelect = document.getElementById('status-select');
 const submitBtn   = document.getElementById('submit-selection');
+const statusLabels = {
+  ouvert: 'Ouvert',
+  en_cours: 'En cours',
+  attente_validation: 'En attente de validation',
+  clos: 'Clos',
+  valide: 'Validé'
+};
+let currentInterventions = [];
+let editId = null;
 
 async function loadInterventions() {
   console.log('Appel loadInterventions');
@@ -57,6 +66,7 @@ async function loadInterventions() {
   const data = await res.json();
   console.log('Données reçues:', data);
   const interventions = Array.isArray(data) ? data : data.rows || [];
+  currentInterventions = interventions;
   const tbody = document.getElementById('interventions-table').querySelector('tbody');
   console.log('tbody trouvé:', tbody);
   tbody.innerHTML = interventions
@@ -68,8 +78,10 @@ async function loadInterventions() {
         <td>${i.room_id}</td>
         <td>${i.lot}</td>
         <td>${i.task}</td>
-        <td>${i.status}</td>
+        <td><span class="dot status-${i.status}"></span> ${statusLabels[i.status] || i.status}</td>
         <td>${new Date(i.created_at).toLocaleString()}</td>
+        <td><button class="edit-btn" data-id="${i.id}">✏️</button></td>
+        <td><button class="delete-btn" data-id="${i.id}">🗑️</button></td>
       </tr>
     `)
     .join('');
@@ -120,6 +132,30 @@ lotSelect.addEventListener('change', () => {
   }
 });
 
+document.getElementById('interventions-table').addEventListener('click', async (e) => {
+  if (e.target.classList.contains('edit-btn')) {
+    const id = e.target.dataset.id;
+    const it = currentInterventions.find(x => String(x.id) === id);
+    if (it) {
+      floorSelect.value = it.floor_id;
+      await loadRooms(it.floor_id);
+      roomSelect.value = it.room_id;
+      userSelect.value = it.user_id;
+      lotSelect.value = it.lot;
+      lotSelect.dispatchEvent(new Event('change'));
+      taskSelect.value = it.task;
+      statusSelect.value = it.status;
+      editId = id;
+      submitBtn.textContent = 'Mettre à jour';
+    }
+  }
+  if (e.target.classList.contains('delete-btn')) {
+    const id = e.target.dataset.id;
+    await fetch(`/api/interventions/${id}`, { method: 'DELETE' });
+    await loadInterventions();
+  }
+});
+
 submitBtn.addEventListener('click', async () => {
   const payload = {
     floorId: floorSelect.value,
@@ -129,14 +165,18 @@ submitBtn.addEventListener('click', async () => {
     task: taskSelect.value,
     status: statusSelect.value
   };
-  const res = await fetch('/api/interventions', {
-    method: 'POST',
+  const url = editId ? `/api/interventions/${editId}` : '/api/interventions';
+  const method = editId ? 'PUT' : 'POST';
+  const res = await fetch(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   if (res.ok) {
-    alert('Intervention enregistrée !');
+    alert(editId ? 'Intervention mise à jour !' : 'Intervention enregistrée !');
   }
+  editId = null;
+  submitBtn.textContent = 'Valider';
   await loadInterventions();
 });
 
