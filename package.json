@@ -19,6 +19,7 @@
     "json2csv": "^6.0.0-alpha.2",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.11.3",
-    "puppeteer": "^21.0.0"
+    "puppeteer-core": "^21.0.0",
+    "chrome-aws-lambda": "^18.1.1"
   }
 }
