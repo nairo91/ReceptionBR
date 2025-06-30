@@ -180,6 +180,14 @@ submitBtn.addEventListener('click', async () => {
   await loadInterventions();
 });
 
+document.getElementById('export-csv').addEventListener('click', () => {
+  window.location.href = '/api/interventions/export/csv';
+});
+
+document.getElementById('export-pdf').addEventListener('click', () => {
+  window.location.href = '/api/interventions/export/pdf';
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
