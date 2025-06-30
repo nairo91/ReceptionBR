@@ -10,6 +10,16 @@
   <main class="container">
     <h1>Gestion tâche</h1>
     <div class="form-grid">
+      <label>État :
+        <select id="status-select">
+          <option value="">--Choisir un état--</option>
+          <option value="ouvert">Ouvert</option>
+          <option value="en_cours">En cours</option>
+          <option value="attente_validation">En attente de validation</option>
+          <option value="clos">Clos</option>
+          <option value="valide">Validé</option>
+        </select>
+      </label>
       <label>Étage :
         <select id="floor-select">
           <option value="">-- Choisir un étage --</option>
@@ -42,22 +52,12 @@
       <label>Tâche :
         <select id="task-select"><option value="">--D'abord choisir un lot--</option></select>
       </label>
-      <label>État :
-        <select id="status-select">
-          <option value="">--Choisir un état--</option>
-          <option value="ouvert">Ouvert</option>
-          <option value="en_cours">En cours</option>
-          <option value="attente_validation">En attente de validation</option>
-          <option value="clos">Clos</option>
-          <option value="valide">Validé</option>
-        </select>
-      </label>
       <button id="submit-selection">Valider</button>
       <h2>Historique des interventions</h2>
-      <table id="interventions-table">
-        <thead>
-          <tr><th>ID</th><th>Employé</th><th>Étage</th><th>Chambre</th><th>Lot</th><th>Tâche</th><th>État</th><th>Date</th></tr>
-        </thead>
+        <table id="interventions-table">
+          <thead>
+            <tr><th>ID</th><th>Employé</th><th>Étage</th><th>Chambre</th><th>Lot</th><th>Tâche</th><th>État</th><th>Date</th><th>Modifier</th><th>Supprimer</th></tr>
+          </thead>
         <tbody></tbody>
       </table>
     </div>

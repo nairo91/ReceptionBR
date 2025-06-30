@@ -41,14 +41,14 @@ router.get('/users', async (req, res) => {
 
 // POST new intervention
 router.post('/', async (req, res) => {
-  const { floorId, roomId, userId, lot, task } = req.body;
+  const { floorId, roomId, userId, lot, task, status } = req.body;
   if (!floorId || !roomId || !userId || !lot || !task) {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
     await pool.query(
-      'INSERT INTO interventions (floor_id, room_id, user_id, lot, task) VALUES ($1,$2,$3,$4,$5)',
-      [floorId, roomId, userId, lot, task]
+      'INSERT INTO interventions (floor_id, room_id, user_id, lot, task, status) VALUES ($1,$2,$3,$4,$5,$6)',
+      [floorId, roomId, userId, lot, task, status]
     );
     res.json({ success: true });
   } catch (err) {
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
 // GET /api/interventions — liste toutes les interventions
 router.get('/', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT id, user_id, floor_id, room_id, lot, task, created_at FROM interventions ORDER BY created_at DESC'
+    'SELECT id, user_id, floor_id, room_id, lot, task, status, created_at FROM interventions ORDER BY created_at DESC'
   );
   res.json(rows);
 });

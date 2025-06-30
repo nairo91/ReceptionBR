@@ -76,3 +76,16 @@ button:focus {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   outline: none;
 }
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.status-ouvert { background: #f00; }
+.status-en_cours { background: #f90; }
+.status-attente_validation { background: #09f; }
+.status-clos { background: #888; }
+.status-valide { background: #0a0; }
