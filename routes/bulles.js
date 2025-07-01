@@ -175,9 +175,17 @@ router.get("/export/csv", async (req, res) => {
 
     let result;
     if (!chambre || chambre === "total") {
-      result = await pool.query("SELECT * FROM bulles WHERE etage = $1", [etage]);
+      result = await pool.query(
+        `SELECT etage, chambre, numero, intitule, description, etat, lot, photo, created_by, modified_by, levee_par
+         FROM bulles WHERE etage = $1 ORDER BY numero`,
+        [etage]
+      );
     } else {
-      result = await pool.query("SELECT * FROM bulles WHERE etage = $1 AND chambre = $2", [etage, chambre]);
+      result = await pool.query(
+        `SELECT etage, chambre, numero, intitule, description, etat, lot, photo, created_by, modified_by, levee_par
+         FROM bulles WHERE etage = $1 AND chambre = $2 ORDER BY numero`,
+        [etage, chambre]
+      );
     }
 
     // Convertir chemins photo en URL complètes (exemple ici : base URL à adapter)
@@ -190,10 +198,17 @@ router.get("/export/csv", async (req, res) => {
     });
 
     const fields = [
-      "id", "numero", "intitule", "description", "etat",
-      "lot", "entreprise", "localisation", "observation",
-      "date_butoir", "photo", "x", "y", "etage", "chambre",
-      "created_by", "modified_by", "levee_par"
+      "etage",
+      "chambre",
+      "numero",
+      "intitule",
+      "description",
+      "etat",
+      "lot",
+      "photo",
+      "created_by",
+      "modified_by",
+      "levee_par"
     ];
 
     const opts = {
