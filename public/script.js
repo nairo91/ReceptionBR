@@ -64,14 +64,19 @@
     // console.log("Plan changé en :", plan.src);
   }
 
-  // Fonction pour adapter les chambres selon l'étage sélectionné (actuellement statique)
-  function updateChambreOptions(etage) {
+  // Fonction pour charger dynamiquement les chambres selon l'étage sélectionné
+  async function updateChambreOptions(etage) {
     chambreSelect.dataset.etage = etage;
-    // Ici tu peux modifier dynamiquement la liste des chambres si besoin
-    // Exemple : 
-    // if (etage === "R+5") { ... afficher chambres 501 à 515 ... }
-    // else if (etage === "R+4") { ... autres chambres ... }
-    // Sinon laisser la liste telle quelle
+    try {
+      const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(etage)}`);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const rooms = await res.json();
+      const options = ['<option value="total">-- Toutes les chambres --</option>']
+        .concat(rooms.map(r => `<option value="${r.id}">${r.name}</option>`));
+      chambreSelect.innerHTML = options.join('');
+    } catch (err) {
+      console.error('Erreur chargement chambres:', err);
+    }
   }
 
   // Chargement des bulles en fonction étage + chambre
