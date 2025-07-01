@@ -12,6 +12,9 @@ router.get('/', (req, res) => {
     return { id: num.toString(), name: `Chambre ${num}` };
   });
 
+  // Ajout d'une option supplémentaire pour les couloirs
+  rooms.push({ id: 'couloir', name: 'Couloirs' });
+
   res.json(rooms);
 });
 
