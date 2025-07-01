@@ -516,7 +516,8 @@
 });
 
 
-  // Au chargement, on affiche les bulles pour l'étage par défaut
+  // Au chargement, on remplit d'abord le menu Chambre pour l'étage par défaut, puis on affiche les bulles
   window.onload = () => {
+    updateChambreOptions(etageSelect.value);
     loadBulles();
   };
