@@ -83,11 +83,9 @@
   function loadBulles() {
     bullesContainer.innerHTML = "";
 
-    const etage = etageSelect.value;
-    changePlan(etage);
-    updateChambreOptions(etage);
+    changePlan(etageSelect.value);
 
-    let url = `/api/bulles?etage=${encodeURIComponent(etage)}`;
+    let url = `/api/bulles?etage=${encodeURIComponent(etageSelect.value)}`;
     if (chambreSelect.value !== "total") {
       url += `&chambre=${chambreSelect.value}`;
     }
@@ -501,7 +499,8 @@
 
   chambreSelect.addEventListener("change", loadBulles);
   etageSelect.addEventListener("change", () => {
-    chambreSelect.dataset.etage = etageSelect.value;
+    changePlan(etageSelect.value);
+    updateChambreOptions(etageSelect.value);
     loadBulles();
   });
 
