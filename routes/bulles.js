@@ -176,14 +176,22 @@ router.get("/export/csv", async (req, res) => {
     let result;
     if (!chambre || chambre === "total") {
       result = await pool.query(
-        `SELECT etage, chambre, numero, intitule, description, etat, lot, photo, created_by, modified_by, levee_par
-         FROM bulles WHERE etage = $1 ORDER BY numero`,
+        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat, b.lot, b.photo,
+                u1.username AS created_by, u2.username AS modified_by, b.levee_par
+         FROM bulles b
+         LEFT JOIN users u1 ON b.created_by = u1.id
+         LEFT JOIN users u2 ON b.modified_by = u2.id
+         WHERE b.etage = $1 ORDER BY b.numero`,
         [etage]
       );
     } else {
       result = await pool.query(
-        `SELECT etage, chambre, numero, intitule, description, etat, lot, photo, created_by, modified_by, levee_par
-         FROM bulles WHERE etage = $1 AND chambre = $2 ORDER BY numero`,
+        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat, b.lot, b.photo,
+                u1.username AS created_by, u2.username AS modified_by, b.levee_par
+         FROM bulles b
+         LEFT JOIN users u1 ON b.created_by = u1.id
+         LEFT JOIN users u2 ON b.modified_by = u2.id
+         WHERE b.etage = $1 AND b.chambre = $2 ORDER BY b.numero`,
         [etage, chambre]
       );
     }
