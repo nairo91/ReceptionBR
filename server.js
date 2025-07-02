@@ -1,5 +1,5 @@
-const express = require("express");
 require("dotenv").config();
+const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
@@ -13,7 +13,7 @@ const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const pool = require("./db");
 
-cloudinary.config(process.env.CLOUDINARY_URL);
+cloudinary.config('cloudinary://523438194377183:yBZ99NdGjYMFNrkMHHjImF3RBi4@dyp93ivlg');
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
