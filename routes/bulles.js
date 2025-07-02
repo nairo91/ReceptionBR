@@ -180,7 +180,8 @@ router.get("/export/csv", async (req, res) => {
       result = await pool.query(
         `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
                 b.lot, b.photo, b.levee_par,
-                u1.username AS created_by, u2.username AS modified_by
+                u1.username AS created_by,
+                u2.username AS modified_by
          FROM bulles b
          LEFT JOIN users u1 ON b.created_by = u1.id
          LEFT JOIN users u2 ON b.modified_by = u2.id
@@ -191,7 +192,8 @@ router.get("/export/csv", async (req, res) => {
       result = await pool.query(
         `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
                 b.lot, b.photo, b.levee_par,
-                u1.username AS created_by, u2.username AS modified_by
+                u1.username AS created_by,
+                u2.username AS modified_by
          FROM bulles b
          LEFT JOIN users u1 ON b.created_by = u1.id
          LEFT JOIN users u2 ON b.modified_by = u2.id
