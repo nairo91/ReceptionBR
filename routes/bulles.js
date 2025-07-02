@@ -4,12 +4,17 @@ const pool = require("../db");
 const multer = require("multer");
 const path = require("path");
 const { Parser } = require("json2csv");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+cloudinary.config(process.env.CLOUDINARY_URL);
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "receptionbr",
+    allowed_formats: ["jpg", "png"],
+  },
 });
 const upload = multer({ storage });
 
@@ -30,7 +35,7 @@ router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res)
     const userId = null; // Pas de session user
 
     const safeDate = date_butoir === "" ? null : date_butoir;
-    const photo = req.file ? `/uploads/${req.file.filename}` : null;
+    const photo = req.file ? req.file.path : null;
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
@@ -83,7 +88,7 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
     const userId = null; // Pas d'utilisateur connecté
 
     const safeDate = date_butoir === "" ? null : date_butoir;
-    const photo = req.file ? `/uploads/${req.file.filename}` : null;
+    const photo = req.file ? req.file.path : null;
 
     // Récupérer l'état actuel complet pour l'historique
     const oldRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
