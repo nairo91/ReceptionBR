@@ -139,16 +139,23 @@ router.get("/export/csv/all", async (req, res) => {
               b.levee_par
        FROM bulles b
        LEFT JOIN LATERAL (
-         SELECT user_id FROM reserve_history rh
-         WHERE rh.bulle_id = b.id AND rh.action_type = 'create'
-         ORDER BY rh.created_at ASC LIMIT 1
+         SELECT user_id
+         FROM reserve_history rh
+         WHERE rh.bulle_id = b.id
+           AND rh.action_type = 'create'
+         ORDER BY rh.created_at ASC
+         LIMIT 1
        ) rh_create ON TRUE
-       LEFT JOIN LATERAL (
-         SELECT user_id FROM reserve_history rh
-         WHERE rh.bulle_id = b.id AND rh.action_type = 'update'
-         ORDER BY rh.created_at DESC LIMIT 1
-       ) rh_update ON TRUE
        LEFT JOIN users u1 ON rh_create.user_id = u1.id
+
+       LEFT JOIN LATERAL (
+         SELECT user_id
+         FROM reserve_history rh
+         WHERE rh.bulle_id = b.id
+           AND rh.action_type = 'update'
+         ORDER BY rh.created_at DESC
+         LIMIT 1
+       ) rh_update ON TRUE
        LEFT JOIN users u2 ON rh_update.user_id = u2.id`
     );
 
@@ -204,16 +211,23 @@ router.get("/export/csv", async (req, res) => {
                 u2.username AS modified_by
          FROM bulles b
          LEFT JOIN LATERAL (
-           SELECT user_id FROM reserve_history rh
-           WHERE rh.bulle_id = b.id AND rh.action_type = 'create'
-           ORDER BY rh.created_at ASC LIMIT 1
+           SELECT user_id
+           FROM reserve_history rh
+           WHERE rh.bulle_id = b.id
+             AND rh.action_type = 'create'
+           ORDER BY rh.created_at ASC
+           LIMIT 1
          ) rh_create ON TRUE
-         LEFT JOIN LATERAL (
-           SELECT user_id FROM reserve_history rh
-           WHERE rh.bulle_id = b.id AND rh.action_type = 'update'
-           ORDER BY rh.created_at DESC LIMIT 1
-         ) rh_update ON TRUE
          LEFT JOIN users u1 ON rh_create.user_id = u1.id
+
+         LEFT JOIN LATERAL (
+           SELECT user_id
+           FROM reserve_history rh
+           WHERE rh.bulle_id = b.id
+             AND rh.action_type = 'update'
+           ORDER BY rh.created_at DESC
+           LIMIT 1
+         ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
          WHERE b.etage = $1 ORDER BY b.numero`,
         [etage]
@@ -226,16 +240,23 @@ router.get("/export/csv", async (req, res) => {
                 u2.username AS modified_by
          FROM bulles b
          LEFT JOIN LATERAL (
-           SELECT user_id FROM reserve_history rh
-           WHERE rh.bulle_id = b.id AND rh.action_type = 'create'
-           ORDER BY rh.created_at ASC LIMIT 1
+           SELECT user_id
+           FROM reserve_history rh
+           WHERE rh.bulle_id = b.id
+             AND rh.action_type = 'create'
+           ORDER BY rh.created_at ASC
+           LIMIT 1
          ) rh_create ON TRUE
-         LEFT JOIN LATERAL (
-           SELECT user_id FROM reserve_history rh
-           WHERE rh.bulle_id = b.id AND rh.action_type = 'update'
-           ORDER BY rh.created_at DESC LIMIT 1
-         ) rh_update ON TRUE
          LEFT JOIN users u1 ON rh_create.user_id = u1.id
+
+         LEFT JOIN LATERAL (
+           SELECT user_id
+           FROM reserve_history rh
+           WHERE rh.bulle_id = b.id
+             AND rh.action_type = 'update'
+           ORDER BY rh.created_at DESC
+           LIMIT 1
+         ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
          WHERE b.etage = $1 AND b.chambre = $2 ORDER BY b.numero`,
         [etage, chambre]
