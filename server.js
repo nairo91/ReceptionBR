@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { v2: cloudinary } = require('cloudinary');
-cloudinary.config('cloudinary://523438194377183:yBZ99NdGjYMFNrkMHHjImF3RBi4@dyp93ivlg');
+cloudinary.config(process.env.CLOUDINARY_URL);
 
 const express = require("express");
 const multer = require("multer");
@@ -76,7 +76,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
-app.use('/api/bulles', upload.single('photo'), bullesRoutes);
+app.use('/api/bulles', bullesRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));
