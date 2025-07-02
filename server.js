@@ -1,15 +1,29 @@
 const express = require("express");
+require("dotenv").config();
 const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
 const session = require("express-session");
-const bullesRoutes = require("./routes/bulles");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
 const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const pool = require("./db");
+
+cloudinary.config(process.env.CLOUDINARY_URL);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "receptionbr",
+    allowed_formats: ["jpg", "png"],
+  },
+});
+const upload = multer({ storage });
+
+const bullesRoutes = require("./routes/bulles");
 
 (async () => {
   await pool.query(`
