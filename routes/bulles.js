@@ -178,8 +178,9 @@ router.get("/export/csv", async (req, res) => {
     let result;
     if (!chambre || chambre === "total") {
       result = await pool.query(
-        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat, b.lot, b.photo,
-                u1.username AS created_by, u2.username AS modified_by, b.levee_par
+        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
+                b.lot, b.photo, b.levee_par,
+                u1.username AS created_by, u2.username AS modified_by
          FROM bulles b
          LEFT JOIN users u1 ON b.created_by = u1.id
          LEFT JOIN users u2 ON b.modified_by = u2.id
@@ -188,8 +189,9 @@ router.get("/export/csv", async (req, res) => {
       );
     } else {
       result = await pool.query(
-        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat, b.lot, b.photo,
-                u1.username AS created_by, u2.username AS modified_by, b.levee_par
+        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
+                b.lot, b.photo, b.levee_par,
+                u1.username AS created_by, u2.username AS modified_by
          FROM bulles b
          LEFT JOIN users u1 ON b.created_by = u1.id
          LEFT JOIN users u2 ON b.modified_by = u2.id
@@ -210,9 +212,9 @@ router.get("/export/csv", async (req, res) => {
       "etat",
       "lot",
       "photo",
+      "levee_par",
       "created_by",
-      "modified_by",
-      "levee_par"
+      "modified_by"
     ];
 
     const opts = {
