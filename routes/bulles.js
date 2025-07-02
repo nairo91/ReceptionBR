@@ -198,14 +198,8 @@ router.get("/export/csv", async (req, res) => {
       );
     }
 
-    // Convertir chemins photo en URL complètes (exemple ici : base URL à adapter)
-    const baseUrl = req.protocol + "://" + req.get("host");
-    const rowsWithFullPhoto = result.rows.map(row => {
-      return {
-        ...row,
-        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : ""
-      };
-    });
+    // Les URLs Cloudinary sont déjà complètes
+    const rowsWithFullPhoto = result.rows;
 
     const fields = [
       "etage",
