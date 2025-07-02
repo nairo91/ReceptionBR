@@ -1,8 +1,22 @@
+require('dotenv').config();
+const { v2: cloudinary } = require('cloudinary');
+cloudinary.config('cloudinary://523438194377183:yBZ99NdGjYMFNrkMHHjImF3RBi4@dyp93ivlg');
+
 const express = require("express");
 const multer = require("multer");
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require("path");
 const cors = require("cors");
 const session = require("express-session");
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "receptionbr",
+    allowed_formats: ["jpg","png"]
+  }
+});
+const upload = multer({ storage });
 const bullesRoutes = require("./routes/bulles");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
@@ -62,7 +76,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/bulles", bullesRoutes);
+app.use('/api/bulles', upload.single('photo'), bullesRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));
