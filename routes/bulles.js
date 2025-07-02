@@ -130,7 +130,27 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
 // Export CSV complet
 router.get("/export/csv/all", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM bulles");
+    const result = await pool.query(
+      `SELECT b.id, b.numero, b.intitule, b.description, b.etat,
+              b.lot, b.entreprise, b.localisation, b.observation,
+              b.date_butoir, b.photo, b.x, b.y, b.etage, b.chambre,
+              u1.username AS created_by,
+              u2.username AS modified_by,
+              b.levee_par
+       FROM bulles b
+       LEFT JOIN LATERAL (
+         SELECT user_id FROM reserve_history rh
+         WHERE rh.bulle_id = b.id AND rh.action_type = 'create'
+         ORDER BY rh.created_at ASC LIMIT 1
+       ) rh_create ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT user_id FROM reserve_history rh
+         WHERE rh.bulle_id = b.id AND rh.action_type = 'update'
+         ORDER BY rh.created_at DESC LIMIT 1
+       ) rh_update ON TRUE
+       LEFT JOIN users u1 ON rh_create.user_id = u1.id
+       LEFT JOIN users u2 ON rh_update.user_id = u2.id`
+    );
 
     const fields = [
       "id", "numero", "intitule", "description", "etat",
