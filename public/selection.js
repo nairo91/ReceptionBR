@@ -45,8 +45,6 @@ const lotSelect   = document.getElementById('lot-select');
 const taskSelect  = document.getElementById('task-select');
 const statusSelect = document.getElementById('status-select');
 const submitBtn   = document.getElementById('submit-selection');
-const filterFloor = document.getElementById('filter-floor');
-const filterLot   = document.getElementById('filter-lot');
 const statusLabels = {
   ouvert: 'Ouvert',
   en_cours: 'En cours',
@@ -59,10 +57,7 @@ let editId = null;
 
 async function loadInterventions() {
   console.log('Appel loadInterventions');
-  let url = '/api/interventions?';
-  if (filterFloor.value) url += `floorId=${encodeURIComponent(filterFloor.value)}&`;
-  if (filterLot.value)   url += `lot=${encodeURIComponent(filterLot.value)}&`;
-  const res = await fetch(url);
+  const res = await fetch('/api/interventions');
   console.log('GET /api/interventions status:', res.status);
   if (!res.ok) {
     console.error('Erreur fetch historique', res.status);
@@ -136,9 +131,6 @@ lotSelect.addEventListener('change', () => {
     taskSelect.innerHTML = tasks.map(t => `<option value="${t}">${t}</option>`).join('');
   }
 });
-
-filterFloor.addEventListener('change', loadInterventions);
-filterLot  .addEventListener('change', loadInterventions);
 
 document.getElementById('interventions-table').addEventListener('click', async (e) => {
   if (e.target.classList.contains('edit-btn')) {
