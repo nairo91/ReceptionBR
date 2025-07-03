@@ -26,10 +26,9 @@ router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res)
   try {
     const {
       etage, chambre, x, y, numero, description,
-      intitule, etat, lot, entreprise, localisation, observation, date_butoir
+      intitule, etat, lot, entreprise, localisation, observation, date_butoir,
+      userId
     } = req.body;
-
-    const userId = null; // Pas de session user
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? req.file.path : null;
@@ -79,10 +78,9 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
   try {
     const { id } = req.params;
     const {
-      description, intitule, etat, lot, entreprise, localisation, observation, date_butoir
+      description, intitule, etat, lot, entreprise, localisation, observation, date_butoir,
+      userId
     } = req.body;
-
-    const userId = null; // Pas d'utilisateur connecté
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? req.file.path : null;
