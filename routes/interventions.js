@@ -61,9 +61,23 @@ router.post('/', async (req, res) => {
 
 // GET /api/interventions — liste toutes les interventions
 router.get('/', async (req, res) => {
-  const { rows } = await pool.query(
-    'SELECT id, user_id, floor_id, room_id, lot, task, status, created_at FROM interventions ORDER BY created_at DESC'
-  );
+  const { floorId, lot } = req.query;
+  let query = 'SELECT id, user_id, floor_id, room_id, lot, task, status, created_at FROM interventions';
+  const params = [];
+  const conditions = [];
+  if (floorId) {
+    params.push(floorId);
+    conditions.push(`floor_id = $${params.length}`);
+  }
+  if (lot) {
+    params.push(lot);
+    conditions.push(`lot = $${params.length}`);
+  }
+  if (conditions.length) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+  query += ' ORDER BY created_at DESC';
+  const { rows } = await pool.query(query, params);
   res.json(rows);
 });
 
