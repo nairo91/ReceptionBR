@@ -186,6 +186,7 @@
             recordAction("modification", {
               etage: bulle.etage,
               chambre: bulle.chambre,
+              lot: lotSelect.value,
               x: div.dataset.x,
               y: div.dataset.y,
               nomBulle,
@@ -287,7 +288,7 @@
     fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => {
       loadBulles();
       const nomBulle = name ? `Bulle ${numero}, ${name}` : `Bulle ${numero}`;
-      recordAction("suppression", { etage, chambre, x, y, nomBulle, description: desc });
+      recordAction("suppression", { etage, chambre, lot: lotSelect.value, x, y, nomBulle, description: desc });
     });
   }
   function zoomImage(src) {
@@ -310,6 +311,7 @@
       user,
       action,
       etage: loc.etage,
+      lot: loc.lot,
       chambre: loc.chambre,
       x: loc.x,
       y: loc.y,
@@ -458,6 +460,7 @@
         recordAction("creation", {
           etage: etageSelect.value,
           chambre: chambreSelect.value,
+          lot: lotSelect.value,
           x: xRatio,
           y: yRatio,
           nomBulle,
