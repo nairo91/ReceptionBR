@@ -164,7 +164,17 @@
       const encodedName = encodeURIComponent(bulle.intitule || '');
       const encodedDesc = encodeURIComponent(bulle.description || '');
       deleteBtn.onclick = () => {
-        confirmDelete(bulle.id, bulle.etage, bulle.chambre, div.dataset.x, div.dataset.y, bulle.numero, encodedName, encodedDesc);
+        confirmDelete(
+          bulle.id,
+          bulle.etage,
+          bulle.chambre,
+          div.dataset.x,
+          div.dataset.y,
+          bulle.numero,
+          encodedName,
+          encodedDesc,
+          bulle.lot
+        );
       };
 
       form.onsubmit = (e) => {
@@ -189,6 +199,7 @@
               x: div.dataset.x,
               y: div.dataset.y,
               nomBulle,
+              lot: formData.get('lot') || '',
               description: desc
             });
             closePopups();
@@ -272,7 +283,7 @@
       p.remove();
     });
   }
-  function confirmDelete(id, etage, chambre, x, y, numero, encName, encDesc) {
+  function confirmDelete(id, etage, chambre, x, y, numero, encName, encDesc, lot) {
     if (!user) {
       alert("Vous devez être connecté pour supprimer.");
       return;
@@ -280,14 +291,14 @@
     if (confirm("Voulez-vous vraiment supprimer cette bulle ?")) {
       const name = decodeURIComponent(encName || '');
       const desc = decodeURIComponent(encDesc || '');
-      deleteBulle(id, etage, chambre, x, y, numero, name, desc);
+      deleteBulle(id, etage, chambre, x, y, numero, name, desc, lot);
     }
   }
-  function deleteBulle(id, etage, chambre, x, y, numero, name, desc) {
+  function deleteBulle(id, etage, chambre, x, y, numero, name, desc, lot) {
     fetch(`/api/bulles/${id}`, { method: "DELETE", credentials: "include" }).then(() => {
       loadBulles();
       const nomBulle = name ? `Bulle ${numero}, ${name}` : `Bulle ${numero}`;
-      recordAction("suppression", { etage, chambre, x, y, nomBulle, description: desc });
+      recordAction("suppression", { etage, chambre, x, y, nomBulle, lot, description: desc });
     });
   }
   function zoomImage(src) {
@@ -314,6 +325,7 @@
       x: loc.x,
       y: loc.y,
       nomBulle: loc.nomBulle || '',
+      lot: loc.lot || '',
       description: loc.description || '',
       timestamp: new Date().toISOString()
     };
@@ -461,6 +473,7 @@
           x: xRatio,
           y: yRatio,
           nomBulle,
+          lot: formData.get('lot') || '',
           description: desc
         });
         closePopups();
