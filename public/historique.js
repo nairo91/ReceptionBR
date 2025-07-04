@@ -17,10 +17,16 @@ window.addEventListener('DOMContentLoaded', () => {
       console.error('Erreur chargement historique', err);
     }
 
-    const filtered = actions.filter(e =>
-      (!filterEtage || e.etage === filterEtage) &&
-      (!filterLot   || e.lot   === filterLot)
-    );
+    const filtered = actions.filter(e => {
+      const matchEtage = !filterEtage || e.etage === filterEtage;
+      const matchLot   = !filterLot
+        || (e.lot || '').toLowerCase() === filterLot.toLowerCase();
+      return matchEtage && matchLot;
+    });
+
+    console.log('Filtres:', { filterEtage, filterLot });
+    console.log('Actions brutes:', actions);
+    console.log('Actions filtrées:', filtered);
 
     tbody.innerHTML = '';
 
