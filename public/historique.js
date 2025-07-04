@@ -1,31 +1,25 @@
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   const tbody = document.querySelector('#historyTable tbody');
-  const actions = JSON.parse(localStorage.getItem('actions') || '[]');
 
-  for (const a of actions) {
-    if (a.lot === undefined) {
-      try {
-        const res = await fetch(`/api/bulles?etage=${encodeURIComponent(a.etage)}&chambre=${encodeURIComponent(a.chambre)}`);
-        if (res.ok) {
-          const data = await res.json();
-          const bulles = Array.isArray(data) ? data : data.rows || [];
-          const bulle = bulles.find(b => b.numero === a.nomBulle);
-          if (bulle) a.lot = bulle.lot;
-        }
-      } catch (err) {
-        console.error('Erreur migration lot', err);
-      }
-    }
-  }
-  localStorage.setItem('actions', JSON.stringify(actions));
-
-  function loadHistory() {
+  async function loadHistory() {
     const filterEtage = document.getElementById('filter-etage').value;
     const filterLot = document.getElementById('filter-lot').value;
 
-    const filtered = actions.filter(a =>
-      (!filterEtage || a.etage === filterEtage) &&
-      (!filterLot || a.lot === filterLot)
+    const params = new URLSearchParams();
+    if (filterEtage) params.append('etage', filterEtage);
+    if (filterLot) params.append('lot', filterLot);
+
+    let actions = [];
+    try {
+      const res = await fetch(`/api/history?${params.toString()}`);
+      if (res.ok) actions = await res.json();
+    } catch (err) {
+      console.error('Erreur chargement historique', err);
+    }
+
+    const filtered = actions.filter(e =>
+      (!filterEtage || e.etage === filterEtage) &&
+      (!filterLot || e.lot === filterLot)
     );
 
     tbody.innerHTML = '';
@@ -33,7 +27,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (filtered.length === 0) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 6;
+      cell.colSpan = 7;
       cell.textContent = 'Aucune action enregistrée.';
       row.appendChild(cell);
       tbody.appendChild(row);
@@ -43,17 +37,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     filtered.forEach(a => {
       const row = document.createElement('tr');
 
-      const emplacement = a.chambre
-        ? `${a.etage} / ${a.chambre}`
-        : `${a.etage} (${Number(a.x).toFixed(2)}, ${Number(a.y).toFixed(2)})`;
+      const emplacement = a.chambre ? `${a.etage} / ${a.chambre}` : a.etage;
 
       const values = [
-        a.user,
-        a.action,
+        a.username,
+        a.action_type,
         emplacement,
-        a.nomBulle || '',
+        a.bulle_numero || '',
+        a.lot || '',
         a.description || '',
-        new Date(a.timestamp).toLocaleString()
+        new Date(a.created_at).toLocaleString()
       ];
       values.forEach(val => {
         const td = document.createElement('td');
