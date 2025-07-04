@@ -19,7 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const filtered = actions.filter(e =>
       (!filterEtage || e.etage === filterEtage) &&
-      (!filterLot || e.lot === filterLot)
+      (!filterLot   || e.lot   === filterLot)
     );
 
     tbody.innerHTML = '';
@@ -27,7 +27,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (filtered.length === 0) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 7;
+      cell.colSpan = 8;
       cell.textContent = 'Aucune action enregistrée.';
       row.appendChild(cell);
       tbody.appendChild(row);
@@ -40,13 +40,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const emplacement = a.chambre ? `${a.etage} / ${a.chambre}` : a.etage;
 
       const values = [
-        a.username,
-        a.action_type,
+        a.username,                       // nom de l’utilisateur
+        a.action_type,                    // type d’action
         emplacement,
-        a.bulle_numero || '',
-        a.lot || '',
-        a.description || '',
-        new Date(a.created_at).toLocaleString()
+        a.bulle_numero || '',            // numéro de bulle
+        a.lot          || '',            // lot
+        a.bulle_intitule || '',          // intitulé texte
+        a.description || '',             // description historique
+        new Date(a.created_at).toLocaleString() // date/heure
       ];
       values.forEach(val => {
         const td = document.createElement('td');
