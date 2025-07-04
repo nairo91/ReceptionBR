@@ -1,6 +1,23 @@
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const tbody = document.querySelector('#historyTable tbody');
   const actions = JSON.parse(localStorage.getItem('actions') || '[]');
+
+  for (const a of actions) {
+    if (a.lot === undefined) {
+      try {
+        const res = await fetch(`/api/bulles?etage=${encodeURIComponent(a.etage)}&chambre=${encodeURIComponent(a.chambre)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const bulles = Array.isArray(data) ? data : data.rows || [];
+          const bulle = bulles.find(b => b.numero === a.nomBulle);
+          if (bulle) a.lot = bulle.lot;
+        }
+      } catch (err) {
+        console.error('Erreur migration lot', err);
+      }
+    }
+  }
+  localStorage.setItem('actions', JSON.stringify(actions));
 
   function loadHistory() {
     const filterEtage = document.getElementById('filter-etage').value;
