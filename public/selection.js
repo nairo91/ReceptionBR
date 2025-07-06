@@ -138,21 +138,10 @@ async function loadInterventions() {
 }
 
 async function loadUsers() {
-  let users = [];
-  try {
-    const res = await fetch('/api/users');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    users = await res.json();
-  } catch (err) {
-    console.error('Erreur chargement utilisateurs', err);
-  }
-
-  window.userMap = users.reduce((m, u) => {
-    m[u.id] = u.username;
-    return m;
-  }, {});
-
-  // Liste statique des personnes à afficher dans le menu déroulant
+  const res = await fetch('/api/users');
+  const users = await res.json();
+  window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
+  // 1) Statisme la liste des personnes
   userSelect.innerHTML = [
     '<option value="">-- Choisir une personne --</option>',
     '<option value="ATHARI">ATHARI Keivan</option>',
