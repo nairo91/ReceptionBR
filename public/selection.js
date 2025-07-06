@@ -56,6 +56,54 @@ let currentInterventions = [];
 let editId = null;
 const rowsByLot = {};
 let currentLot = '';
+let historyEntries = [];
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/interventions/history');
+    if (!res.ok) throw new Error('fail');
+    historyEntries = await res.json();
+    populateHistoryLotFilter();
+    renderHistory();
+  } catch (err) {
+    console.error('Erreur chargement historique', err);
+  }
+}
+
+function populateHistoryLotFilter() {
+  const select = document.getElementById('history-lot-filter');
+  const lots = [...new Set(historyEntries.map(h => h.lot))];
+  select.innerHTML = '<option value="">Tous</option>' +
+    lots.map(l => `<option value="${l}">${l}</option>`).join('');
+}
+
+function renderHistory() {
+  const filter = document.getElementById('history-lot-filter').value;
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = '';
+  historyEntries
+    .filter(h => !filter || h.lot === filter)
+    .forEach(h => {
+      const row = document.createElement('tr');
+      const emplacement = `${h.etage} / ${h.chambre}`;
+      const vals = [
+        window.userMap[h.user_id] || h.user_id,
+        h.action_type,
+        h.lot,
+        emplacement,
+        h.tache,
+        h.personne,
+        h.etat,
+        new Date(h.timestamp).toLocaleString()
+      ];
+      vals.forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+}
 
 async function loadInterventions() {
   console.log('Appel loadInterventions');
@@ -276,6 +324,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
   await loadInterventions();
+  await loadHistory();
+  document.getElementById('history-lot-filter').addEventListener('change', renderHistory);
   currentLot = lotSelect.value;
   rebuildTasksTable();
 });

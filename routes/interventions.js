@@ -67,6 +67,18 @@ router.get('/', async (req, res) => {
   res.json(rows);
 });
 
+router.get('/history', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, action_type, lot, etage, chambre, tache, personne, etat, created_at AS timestamp, user_id FROM intervention_history ORDER BY created_at DESC'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur historique" });
+  }
+});
+
 function escapePdf(str) {
   return String(str)
     .replace(/\\/g, "\\\\")
