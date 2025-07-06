@@ -124,13 +124,60 @@ floorSelect.addEventListener('change', () => {
 });
 
 lotSelect.addEventListener('change', () => {
-  const tasks = lotTasks[lotSelect.value] || [];
-  if (tasks.length === 0) {
-    taskSelect.innerHTML = '<option value="">--D\'abord choisir un lot--</option>';
-  } else {
-    taskSelect.innerHTML = tasks.map(t => `<option value="${t}">${t}</option>`).join('');
-  }
+  rebuildTasksTable();
 });
+
+// Reconstruit le tbody de #tasksTable pour le lot sélectionné
+function rebuildTasksTable() {
+  const lot = lotSelect.value;
+  const tasks = lotTasks[lot] || [];
+  const tbody = document.querySelector('#tasksTable tbody');
+  tbody.innerHTML = '';
+
+  // Crée une ligne vierge
+  addTaskRow(tbody, tasks);
+}
+
+// Ajoute une ligne dans le <tbody>
+function addTaskRow(tbody, tasks) {
+  const row = document.createElement('tr');
+  // Colonne Tâche : select options=tasks
+  const tdTask = document.createElement('td');
+  const selT = document.createElement('select');
+  selT.innerHTML = `<option value="">-- Choisir tâche --</option>`
+    + tasks.map(t => `<option value="${t}">${t}</option>`).join('');
+  tdTask.appendChild(selT);
+  row.appendChild(tdTask);
+
+  // Colonne Personne : reutilise userSelect global
+  const tdUser = document.createElement('td');
+  const selU = document.createElement('select');
+  // on clone les options de userSelect
+  selU.innerHTML = userSelect.innerHTML;
+  tdUser.appendChild(selU);
+  row.appendChild(tdUser);
+
+  // Colonne État
+  const tdEtat = document.createElement('td');
+  tdEtat.textContent = 'à définir';
+  row.appendChild(tdEtat);
+
+  // Colonne Dernière modif
+  const tdModif = document.createElement('td');
+  tdModif.textContent = '–';
+  row.appendChild(tdModif);
+
+  // Colonne Actions (+ / –)
+  const tdActions = document.createElement('td');
+  const btnAdd = document.createElement('button');
+  btnAdd.type = 'button';
+  btnAdd.textContent = '＋';
+  btnAdd.addEventListener('click', () => addTaskRow(tbody, tasks));
+  tdActions.appendChild(btnAdd);
+  row.appendChild(tdActions);
+
+  tbody.appendChild(row);
+}
 
 document.getElementById('interventions-table').addEventListener('click', async (e) => {
   if (e.target.classList.contains('edit-btn')) {
