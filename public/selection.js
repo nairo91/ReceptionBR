@@ -141,7 +141,7 @@ async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
   window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
-  // 1) Statisme la liste des personnes
+  // On met vraiment des <option>, pas juste du texte
   userSelect.innerHTML = [
     '<option value="">-- Choisir une personne --</option>',
     '<option value="ATHARI">ATHARI Keivan</option>',
@@ -154,7 +154,7 @@ async function loadUsers() {
     '<option value="PENA">PENA Angel</option>',
     '<option value="PEREIRA">PEREIRA Romain</option>',
     '<option value="RADWAN">RADWAN Mahmoud</option>',
-    '<option value="VAUTHIER">VAUTHIER Philippe</option>',
+    '<option value="VAAUTHIER">VAUTHIER Philippe</option>',
     '<option value="VAZ">VAZ Xavier</option>'
   ].join('');
 }
