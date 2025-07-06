@@ -141,6 +141,7 @@ async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
   window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
+  // 1) Statisme la liste des personnes
   userSelect.innerHTML = [
     '<option value="">-- Sélectionner --</option>',
     '<option value="ATHARI">ATHARI Keivan</option>',
@@ -330,6 +331,7 @@ submitBtn.addEventListener('click', async () => {
 
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 2) Assure-toi toujours d’appeler loadUsers() *avant* rebuildTasksTable()
   await loadUsers();
   await loadFloors();
   await loadInterventions();
