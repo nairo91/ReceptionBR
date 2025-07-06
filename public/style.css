@@ -1,0 +1,9 @@
+/* Permet aux menus déroulants de déborder sur mobile */
+header, #tableWrapper, .popup {
+  overflow: visible !important;
+  z-index: auto !important;
+}
+select {
+  position: relative;
+  z-index: 9999;
+}
