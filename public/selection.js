@@ -54,6 +54,56 @@ const statusLabels = {
 };
 let currentInterventions = [];
 let editId = null;
+const rowsByLot = {};
+let currentLot = '';
+let historyEntries = [];
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/interventions/history');
+    if (!res.ok) throw new Error('fail');
+    historyEntries = await res.json();
+    populateHistoryLotFilter();
+    renderHistory();
+  } catch (err) {
+    console.error('Erreur chargement historique', err);
+  }
+}
+
+function populateHistoryLotFilter() {
+  const select = document.getElementById('history-lot-filter');
+  const lots = [...new Set(historyEntries.map(h => h.lot))];
+  select.innerHTML = '<option value="">Tous</option>' +
+    lots.map(l => `<option value="${l}">${l}</option>`).join('');
+}
+
+function renderHistory() {
+  const filter = document.getElementById('history-lot-filter').value;
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = '';
+  historyEntries
+    .filter(h => !filter || h.lot === filter)
+    .forEach(h => {
+      const row = document.createElement('tr');
+      const emplacement = `${h.etage} / ${h.chambre}`;
+      const vals = [
+        window.userMap[h.user_id] || h.user_id,
+        h.action_type,
+        h.lot,
+        emplacement,
+        h.tache,
+        h.personne,
+        h.etat,
+        new Date(h.timestamp).toLocaleString()
+      ];
+      vals.forEach(v => {
+        const td = document.createElement('td');
+        td.textContent = v;
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+}
 
 async function loadInterventions() {
   console.log('Appel loadInterventions');
@@ -91,9 +141,22 @@ async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
   window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
-  userSelect.innerHTML =
-    '<option value="">-- Choisir un employé --</option>' +
-    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+  // On met vraiment des <option>, pas juste du texte
+  userSelect.innerHTML = [
+    '<option value="">-- Choisir une personne --</option>',
+    '<option value="ATHARI">ATHARI Keivan</option>',
+    '<option value="BLOT">BLOT Valentin</option>',
+    '<option value="COULIBALY">COULIBALY Baba</option>',
+    '<option value="DACOSTA">DA COSTA André</option>',
+    '<option value="GOURDEL">GOURDEL Yoann</option>',
+    '<option value="MARZOUKI">MARZOUKI Adam</option>',
+    '<option value="MAZZUCCO">MAZZUCCO Ryan</option>',
+    '<option value="PENA">PENA Angel</option>',
+    '<option value="PEREIRA">PEREIRA Romain</option>',
+    '<option value="RADWAN">RADWAN Mahmoud</option>',
+    '<option value="VAAUTHIER">VAUTHIER Philippe</option>',
+    '<option value="VAZ">VAZ Xavier</option>'
+  ].join('');
 }
 
 async function loadFloors() {
@@ -123,14 +186,91 @@ floorSelect.addEventListener('change', () => {
   loadRooms(floorSelect.value);
 });
 
+function saveCurrentRows() {
+  if (!currentLot) return;
+  const tbody = document.querySelector('#tasksTable tbody');
+  rowsByLot[currentLot] = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+    const selects = tr.querySelectorAll('select');
+    return {
+      tache: selects[0]?.value || '',
+      personne: selects[1]?.value || '',
+      etat: selects[2]?.value || ''
+    };
+  });
+}
+
 lotSelect.addEventListener('change', () => {
-  const tasks = lotTasks[lotSelect.value] || [];
-  if (tasks.length === 0) {
-    taskSelect.innerHTML = '<option value="">--D\'abord choisir un lot--</option>';
-  } else {
-    taskSelect.innerHTML = tasks.map(t => `<option value="${t}">${t}</option>`).join('');
-  }
+  saveCurrentRows();
+  currentLot = lotSelect.value;
+  rebuildTasksTable();
 });
+
+// Reconstruit le tbody de #tasksTable pour le lot sélectionné
+function rebuildTasksTable() {
+  const lot = lotSelect.value;
+  const tasks = lotTasks[lot] || [];
+  const tbody = document.querySelector('#tasksTable tbody');
+  tbody.innerHTML = '';
+  const saved = rowsByLot[lot] || [];
+  if (saved.length) {
+    saved.forEach(data => addTaskRow(tbody, tasks, data));
+  } else {
+    addTaskRow(tbody, tasks);
+  }
+}
+
+// Ajoute une ligne dans le <tbody>
+function addTaskRow(tbody, tasks, data = {}) {
+  const row = document.createElement('tr');
+  // Colonne Tâche : select options=tasks
+  const tdTask = document.createElement('td');
+  const selT = document.createElement('select');
+  selT.innerHTML = `<option value="">-- Choisir tâche --</option>`
+    + tasks.map(t => `<option value="${t}">${t}</option>`).join('');
+  if (data.tache) selT.value = data.tache;
+  tdTask.appendChild(selT);
+  row.appendChild(tdTask);
+
+  // Colonne Personne : reutilise userSelect global
+  const tdUser = document.createElement('td');
+  const selU = document.createElement('select');
+  // on clone les options de userSelect
+  selU.innerHTML = userSelect.innerHTML;
+  if (data.personne) selU.value = data.personne;
+  tdUser.appendChild(selU);
+  row.appendChild(tdUser);
+
+  // Colonne État
+  const tdEtat = document.createElement('td');
+  const selEtat = document.createElement('select');
+  selEtat.innerHTML = [
+    '<option value="">--Choisir un état--</option>',
+    '<option value="ouvert">Ouvert</option>',
+    '<option value="en_cours">En cours</option>',
+    '<option value="attente_validation">Attente validation</option>',
+    '<option value="clos">Clos</option>',
+    '<option value="valide">Validé</option>'
+  ].join('');
+  if (data.etat) selEtat.value = data.etat;
+  tdEtat.appendChild(selEtat);
+  row.appendChild(tdEtat);
+
+  // Colonne Dernière modif
+  const tdModif = document.createElement('td');
+  tdModif.textContent = '–';
+  row.appendChild(tdModif);
+
+  // Colonne Actions (+ / –)
+  const tdActions = document.createElement('td');
+  const btnAdd = document.createElement('button');
+  btnAdd.type = 'button';
+  btnAdd.textContent = '＋';
+  btnAdd.addEventListener('click', () => addTaskRow(tbody, tasks));
+  tdActions.appendChild(btnAdd);
+  row.appendChild(tdActions);
+
+  tbody.appendChild(row);
+}
 
 document.getElementById('interventions-table').addEventListener('click', async (e) => {
   if (e.target.classList.contains('edit-btn')) {
@@ -157,39 +297,40 @@ document.getElementById('interventions-table').addEventListener('click', async (
 });
 
 submitBtn.addEventListener('click', async () => {
-  const payload = {
-    floorId: floorSelect.value,
-    roomId: roomSelect.value,
-    userId: userSelect.value,
-    lot: lotSelect.value,
-    task: taskSelect.value,
-    status: statusSelect.value
-  };
-  const url = editId ? `/api/interventions/${editId}` : '/api/interventions';
-  const method = editId ? 'PUT' : 'POST';
-  const res = await fetch(url, {
-    method,
+  saveCurrentRows();
+  const bulk = [];
+  const floorId = floorSelect.value;
+  const roomId = roomSelect.value;
+  Object.keys(rowsByLot).forEach(lot => {
+    rowsByLot[lot].forEach(r => {
+      if (!r.tache || !r.personne) return;
+      bulk.push({
+        lot,
+        etage: floorId,
+        chambre: roomId,
+        tache: r.tache,
+        personne: r.personne,
+        etat: r.etat
+      });
+    });
+  });
+  if (!bulk.length) return;
+  const res = await fetch('/api/interventions/bulk', {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(bulk)
   });
   if (res.ok) {
-    alert(editId ? 'Intervention mise à jour !' : 'Intervention enregistrée !');
+    await loadInterventions(lotSelect.value);
   }
-  editId = null;
-  submitBtn.textContent = 'Valider';
-  await loadInterventions();
 });
 
-document.getElementById('export-csv').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/csv';
-});
-
-document.getElementById('export-pdf').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/pdf';
-});
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 2) Assure-toi toujours d’appeler loadUsers() *avant* rebuildTasksTable()
   await loadUsers();
   await loadFloors();
   await loadInterventions();
+  currentLot = lotSelect.value;
+  rebuildTasksTable();
 });
