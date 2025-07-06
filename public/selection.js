@@ -56,7 +56,6 @@ let currentInterventions = [];
 let editId = null;
 const rowsByLot = {};
 let currentLot = '';
-let historyEntries = [];
 
 async function loadHistory() {
   try {
@@ -312,20 +311,10 @@ submitBtn.addEventListener('click', async () => {
   }
 });
 
-document.getElementById('export-csv').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/csv';
-});
-
-document.getElementById('export-pdf').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/pdf';
-});
-
 window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
   await loadInterventions();
-  await loadHistory();
-  document.getElementById('history-lot-filter').addEventListener('change', renderHistory);
   currentLot = lotSelect.value;
   rebuildTasksTable();
 });
