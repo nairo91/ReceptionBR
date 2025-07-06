@@ -9,6 +9,14 @@
 <body>
   <header>
     <h1>Historique des actions</h1>
+    <div class="filters">
+      <label>Étage :
+        <select id="floorFilter"></select>
+      </label>
+      <label>Lot :
+        <select id="lotFilter"></select>
+      </label>
+    </div>
     <button id="backBtn">Retour</button>
   </header>
   <main id="tableWrapper">
@@ -19,6 +27,7 @@
           <th>Action</th>
           <th>Emplacement</th>
           <th>Bulle</th>
+          <th>Lot</th>
           <th>Description</th>
           <th>Date/Heure</th>
         </tr>
