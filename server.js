@@ -18,6 +18,7 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage });
 const bullesRoutes = require("./routes/bulles");
+const historyRoutes = require("./routes/history");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
@@ -77,6 +78,7 @@ app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
 app.use('/api/bulles', bullesRoutes);
+app.use('/api/history', historyRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));
