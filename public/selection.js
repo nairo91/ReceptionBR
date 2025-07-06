@@ -143,21 +143,17 @@ async function loadUsers() {
   window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
   // 1) Statisme la liste des personnes
   userSelect.innerHTML = [
-    '<option value="">-- Sélectionner --</option>',
+    '<option value="">-- Choisir une personne --</option>',
     '<option value="ATHARI">ATHARI Keivan</option>',
     '<option value="BLOT">BLOT Valentin</option>',
     '<option value="COULIBALY">COULIBALY Baba</option>',
     '<option value="DACOSTA">DA COSTA André</option>',
     '<option value="GOURDEL">GOURDEL Yoann</option>',
-    '<option value="GUEGAN">GUEGAN Maxime</option>',
-    '<option value="LAUNAY">LAUNAY Jérémy</option>',
     '<option value="MARZOUKI">MARZOUKI Adam</option>',
     '<option value="MAZZUCCO">MAZZUCCO Ryan</option>',
     '<option value="PENA">PENA Angel</option>',
     '<option value="PEREIRA">PEREIRA Romain</option>',
     '<option value="RADWAN">RADWAN Mahmoud</option>',
-    '<option value="ROUAULT">ROUAULT Christophe</option>',
-    '<option value="TABLETTE">TABLETTE DÉPÔT</option>',
     '<option value="VAUTHIER">VAUTHIER Philippe</option>',
     '<option value="VAZ">VAZ Xavier</option>'
   ].join('');
