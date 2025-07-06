@@ -268,3 +268,7 @@ button:hover {
   }
 
 }
+
+/* Permet aux <select> de s'afficher par-dessus */
+header, #tableWrapper, .popup { overflow: visible !important; }
+select { position: relative; z-index: 9999; }
