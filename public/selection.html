@@ -49,9 +49,26 @@
           <option value="Repose">Repose</option>
         </select>
       </label>
-      <label>Tâche :
-        <select id="task-select"><option value="">--D'abord choisir un lot--</option></select>
-      </label>
+      <table id="tasksTable">
+        <thead>
+          <tr>
+            <th>Tâche</th>
+            <th>Personne</th>
+            <th>État</th>
+            <th>Dernière modif</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><!-- select tâches --></td>
+            <td><!-- select personne --></td>
+            <td>à définir</td>
+            <td>–</td>
+            <td><button type="button" class="add-row">＋</button></td>
+          </tr>
+        </tbody>
+      </table>
       <button id="submit-selection">Valider</button>
       <h2>Historique des interventions</h2>
       <div class="export-buttons">

@@ -38,11 +38,13 @@ const lotTasks = {
   Repose: ["Sommier + matelat","TV","Patere SDB (x2)","Porte papier WC (x2)"]
 };
 
+const rowsByLot = {};
+let currentLot = '';
+
 const userSelect  = document.getElementById('user-select');
 const floorSelect = document.getElementById('floor-select');
 const roomSelect  = document.getElementById('room-select');
 const lotSelect   = document.getElementById('lot-select');
-const taskSelect  = document.getElementById('task-select');
 const statusSelect = document.getElementById('status-select');
 const submitBtn   = document.getElementById('submit-selection');
 const statusLabels = {
@@ -119,17 +121,70 @@ async function loadRooms(floorId) {
     rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
 }
 
+function saveCurrentRows() {
+  if (!currentLot) return;
+  const tbody = document.querySelector('#tasksTable tbody');
+  rowsByLot[currentLot] = Array.from(tbody.querySelectorAll('tr')).map(tr => {
+    const [selT, selU, selE] = tr.querySelectorAll('select');
+    return { tache: selT.value, personne: selU.value, etat: selE.value };
+  });
+}
+
+function rebuildTasksTable() {
+  const lot = lotSelect.value;
+  const tasks = lotTasks[lot] || [];
+  const saved = rowsByLot[lot] || [];
+  const tbody = document.querySelector('#tasksTable tbody');
+  tbody.innerHTML = '';
+  if (saved.length) {
+    saved.forEach(data => addTaskRow(tbody, tasks, data));
+  } else {
+    addTaskRow(tbody, tasks);
+  }
+}
+
+function addTaskRow(tbody, tasks, data = {}) {
+  const row = document.createElement('tr');
+  const tdT = document.createElement('td');
+  const selT = document.createElement('select');
+  selT.innerHTML = `<option value="">-- Choisir tâche --</option>` +
+    tasks.map(t => `<option value="${t}">${t}</option>`).join('');
+  selT.value = data.tache || '';
+  tdT.appendChild(selT); row.appendChild(tdT);
+
+  const tdU = document.createElement('td');
+  const selU = document.createElement('select');
+  selU.innerHTML = userSelect.innerHTML;
+  selU.value = data.personne || '';
+  tdU.appendChild(selU); row.appendChild(tdU);
+
+  const tdE = document.createElement('td');
+  const selE = document.createElement('select');
+  selE.innerHTML = [
+    '<option value="">--Choisir un état--</option>',
+    '<option value="ouvert">Ouvert</option>',
+    '<option value="en_cours">En cours</option>',
+    '<option value="attente_validation">En attente de validation</option>',
+    '<option value="clos">Clos</option>',
+    '<option value="valide">Validé</option>'
+  ].join('');
+  selE.value = data.etat || '';
+  tdE.appendChild(selE); row.appendChild(tdE);
+
+  const tdM = document.createElement('td');
+  tdM.textContent = '–'; row.appendChild(tdM);
+
+  const tdA = document.createElement('td');
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.textContent = '＋';
+  btn.addEventListener('click', () => addTaskRow(tbody, tasks));
+  tdA.appendChild(btn); row.appendChild(tdA);
+
+  tbody.appendChild(row);
+}
+
 floorSelect.addEventListener('change', () => {
   loadRooms(floorSelect.value);
-});
-
-lotSelect.addEventListener('change', () => {
-  const tasks = lotTasks[lotSelect.value] || [];
-  if (tasks.length === 0) {
-    taskSelect.innerHTML = '<option value="">--D\'abord choisir un lot--</option>';
-  } else {
-    taskSelect.innerHTML = tasks.map(t => `<option value="${t}">${t}</option>`).join('');
-  }
 });
 
 document.getElementById('interventions-table').addEventListener('click', async (e) => {
@@ -143,7 +198,6 @@ document.getElementById('interventions-table').addEventListener('click', async (
       userSelect.value = it.user_id;
       lotSelect.value = it.lot;
       lotSelect.dispatchEvent(new Event('change'));
-      taskSelect.value = it.task;
       statusSelect.value = it.status;
       editId = id;
       submitBtn.textContent = 'Mettre à jour';
@@ -162,7 +216,6 @@ submitBtn.addEventListener('click', async () => {
     roomId: roomSelect.value,
     userId: userSelect.value,
     lot: lotSelect.value,
-    task: taskSelect.value,
     status: statusSelect.value
   };
   const url = editId ? `/api/interventions/${editId}` : '/api/interventions';
@@ -192,4 +245,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
   await loadInterventions();
+  currentLot = lotSelect.value;
+  rebuildTasksTable();
+  lotSelect.addEventListener('change', () => {
+    saveCurrentRows();
+    currentLot = lotSelect.value;
+    rebuildTasksTable();
+  });
 });
