@@ -45,9 +45,6 @@ const lotSelect   = document.getElementById('lot-select');
 const taskSelect  = document.getElementById('task-select');
 const statusSelect = document.getElementById('status-select');
 const submitBtn   = document.getElementById('submit-selection');
-const interventionsTable = document.getElementById('interventions-table');
-const exportCsvBtn = document.getElementById('export-csv');
-const exportPdfBtn = document.getElementById('export-pdf');
 const statusLabels = {
   ouvert: 'Ouvert',
   en_cours: 'En cours',
@@ -70,10 +67,7 @@ async function loadInterventions() {
   console.log('Données reçues:', data);
   const interventions = Array.isArray(data) ? data : data.rows || [];
   currentInterventions = interventions;
-  if (!interventionsTable) {
-    return;
-  }
-  const tbody = interventionsTable.querySelector('tbody');
+  const tbody = document.getElementById('interventions-table').querySelector('tbody');
   console.log('tbody trouvé:', tbody);
   tbody.innerHTML = interventions
     .map(i => `
@@ -138,8 +132,7 @@ lotSelect.addEventListener('change', () => {
   }
 });
 
-if (interventionsTable) {
-interventionsTable.addEventListener('click', async (e) => {
+document.getElementById('interventions-table').addEventListener('click', async (e) => {
   if (e.target.classList.contains('edit-btn')) {
     const id = e.target.dataset.id;
     const it = currentInterventions.find(x => String(x.id) === id);
@@ -162,7 +155,6 @@ interventionsTable.addEventListener('click', async (e) => {
     await loadInterventions();
   }
 });
-}
 
 submitBtn.addEventListener('click', async () => {
   const payload = {
@@ -185,27 +177,19 @@ submitBtn.addEventListener('click', async () => {
   }
   editId = null;
   submitBtn.textContent = 'Valider';
-  if (interventionsTable) {
-    await loadInterventions();
-  }
+  await loadInterventions();
 });
 
-if (exportCsvBtn) {
-  exportCsvBtn.addEventListener('click', () => {
-    window.location.href = '/api/interventions/export/csv';
-  });
-}
+document.getElementById('export-csv').addEventListener('click', () => {
+  window.location.href = '/api/interventions/export/csv';
+});
 
-if (exportPdfBtn) {
-  exportPdfBtn.addEventListener('click', () => {
-    window.location.href = '/api/interventions/export/pdf';
-  });
-}
+document.getElementById('export-pdf').addEventListener('click', () => {
+  window.location.href = '/api/interventions/export/pdf';
+});
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadFloors();
-  if (interventionsTable) {
-    await loadInterventions();
-  }
+  await loadInterventions();
 });
