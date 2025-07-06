@@ -1,22 +1,38 @@
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const tbody = document.querySelector('#historyTable tbody');
   const floorFilter = document.getElementById('floorFilter');
   const lotFilter = document.getElementById('lotFilter');
-  const actions = JSON.parse(localStorage.getItem('actions') || '[]');
+  let actions = [];
 
-  const floors = [...new Set(actions.map(a => a.etage))];
-  const lots = [...new Set(actions.map(a => a.lot).filter(l => l))];
+  async function loadActions() {
+    const res = await fetch('/api/history');
+    actions = await res.json();
+    actions.forEach(a => {
+      if (a.new_values && typeof a.new_values === 'string') {
+        try { a.new_values = JSON.parse(a.new_values); } catch (e) {}
+      }
+      if (a.old_values && typeof a.old_values === 'string') {
+        try { a.old_values = JSON.parse(a.old_values); } catch (e) {}
+      }
+    });
 
-  floorFilter.innerHTML = ['<option value="">Tous</option>']
-    .concat(floors.map(f => `<option value="${f}">${f}</option>`)).join('');
-  lotFilter.innerHTML = ['<option value="">Tous</option>']
-    .concat(lots.map(l => `<option value="${l}">${l}</option>`)).join('');
+    const floors = [...new Set(actions.map(a => a.etage).filter(Boolean))];
+    const lots = [...new Set(actions.map(a => (a.new_values?.lot || a.old_values?.lot || a.lot)).filter(Boolean))];
+
+    floorFilter.innerHTML = ['<option value="">Tous</option>']
+      .concat(floors.map(f => `<option value="${f}">${f}</option>`)).join('');
+    lotFilter.innerHTML = ['<option value="">Tous</option>']
+      .concat(lots.map(l => `<option value="${l}">${l}</option>`)).join('');
+  }
 
   function render() {
     tbody.innerHTML = '';
     let filtered = actions.slice();
     if (floorFilter.value) filtered = filtered.filter(a => a.etage === floorFilter.value);
-    if (lotFilter.value) filtered = filtered.filter(a => a.lot === lotFilter.value);
+    if (lotFilter.value) filtered = filtered.filter(a => {
+      const lot = a.new_values?.lot || a.old_values?.lot || a.lot;
+      return lot === lotFilter.value;
+    });
 
     if (filtered.length === 0) {
       const row = document.createElement('tr');
@@ -30,17 +46,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
     filtered.forEach(a => {
       const row = document.createElement('tr');
+      const data = a.new_values || a.old_values || {};
       const emplacement = a.chambre
         ? `${a.etage} / ${a.chambre}`
-        : `${a.etage} (${Number(a.x).toFixed(2)}, ${Number(a.y).toFixed(2)})`;
+        : `${a.etage} (${Number(data.x || 0).toFixed(2)}, ${Number(data.y || 0).toFixed(2)})`;
+      const nomBulle = data.intitule ? `Bulle ${a.bulle_numero}, ${data.intitule}` : `Bulle ${a.bulle_numero}`;
+      const lot = data.lot || a.lot || '';
+      const description = data.description || '';
+      const actionText = a.action_type === 'create' ? 'creation'
+                        : a.action_type === 'update' ? 'modification'
+                        : a.action_type;
       const values = [
-        a.user,
-        a.action,
+        a.username || '',
+        actionText,
         emplacement,
-        a.nomBulle || '',
-        a.lot || '',
-        a.description || '',
-        new Date(a.timestamp).toLocaleString()
+        nomBulle,
+        lot,
+        description,
+        new Date(a.created_at).toLocaleString()
       ];
       values.forEach(val => {
         const td = document.createElement('td');
@@ -51,6 +74,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  await loadActions();
   render();
   floorFilter.addEventListener('change', render);
   lotFilter.addEventListener('change', render);
