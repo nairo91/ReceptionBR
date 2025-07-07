@@ -85,7 +85,7 @@ async function loadHistory() {
     chambre: document.getElementById('hist-room').value || '',
     lot: document.getElementById('hist-lot').value || ''
   });
-  const res = await fetch(`/api/interventions/history?${params.toString()}`);
+  const res = await fetch('/api/interventions/history?' + params.toString());
   const rows = await res.json();
   const tbody = document.querySelector('#history-table tbody');
   tbody.innerHTML = '';
@@ -173,11 +173,13 @@ editSubmitBtn.addEventListener('click', async function () {
     });
     btn.dataset.id = '';
   } else {
-    await fetch('/api/interventions/bulk', {
+    const res = await fetch('/api/interventions/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    const result = await res.json();
+    if (!res.ok) console.error('Erreur bulk:', result);
   }
   document.querySelector('#edit-table tbody').innerHTML = '';
   await loadHistory();
