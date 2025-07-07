@@ -112,11 +112,9 @@ function addEditRow(data = {}) {
   const row = tpl.content.firstElementChild.cloneNode(true);
 
   const lot = document.getElementById('edit-lot').value;
-  const tasks = lotTasks[lot] || [];
-
   const selTask = row.querySelector('select[name="task"]');
-  selTask.innerHTML = '<option value=""></option>' +
-    tasks.map(t => `<option value="${t}">${t}</option>`).join('');
+  selTask.innerHTML = '<option value="">--Tâche--</option>' +
+    (lotTasks[lot] || []).map(t => `<option value="${t}">${t}</option>`).join('');
   if (data.task) selTask.value = data.task;
 
   const selPerson = row.querySelector('select.person');
@@ -187,6 +185,7 @@ function openForEdit(row) {
     document.getElementById('edit-room').value = row.room;
   });
   document.getElementById('edit-lot').value = row.lot;
+  document.getElementById('edit-lot').dispatchEvent(new Event('change'));
   document.querySelector('#edit-table tbody').innerHTML = '';
   addEditRow({
     task: row.task,
@@ -220,6 +219,14 @@ document.getElementById('photo-send').addEventListener('click', async () => {
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
+  const lotOptions = Object.keys(lotTasks)
+    .map(l => `<option value="${l}">${l}</option>`)
+    .join('');
+  document.getElementById('edit-lot').innerHTML = '<option value="">-- Lot --</option>' + lotOptions;
+  document.getElementById('edit-lot').addEventListener('change', () => {
+    document.querySelector('#edit-table tbody').innerHTML = '';
+    addEditRow();
+  });
   await loadUsers();
   await loadFloors('#hist-floor');
   await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
