@@ -107,6 +107,12 @@ async function loadHistory() {
 }
 
 function addEditRow(data = {}) {
+  const floor = document.getElementById('edit-floor').value;
+  const room = document.getElementById('edit-room').value;
+  if (!floor || !room) {
+    alert('Veuillez sélectionner un étage et une chambre avant d\u2019ajouter une ligne');
+    return;
+  }
   const tbody = document.querySelector('#edit-table tbody');
   const tpl = document.getElementById('edit-row-template');
   const row = tpl.content.firstElementChild.cloneNode(true);
@@ -173,6 +179,7 @@ editSubmitBtn.addEventListener('click', async function () {
       body: JSON.stringify(payload)
     });
   }
+  document.querySelector('#edit-table tbody').innerHTML = '';
   await loadHistory();
   showTab('historyTab');
 });
@@ -183,17 +190,17 @@ function openForEdit(row) {
   document.getElementById('edit-floor').value = row.floor;
   loadRooms(row.floor, '#edit-room').then(() => {
     document.getElementById('edit-room').value = row.room;
+    document.getElementById('edit-lot').value = row.lot;
+    document.getElementById('edit-lot').dispatchEvent(new Event('change'));
+    document.querySelector('#edit-table tbody').innerHTML = '';
+    addEditRow({
+      task: row.task,
+      person: row.person,
+      state: row.state,
+      modified: row.modified
+    });
+    showTab('editTab');
   });
-  document.getElementById('edit-lot').value = row.lot;
-  document.getElementById('edit-lot').dispatchEvent(new Event('change'));
-  document.querySelector('#edit-table tbody').innerHTML = '';
-  addEditRow({
-    task: row.task,
-    person: row.person,
-    state: row.state,
-    modified: row.modified
-  });
-  showTab('editTab');
 }
 
 document.getElementById('comment-send').addEventListener('click', async () => {
