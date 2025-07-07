@@ -140,4 +140,33 @@ router.get('/export/pdf', async (req, res) => {
   }
 });
 
+// POST /api/interventions/bulk : insertion multiple
+router.post('/bulk', async (req, res) => {
+  const { floor, room, lot, rows } = req.body;
+  if (!floor || !room || !lot || !Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'Données bulk manquantes' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const text = `
+      INSERT INTO interventions
+        (floor_id, room_id, user_id, lot, task, status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+    for (const { person, task, state } of rows) {
+      if (!person || !task) continue;
+      await client.query(text, [floor, room, person, lot, task, state || 'ouvert']);
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur bulk' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
