@@ -95,3 +95,7 @@ button:focus {
   display: flex;
   gap: 0.5rem;
 }
+
+#edit-row-template {
+  display: none;
+}

@@ -38,218 +38,199 @@ const lotTasks = {
   Repose: ["Sommier + matelat","TV","Patere SDB (x2)","Porte papier WC (x2)"]
 };
 
-const rowsByLot = {};
-let currentLot = '';
+let userOptions = '';
+let currentId = null;
 
-const userSelect  = document.getElementById('user-select');
-const floorSelect = document.getElementById('floor-select');
-const roomSelect  = document.getElementById('room-select');
-const lotSelect   = document.getElementById('lot-select');
-const statusSelect = document.getElementById('status-select');
-const submitBtn   = document.getElementById('submit-selection');
-const statusLabels = {
-  ouvert: 'Ouvert',
-  en_cours: 'En cours',
-  attente_validation: 'En attente de validation',
-  clos: 'Clos',
-  valide: 'Validé'
-};
-let currentInterventions = [];
-let editId = null;
-
-async function loadInterventions() {
-  console.log('Appel loadInterventions');
-  const res = await fetch('/api/interventions');
-  console.log('GET /api/interventions status:', res.status);
-  if (!res.ok) {
-    console.error('Erreur fetch historique', res.status);
-    return;
-  }
-  const data = await res.json();
-  console.log('Données reçues:', data);
-  const interventions = Array.isArray(data) ? data : data.rows || [];
-  currentInterventions = interventions;
-  const tbody = document.getElementById('interventions-table').querySelector('tbody');
-  console.log('tbody trouvé:', tbody);
-  tbody.innerHTML = interventions
-    .map(i => `
-      <tr>
-        <td>${i.id}</td>
-        <td>${window.userMap[i.user_id] || i.user_id}</td>
-        <td>${i.floor_id}</td>
-        <td>${i.room_id}</td>
-        <td>${i.lot}</td>
-        <td>${i.task}</td>
-        <td><span class="dot status-${i.status}"></span> ${statusLabels[i.status] || i.status}</td>
-        <td>${new Date(i.created_at).toLocaleString()}</td>
-        <td><button class="edit-btn" data-id="${i.id}">✏️</button></td>
-        <td><button class="delete-btn" data-id="${i.id}">🗑️</button></td>
-      </tr>
-    `)
-    .join('');
+function showTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(sec => {
+    sec.hidden = sec.id !== tabId;
+  });
 }
 
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
-  window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
-  userSelect.innerHTML =
-    '<option value="">-- Choisir un employé --</option>' +
+  userOptions = '<option value="">--Choisir--</option>' +
     users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+  document.querySelectorAll('select.person').forEach(sel => {
+    const v = sel.value;
+    sel.innerHTML = userOptions;
+    if (v) sel.value = v;
+  });
 }
 
-async function loadFloors() {
+async function loadFloors(selector) {
   const res = await fetch('/api/floors');
   const floors = await res.json();
-  floorSelect.innerHTML =
-    '<option value="">-- Choisir un étage --</option>' +
+  const sel = document.querySelector(selector);
+  sel.innerHTML = '<option value="">-- Choisir un étage --</option>' +
     floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
-  if (floors.length) {
-    loadRooms(floors[0].id);
-  }
 }
 
-async function loadRooms(floorId) {
+async function loadRooms(floorId, selectorRoom) {
+  const sel = document.querySelector(selectorRoom);
   if (!floorId) {
-    roomSelect.innerHTML = '<option value="">-- Choisir une chambre --</option>';
+    sel.innerHTML = '<option value="">-- Choisir une chambre --</option>';
     return;
   }
   const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
   const rooms = await res.json();
-  roomSelect.innerHTML =
-    '<option value="">-- Choisir une chambre --</option>' +
+  sel.innerHTML = '<option value="">-- Choisir une chambre --</option>' +
     rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
 }
 
-function saveCurrentRows() {
-  if (!currentLot) return;
-  const tbody = document.querySelector('#tasksTable tbody');
-  rowsByLot[currentLot] = Array.from(tbody.querySelectorAll('tr')).map(tr => {
-    const [selT, selU, selE] = tr.querySelectorAll('select');
-    return { tache: selT.value, personne: selU.value, etat: selE.value };
+async function loadHistory() {
+  const params = new URLSearchParams({
+    etage: document.getElementById('hist-floor').value || '',
+    chambre: document.getElementById('hist-room').value || '',
+    lot: document.getElementById('hist-lot').value || ''
+  });
+  const res = await fetch(`/api/interventions/history?${params.toString()}`);
+  const rows = await res.json();
+  const tbody = document.querySelector('#history-table tbody');
+  tbody.innerHTML = '';
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.user || row.user_id || row.utilisateur || ''}</td>
+      <td>${row.action || ''}</td>
+      <td>${row.lot || ''}</td>
+      <td>${row.floor || ''}-${row.room || ''}</td>
+      <td>${row.task || ''}</td>
+      <td>${row.person || ''}</td>
+      <td>${row.state || ''}</td>
+      <td>${row.date ? new Date(row.date).toLocaleString() : ''}</td>
+      <td><button class="hist-edit">✏️</button></td>`;
+    tr.querySelector('.hist-edit').addEventListener('click', () => openForEdit(row));
+    tbody.appendChild(tr);
   });
 }
 
-function rebuildTasksTable() {
-  const lot = lotSelect.value;
+function addEditRow(data = {}) {
+  const tbody = document.querySelector('#edit-table tbody');
+  const tpl = document.getElementById('edit-row-template');
+  const row = tpl.content.firstElementChild.cloneNode(true);
+
+  const lot = document.getElementById('edit-lot').value;
   const tasks = lotTasks[lot] || [];
-  const saved = rowsByLot[lot] || [];
-  const tbody = document.querySelector('#tasksTable tbody');
-  tbody.innerHTML = '';
-  if (saved.length) {
-    saved.forEach(data => addTaskRow(tbody, tasks, data));
-  } else {
-    addTaskRow(tbody, tasks);
-  }
-}
 
-function addTaskRow(tbody, tasks, data = {}) {
-  const row = document.createElement('tr');
-  const tdT = document.createElement('td');
-  const selT = document.createElement('select');
-  selT.innerHTML = `<option value="">-- Choisir tâche --</option>` +
+  const selTask = row.querySelector('select[name="task"]');
+  selTask.innerHTML = '<option value=""></option>' +
     tasks.map(t => `<option value="${t}">${t}</option>`).join('');
-  selT.value = data.tache || '';
-  tdT.appendChild(selT); row.appendChild(tdT);
+  if (data.task) selTask.value = data.task;
 
-  const tdU = document.createElement('td');
-  const selU = document.createElement('select');
-  selU.innerHTML = userSelect.innerHTML;
-  selU.value = data.personne || '';
-  tdU.appendChild(selU); row.appendChild(tdU);
+  const selPerson = row.querySelector('select.person');
+  selPerson.innerHTML = userOptions;
+  if (data.person) selPerson.value = data.person;
 
-  const tdE = document.createElement('td');
-  const selE = document.createElement('select');
-  selE.innerHTML = [
-    '<option value="">--Choisir un état--</option>',
-    '<option value="ouvert">Ouvert</option>',
-    '<option value="en_cours">En cours</option>',
-    '<option value="attente_validation">En attente de validation</option>',
-    '<option value="clos">Clos</option>',
-    '<option value="valide">Validé</option>'
-  ].join('');
-  selE.value = data.etat || '';
-  tdE.appendChild(selE); row.appendChild(tdE);
+  const selState = row.querySelector('select.state');
+  selState.innerHTML = `
+    <option value="ouvert">Ouvert</option>
+    <option value="en_cours">En cours</option>
+    <option value="attente_validation">En attente de validation</option>
+    <option value="clos">Clos</option>
+    <option value="valide">Validé</option>
+    <option value="a_definir">À définir</option>
+  `;
+  if (data.state) selState.value = data.state;
 
-  const tdM = document.createElement('td');
-  tdM.textContent = '–'; row.appendChild(tdM);
-
-  const tdA = document.createElement('td');
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.textContent = '＋';
-  btn.addEventListener('click', () => addTaskRow(tbody, tasks));
-  tdA.appendChild(btn); row.appendChild(tdA);
+  row.querySelector('.modified').textContent = data.modified || '';
+  row.querySelector('.remove').addEventListener('click', () => row.remove());
 
   tbody.appendChild(row);
 }
 
-floorSelect.addEventListener('change', () => {
-  loadRooms(floorSelect.value);
-});
+document.getElementById('edit-add').addEventListener('click', () => addEditRow());
 
-document.getElementById('interventions-table').addEventListener('click', async (e) => {
-  if (e.target.classList.contains('edit-btn')) {
-    const id = e.target.dataset.id;
-    const it = currentInterventions.find(x => String(x.id) === id);
-    if (it) {
-      floorSelect.value = it.floor_id;
-      await loadRooms(it.floor_id);
-      roomSelect.value = it.room_id;
-      userSelect.value = it.user_id;
-      lotSelect.value = it.lot;
-      lotSelect.dispatchEvent(new Event('change'));
-      statusSelect.value = it.status;
-      editId = id;
-      submitBtn.textContent = 'Mettre à jour';
-    }
-  }
-  if (e.target.classList.contains('delete-btn')) {
-    const id = e.target.dataset.id;
-    await fetch(`/api/interventions/${id}`, { method: 'DELETE' });
-    await loadInterventions();
-  }
-});
-
-submitBtn.addEventListener('click', async () => {
+const editSubmitBtn = document.getElementById('edit-submit');
+editSubmitBtn.addEventListener('click', async function () {
+  const btn = this;
+  const rows = Array.from(document.querySelectorAll('#edit-table tbody tr')).map(tr => ({
+    task: tr.querySelector('select[name="task"]').value,
+    person: tr.querySelector('select.person').value,
+    state: tr.querySelector('select.state').value
+  }));
   const payload = {
-    floorId: floorSelect.value,
-    roomId: roomSelect.value,
-    userId: userSelect.value,
-    lot: lotSelect.value,
-    status: statusSelect.value
+    floor: document.getElementById('edit-floor').value,
+    room: document.getElementById('edit-room').value,
+    lot: document.getElementById('edit-lot').value,
+    rows
   };
-  const url = editId ? `/api/interventions/${editId}` : '/api/interventions';
-  const method = editId ? 'PUT' : 'POST';
-  const res = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (res.ok) {
-    alert(editId ? 'Intervention mise à jour !' : 'Intervention enregistrée !');
+  if (btn.dataset.id) {
+    await fetch(`/api/interventions/${btn.dataset.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        floor: payload.floor,
+        room: payload.room,
+        lot: payload.lot,
+        ...rows[0]
+      })
+    });
+    btn.dataset.id = '';
+  } else {
+    await fetch('/api/interventions/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
   }
-  editId = null;
-  submitBtn.textContent = 'Valider';
-  await loadInterventions();
+  await loadHistory();
+  showTab('historyTab');
 });
 
-document.getElementById('export-csv').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/csv';
+function openForEdit(row) {
+  currentId = row.id;
+  editSubmitBtn.dataset.id = row.id;
+  document.getElementById('edit-floor').value = row.floor;
+  loadRooms(row.floor, '#edit-room').then(() => {
+    document.getElementById('edit-room').value = row.room;
+  });
+  document.getElementById('edit-lot').value = row.lot;
+  document.querySelector('#edit-table tbody').innerHTML = '';
+  addEditRow({
+    task: row.task,
+    person: row.person,
+    state: row.state,
+    modified: row.modified
+  });
+  showTab('editTab');
+}
+
+document.getElementById('comment-send').addEventListener('click', async () => {
+  if (!currentId) return;
+  const text = document.getElementById('comment-text').value;
+  await fetch(`/api/interventions/${currentId}/comment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+  document.getElementById('comment-text').value = '';
 });
 
-document.getElementById('export-pdf').addEventListener('click', () => {
-  window.location.href = '/api/interventions/export/pdf';
+document.getElementById('photo-send').addEventListener('click', async () => {
+  if (!currentId) return;
+  const files = document.getElementById('photo-file').files;
+  const fd = new FormData();
+  for (const f of files) fd.append('photos', f);
+  const res = await fetch(`/api/interventions/${currentId}/photos`, { method: 'POST', body: fd });
+  const urls = await res.json();
+  const list = document.getElementById('photo-list');
+  list.innerHTML = urls.map(u => `<li><img src="${u}" /></li>`).join('');
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
-  await loadFloors();
-  await loadInterventions();
-  currentLot = lotSelect.value;
-  rebuildTasksTable();
-  lotSelect.addEventListener('change', () => {
-    saveCurrentRows();
-    currentLot = lotSelect.value;
-    rebuildTasksTable();
+  await loadFloors('#hist-floor');
+  await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
+  await loadFloors('#edit-floor');
+  await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
+  editSubmitBtn.dataset.id = '';
+  showTab('historyTab');
+  document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
+  document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
+  document.getElementById('hist-refresh').addEventListener('click', loadHistory);
+  document.querySelector('.tabs').addEventListener('click', e => {
+    if (e.target.tagName === 'BUTTON') showTab(e.target.dataset.tab);
   });
 });
