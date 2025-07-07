@@ -148,9 +148,9 @@ router.get('/history', async (req, res) => {
             i.lot, i.task, i.status AS state, i.created_at AS date, i.person AS person
      FROM interventions i
      JOIN users u ON u.id = i.user_id
-     WHERE ($1 = '' OR i.floor_id = $1::int)
-       AND ($2 = '' OR i.room_id = $2::int)
-       AND ($3 = '' OR i.lot = $3)
+     WHERE ($1::text = '' OR i.floor_id = $1::int)
+       AND ($2::text = '' OR i.room_id = $2::int)
+       AND ($3::text = '' OR i.lot = $3::text)
      ORDER BY i.created_at DESC`,
     [etage, chambre, lot]
   );
