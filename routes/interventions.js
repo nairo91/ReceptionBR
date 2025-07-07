@@ -142,7 +142,7 @@ router.get('/export/pdf', async (req, res) => {
 
 // GET /api/interventions/history?etage=&chambre=&lot=
 router.get('/history', async (req, res) => {
-  const { etage, chambre, lot } = req.query;
+  const { etage = '', chambre = '', lot = '' } = req.query;
   const { rows } = await pool.query(
     `SELECT i.id, u.username AS user, i.action, i.floor_id AS floor, i.room_id AS room,
             i.lot, i.task, i.status AS state, i.created_at AS date, i.person AS person
