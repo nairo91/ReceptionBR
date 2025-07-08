@@ -167,7 +167,7 @@ router.get('/history', async (req, res) => {
       i.status AS state,
       i.created_at AS date
     FROM interventions i
-    JOIN users u ON u.id::text = i.user_id
+    LEFT JOIN users u ON u.id::text = i.user_id
     WHERE ($1 = '' OR i.floor_id::text = $1)
       AND ($2 = '' OR i.room_id ::text = $2)
       AND ($3 = '' OR i.lot      = $3)
