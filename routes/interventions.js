@@ -173,6 +173,10 @@ router.get('/history', async (req, res) => {
       AND ($3 = '' OR i.lot      = $3)
     ORDER BY i.created_at DESC
   `;
+  console.log('––– HISTORY SQL –––');
+  console.log('SQL:', sql.replace(/\s+/g, ' '));
+  console.log('Params:', { etage, chambre, lot });
+  console.log('–––––––––––––––––––');
   const { rows } = await pool.query(sql, [etage, chambre, lot]);
   res.json(rows);
 });
