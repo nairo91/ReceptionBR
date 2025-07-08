@@ -157,22 +157,19 @@ router.get('/history', async (req, res) => {
   const lot     = req.query.lot     || '';
 
   const sql = `
-    SELECT 
+    SELECT
       i.id,
       u.username      AS user,
       i.floor_id::text AS floor,
       i.room_id ::text AS room,
       i.lot,
       i.task,
-      // on remplace l’id par le nom
       p.username      AS person,
       i.status        AS state,
       i.created_at    AS date
     FROM interventions i
-    -- on réutilise la jointure existante pour l’auteur
-    LEFT JOIN users u ON u.id::text = i.user_id
-    -- on ajoute une jointure pour la personne affectée
-    LEFT JOIN users p ON p.id::text = i.person
+      LEFT JOIN users u ON u.id::text = i.user_id
+      LEFT JOIN users p ON p.id::text = i.person
     WHERE ($1 = '' OR i.floor_id::text = $1)
       AND ($2 = '' OR i.room_id ::text = $2)
       AND ($3 = '' OR i.lot      = $3)
