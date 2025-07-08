@@ -238,7 +238,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   await loadUsers();
   await loadFloors('#hist-floor');
+  const histFloor = document.getElementById('hist-floor');
+  histFloor.insertAdjacentHTML('afterbegin',
+    '<option value="">-- Tous les étages --</option>'
+  );
   await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
+  const histRoom = document.getElementById('hist-room');
+  histRoom.insertAdjacentHTML('afterbegin',
+    '<option value="">-- Toutes les chambres --</option>'
+  );
+  const histLot = document.getElementById('hist-lot');
+  histLot.insertAdjacentHTML('afterbegin',
+    '<option value="">-- Tous les lots --</option>'
+  );
   await loadFloors('#edit-floor');
   await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
   editSubmitBtn.dataset.id = '';
