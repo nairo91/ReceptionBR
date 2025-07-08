@@ -142,18 +142,29 @@ router.get('/export/pdf', async (req, res) => {
 
 // GET /api/interventions/history?etage=&chambre=&lot=
 router.get('/history', async (req, res) => {
-  const { etage = '', chambre = '', lot = '' } = req.query;
-  const { rows } = await pool.query(
-    `SELECT i.id, u.username AS user, i.action, i.floor_id AS floor, i.room_id AS room,
-            i.lot, i.task, i.status AS state, i.created_at AS date, i.person AS person
-     FROM interventions i
-     JOIN users u ON u.id = i.user_id
-     WHERE ($1 = '' OR i.floor_id = $1)
-       AND ($2 = '' OR i.room_id = $2)
-       AND ($3 = '' OR i.lot = $3)
-     ORDER BY i.created_at DESC`,
-    [etage, chambre, lot]
-  );
+  // on s’assure que ces 3 variables sont toujours des chaînes
+  const etage   = req.query.etage   || '';
+  const chambre = req.query.chambre || '';
+  const lot     = req.query.lot     || '';
+
+  const sql = `
+    SELECT 
+      i.id,
+      u.username   AS user,
+      i.floor_id   AS floor,
+      i.room_id    AS room,
+      i.lot,
+      i.task,
+      i.status     AS state,
+      i.created_at AS date
+    FROM interventions   i
+    JOIN users           u ON u.id = i.user_id
+    WHERE ($1 = '' OR i.floor_id = $1)
+      AND ($2 = '' OR i.room_id  = $2)
+      AND ($3 = '' OR i.lot      = $3)
+    ORDER BY i.created_at DESC
+  `;
+  const { rows } = await pool.query(sql, [etage, chambre, lot]);
   res.json(rows);
 });
 
