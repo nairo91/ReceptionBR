@@ -85,13 +85,16 @@ async function loadRooms(floorId, selectorRoom) {
 }
 
 async function loadHistory() {
+  console.log('⚙️ loadHistory() called');
   const params = new URLSearchParams({
     etage: document.getElementById('hist-floor').value || '',
     chambre: document.getElementById('hist-room').value || '',
     lot: document.getElementById('hist-lot').value || ''
   });
+  console.log('⚙️ HISTORY SQL params:', params.toString());
   const res = await fetch('/api/interventions/history?' + params.toString());
   const rows = await res.json();
+  console.log('⚙️ rows returned:', rows);
   const tbody = document.querySelector('#history-table tbody');
   tbody.innerHTML = '';
   rows.forEach(row => {
