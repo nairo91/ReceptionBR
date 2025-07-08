@@ -1,21 +1,30 @@
 const express = require("express");
 const router = express.Router();
+const pool = require("../db");
 
 // GET /api/rooms
-// Génère 15 chambres pour l'étage indiqué par floorId (ex : "R+5")
-router.get('/', (req, res) => {
-  const floorId = req.query.floorId;
-  const floorNumber = parseInt(floorId.split('+')[1]);
-
-  const rooms = Array.from({ length: 15 }, (_, i) => {
-    const num = floorNumber * 100 + i + 1;
-    return { id: num.toString(), name: `Chambre ${num}` };
-  });
-
-  // Ajout d'une option supplémentaire pour les couloirs
-  rooms.push({ id: 'couloir', name: 'Couloirs' });
-
-  res.json(rooms);
+// Renvoie les chambres d'un étage depuis la base de données
+router.get('/', async (req, res) => {
+  const { floorId } = req.query;
+  if (!floorId) {
+    return res.status(400).json({ error: 'floorId requis' });
+  }
+  // on s’assure que floorId est un entier
+  const fid = parseInt(floorId, 10);
+  if (Number.isNaN(fid)) {
+    return res.status(400).json({ error: 'floorId doit être un entier' });
+  }
+  try {
+    const result = await pool.query(
+      // on cast $1 en entier pour éviter integer = text
+      'SELECT id, name FROM rooms WHERE floor_id = $1::int ORDER BY id',
+      [fid]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 module.exports = router;

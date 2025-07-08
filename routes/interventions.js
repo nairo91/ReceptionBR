@@ -20,8 +20,17 @@ router.get('/rooms', async (req, res) => {
   if (!floorId) {
     return res.status(400).json({ error: 'floorId requis' });
   }
+  // on s’assure que floorId est un entier
+  const fid = parseInt(floorId, 10);
+  if (Number.isNaN(fid)) {
+    return res.status(400).json({ error: 'floorId doit être un entier' });
+  }
   try {
-    const result = await pool.query('SELECT id, name FROM rooms WHERE floor_id = $1 ORDER BY id', [floorId]);
+    const result = await pool.query(
+      // on cast $1 en entier pour éviter integer = text
+      'SELECT id, name FROM rooms WHERE floor_id = $1::int ORDER BY id',
+      [fid]
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
