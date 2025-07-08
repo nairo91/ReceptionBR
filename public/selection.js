@@ -70,7 +70,12 @@ async function loadFloors(selector) {
 async function loadRooms(floorId, selectorRoom) {
   const sel = document.querySelector(selectorRoom);
   if (!floorId) {
-    sel.innerHTML = '<option value="">-- Choisir une chambre --</option>';
+    // si on est dans l'onglet Historique, on propose “Toutes les chambres”
+    if (selectorRoom === '#hist-room') {
+      sel.innerHTML = '<option value="">-- Toutes les chambres --</option>';
+    } else {
+      sel.innerHTML = '<option value="">-- Choisir une chambre --</option>';
+    }
     return;
   }
   const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
@@ -243,10 +248,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     '<option value="">-- Tous les étages --</option>'
   );
   await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
-  const histRoom = document.getElementById('hist-room');
-  histRoom.insertAdjacentHTML('afterbegin',
-    '<option value="">-- Toutes les chambres --</option>'
-  );
   const histLot = document.getElementById('hist-lot');
   histLot.insertAdjacentHTML('afterbegin',
     '<option value="">-- Tous les lots --</option>'
