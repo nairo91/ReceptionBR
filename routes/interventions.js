@@ -170,10 +170,10 @@ router.get('/history', async (req, res) => {
       i.created_at    AS date
     FROM interventions i
       LEFT JOIN users u ON u.id::text = i.user_id
-      LEFT JOIN users p ON p.id::text = i.person
+    LEFT JOIN users p ON p.id = (i.person::int)
     WHERE ($1 = '' OR i.floor_id::text = $1)
-      AND ($2 = '' OR i.room_id ::text = $2)
-      AND ($3 = '' OR i.lot      = $3)
+      AND ($2 = '' OR i.room_id::text = $2)
+      AND ($3 = '' OR i.lot::text   = $3)
     ORDER BY i.created_at DESC
   `;
   console.log('––– HISTORY SQL –––');
