@@ -159,17 +159,17 @@ router.get('/history', async (req, res) => {
   const sql = `
     SELECT 
       i.id,
-      u.username   AS user,
-      i.floor_id   AS floor,
-      i.room_id    AS room,
+      u.username AS user,
+      i.floor_id::text AS floor,
+      i.room_id ::text AS room,
       i.lot,
       i.task,
-      i.status     AS state,
+      i.status AS state,
       i.created_at AS date
-    FROM interventions   i
-    JOIN users           u ON u.id = i.user_id
-    WHERE ($1 = '' OR i.floor_id = $1)
-      AND ($2 = '' OR i.room_id  = $2)
+    FROM interventions i
+    JOIN users u ON u.id = i.user_id
+    WHERE ($1 = '' OR i.floor_id::text = $1)
+      AND ($2 = '' OR i.room_id ::text = $2)
       AND ($3 = '' OR i.lot      = $3)
     ORDER BY i.created_at DESC
   `;
