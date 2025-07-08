@@ -51,14 +51,14 @@ router.get('/users', async (req, res) => {
 
 // POST new intervention
 router.post('/', async (req, res) => {
-  const { floorId, roomId, userId, lot, task, status } = req.body;
+  const { floorId, roomId, userId, lot, task, status, person } = req.body;
   if (!floorId || !roomId || !userId || !lot || !task) {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
     await pool.query(
-      'INSERT INTO interventions (floor_id, room_id, user_id, lot, task, status) VALUES ($1,$2,$3,$4,$5,$6)',
-      [floorId, roomId, userId, lot, task, status]
+      'INSERT INTO interventions (floor_id, room_id, user_id, lot, task, status, person, action) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [floorId, roomId, userId, lot, task, status, person || userId, 'Création']
     );
     res.json({ success: true });
   } catch (err) {
@@ -161,10 +161,11 @@ router.get('/history', async (req, res) => {
       i.id,
       u.username      AS user,
       i.floor_id::text AS floor,
-      i.room_id ::text AS room,
+      i.room_id   ::text AS room,
       i.lot,
       i.task,
       p.username      AS person,
+      i.action        AS action,
       i.status        AS state,
       i.created_at    AS date
     FROM interventions i
@@ -183,6 +184,30 @@ router.get('/history', async (req, res) => {
   res.json(rows);
 });
 
+// PUT update an intervention
+router.put('/:id', async (req, res) => {
+  const { floor, room, lot, task, person, state, userId } = req.body;
+  const action = 'Modification';
+  try {
+    await pool.query(
+      `UPDATE interventions
+         SET floor_id = $1,
+             room_id  = $2,
+             lot      = $3,
+             task     = $4,
+             person   = $5,
+             status   = $6,
+             action   = $7
+       WHERE id = $8`,
+      [floor, room, lot, task, person || userId, state, action, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur modification' });
+  }
+});
+
 // POST /api/interventions/bulk : insertion multiple
 router.post('/bulk', async (req, res) => {
   const { floor, room, lot, rows } = req.body;
@@ -194,12 +219,12 @@ router.post('/bulk', async (req, res) => {
     await client.query('BEGIN');
     const text = `
       INSERT INTO interventions
-        (floor_id, room_id, user_id, lot, task, status, person)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (floor_id, room_id, user_id, lot, task, status, person, action)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
     for (const { person: user_id, task, state } of rows) {
       if (!user_id || !task) continue;
-      await client.query(text, [floor, room, user_id, lot, task, state || 'ouvert', user_id]);
+      await client.query(text, [floor, room, user_id, lot, task, state || 'ouvert', user_id, 'Création']);
     }
     await client.query('COMMIT');
     res.json({ success: true });
