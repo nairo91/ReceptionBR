@@ -159,13 +159,14 @@ router.get('/history', async (req, res) => {
   const sql = `
     SELECT 
       i.id,
-      u.username AS user,
+      u.username      AS user,
       i.floor_id::text AS floor,
       i.room_id ::text AS room,
       i.lot,
       i.task,
-      i.status AS state,
-      i.created_at AS date
+      i.person        AS person,
+      i.status        AS state,
+      i.created_at    AS date
     FROM interventions i
     LEFT JOIN users u ON u.id::text = i.user_id
     WHERE ($1 = '' OR i.floor_id::text = $1)
@@ -192,12 +193,12 @@ router.post('/bulk', async (req, res) => {
     await client.query('BEGIN');
     const text = `
       INSERT INTO interventions
-        (floor_id, room_id, user_id, lot, task, status)
-      VALUES ($1, $2, $3, $4, $5, $6)
+        (floor_id, room_id, user_id, lot, task, status, person)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
     for (const { person: user_id, task, state } of rows) {
       if (!user_id || !task) continue;
-      await client.query(text, [floor, room, user_id, lot, task, state || 'ouvert']);
+      await client.query(text, [floor, room, user_id, lot, task, state || 'ouvert', user_id]);
     }
     await client.query('COMMIT');
     res.json({ success: true });
