@@ -50,6 +50,14 @@ const statusLabels = {
   a_definir: 'À définir'
 };
 
+function showTaskHistory(logs) {
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('history-content');
+  const items = logs.map(l => `<li>${l.action} - ${l.state} - ${new Date(l.created_at).toLocaleString()}</li>`).join('');
+  content.innerHTML = `<ul>${items}</ul>`;
+  modal.hidden = false;
+}
+
 function showTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(sec => {
     sec.hidden = sec.id !== tabId;
@@ -150,12 +158,49 @@ function renderHistory(rows, tableSelector = '#history-table') {
     // on ajoute le bouton d'édition pour l'historique et la prévisualisation
     if (['#history-table', '#preview-table'].includes(tableSelector)) {
       const tdEdit = document.createElement('td');
-      const btn = document.createElement('button');
-      btn.className = 'hist-edit';
-      btn.textContent = '✏️';
-      btn.addEventListener('click', () => openForEdit(h));
-      tdEdit.appendChild(btn);
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'hist-edit';
+      btnEdit.textContent = '✏️';
+      btnEdit.addEventListener('click', () => openForEdit(h));
+      tdEdit.appendChild(btnEdit);
       tr.appendChild(tdEdit);
+
+      const tdInfo = document.createElement('td');
+      tdInfo.className = 'info-cell';
+      tdInfo.innerHTML = `
+        <button class="info-btn">ℹ️</button>
+        <ul class="info-menu" hidden>
+          <li data-action="view-history">Historique</li>
+          <li data-action="add-comment">Commentaire</li>
+          <li data-action="add-photo">Photos</li>
+        </ul>
+      `;
+      const btn = tdInfo.querySelector('.info-btn');
+      const menu = tdInfo.querySelector('.info-menu');
+      btn.addEventListener('click', () => {
+        menu.hidden = !menu.hidden;
+      });
+      menu.addEventListener('click', async e => {
+        const action = e.target.dataset.action;
+        if (action === 'view-history') {
+          const res = await fetch(`/api/interventions/${h.id}/history`);
+          const logs = await res.json();
+          if (typeof showTaskHistory === 'function') {
+            showTaskHistory(logs);
+          } else {
+            console.log('Task history', logs);
+          }
+        } else if (action === 'add-comment') {
+          showTab('commentTab');
+          document.getElementById('comment-text').focus();
+          currentId = h.id;
+        } else if (action === 'add-photo') {
+          showTab('photoTab');
+          currentId = h.id;
+        }
+        menu.hidden = true;
+      });
+      tr.appendChild(tdInfo);
     }
     tbody.appendChild(tr);
   });
@@ -319,5 +364,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       showTab(e.target.dataset.tab);
       if (e.target.dataset.tab === 'editTab') loadPreview();
     }
+  });
+  const modal = document.getElementById('history-modal');
+  document.getElementById('close-history').addEventListener('click', () => {
+    modal.hidden = true;
+  });
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.hidden = true;
   });
 });

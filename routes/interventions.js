@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { Parser } = require('json2csv');
+const upload = require('../middlewares/upload');
 
 // GET list of floors
 router.get('/floors', async (req, res) => {
@@ -182,6 +183,19 @@ router.get('/history', async (req, res) => {
   res.json(rows);
 });
 
+router.get('/:id/history', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM interventions_history WHERE intervention_id = $1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
   const { floor, room, lot, task, person, state, userId } = req.body;
@@ -233,6 +247,10 @@ router.post('/bulk', async (req, res) => {
   } finally {
     client.release();
   }
+});
+
+router.post('/:id/photos', upload.array('photos'), (req, res) => {
+  res.json(req.files.map(f => f.path));
 });
 
 module.exports = router;
