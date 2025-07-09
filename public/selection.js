@@ -41,6 +41,15 @@ const lotTasks = {
 let userOptions = '';
 let currentId = null;
 
+const statusLabels = {
+  ouvert: 'Ouvert',
+  en_cours: 'En cours',
+  attente_validation: 'En attente de validation',
+  clos: 'Clos',
+  valide: 'Validé',
+  a_definir: 'À définir'
+};
+
 function showTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(sec => {
     sec.hidden = sec.id !== tabId;
@@ -97,21 +106,37 @@ async function loadHistory() {
   const res = await fetch('/api/interventions/history?' + params.toString());
   const rows = await res.json();
   console.log('⚙️ rows returned:', rows);
+  renderHistory(rows);
+}
+
+function renderHistory(rows) {
   const tbody = document.querySelector('#history-table tbody');
   tbody.innerHTML = '';
-  rows.forEach(row => {
+  rows.forEach(h => {
+    const emplacement = `${h.floor} / ${h.room}`;
+    const vals = [
+      h.user || '',                     // creator.username
+      h.action,                         // i.action
+      h.lot,
+      emplacement,                      // i.floor / i.room
+      h.task,                           // i.task
+      h.person || '',                   // COALESCE(u.username,i.person)
+      statusLabels[h.state] || h.state, // i.status
+      new Date(h.date).toLocaleString() // i.created_at
+    ];
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.user || row.user_id || row.utilisateur || ''}</td>
-      <td>${row.action || ''}</td>
-      <td>${row.lot || ''}</td>
-      <td>${row.floor || ''}-${row.room || ''}</td>
-      <td>${row.task || ''}</td>
-      <td>${row.person || ''}</td>
-      <td>${row.state || ''}</td>
-      <td>${row.date ? new Date(row.date).toLocaleString() : ''}</td>
-      <td><button class="hist-edit">✏️</button></td>`;
-    tr.querySelector('.hist-edit').addEventListener('click', () => openForEdit(row));
+    vals.forEach(v => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    const tdEdit = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'hist-edit';
+    btn.textContent = '✏️';
+    btn.addEventListener('click', () => openForEdit(h));
+    tdEdit.appendChild(btn);
+    tr.appendChild(tdEdit);
     tbody.appendChild(tr);
   });
 }
