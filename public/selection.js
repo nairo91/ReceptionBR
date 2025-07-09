@@ -112,16 +112,17 @@ function renderHistory(rows) {
   const tbody = document.querySelector('#history-table tbody');
   tbody.innerHTML = '';
   rows.forEach(h => {
-    const emplacement = `${h.floor} / ${h.room}`;
+    // plus besoin de `emplacement`
     const vals = [
-      window.userMap[h.user_id] || h.user_id,          // Utilisateur
-      h.action,                                        // Action
-      h.lot,                                           // Lot
-      emplacement,                                     // Étage-Chambre
-      h.task,                                          // Tâche
-      window.userMap[h.person]  || h.person,           // Personne
-      statusLabels[h.state]  || h.state,               // État
-      new Date(h.date).toLocaleString()                // Date/Heure
+      window.userMap[h.user_id] || h.user_id,  // Utilisateur
+      h.action,                                // Action
+      h.lot,                                   // Lot
+      h.floor || '',                           // Étage
+      h.room  || '',                           // Chambre
+      h.task,                                  // Tâche
+      window.userMap[h.person]  || h.person,   // Personne
+      statusLabels[h.state]  || h.state,       // État
+      new Date(h.date).toLocaleString()        // Date/Heure
     ];
     const tr = document.createElement('tr');
     vals.forEach(v => {
