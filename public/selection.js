@@ -105,11 +105,21 @@ async function loadHistory() {
   const res = await fetch('/api/interventions/history?' + params.toString());
   const rows = await res.json();
   console.log('⚙️ rows returned:', rows);
-  renderHistory(rows);
+  renderHistory(rows, '#history-table');
 }
 
-function renderHistory(rows) {
-  const tbody = document.querySelector('#history-table tbody');
+async function loadPreview() {
+  const floor = document.getElementById('edit-floor').value || '';
+  const room  = document.getElementById('edit-room').value || '';
+  const lot   = document.getElementById('edit-lot').value || '';
+  const params = new URLSearchParams({ etage: floor, chambre: room, lot });
+  const res = await fetch('/api/interventions/history?' + params.toString());
+  const rows = await res.json();
+  renderHistory(rows, '#preview-table');
+}
+
+function renderHistory(rows, tableSelector = '#history-table') {
+  const tbody = document.querySelector(`${tableSelector} tbody`);
   tbody.innerHTML = '';
   rows.forEach(h => {
     // plus besoin de `emplacement`
@@ -125,18 +135,22 @@ function renderHistory(rows) {
       new Date(h.date).toLocaleString()        // Date/Heure
     ];
     const tr = document.createElement('tr');
+    // cellules de données
     vals.forEach(v => {
       const td = document.createElement('td');
       td.textContent = v;
       tr.appendChild(td);
     });
-    const tdEdit = document.createElement('td');
-    const btn = document.createElement('button');
-    btn.className = 'hist-edit';
-    btn.textContent = '✏️';
-    btn.addEventListener('click', () => openForEdit(h));
-    tdEdit.appendChild(btn);
-    tr.appendChild(tdEdit);
+    // seulement pour l'historique "véritable", on ajoute le bouton d'édition
+    if (tableSelector === '#history-table') {
+      const tdEdit = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.className = 'hist-edit';
+      btn.textContent = '✏️';
+      btn.addEventListener('click', () => openForEdit(h));
+      tdEdit.appendChild(btn);
+      tr.appendChild(tdEdit);
+    }
     tbody.appendChild(tr);
   });
 }
@@ -221,23 +235,23 @@ editSubmitBtn.addEventListener('click', async function () {
   showTab('historyTab');
 });
 
-function openForEdit(row) {
+async function openForEdit(row) {
   currentId = row.id;
   editSubmitBtn.dataset.id = row.id;
   document.getElementById('edit-floor').value = row.floor;
-  loadRooms(row.floor, '#edit-room').then(() => {
-    document.getElementById('edit-room').value = row.room;
-    document.getElementById('edit-lot').value = row.lot;
-    document.getElementById('edit-lot').dispatchEvent(new Event('change'));
-    document.querySelector('#edit-table tbody').innerHTML = '';
-    addEditRow({
-      task: row.task,
-      person: row.person,
-      state: row.state,
-      modified: row.modified
-    });
-    showTab('editTab');
+  await loadRooms(row.floor, '#edit-room');
+  document.getElementById('edit-room').value = row.room;
+  document.getElementById('edit-lot').value = row.lot;
+  document.getElementById('edit-lot').dispatchEvent(new Event('change'));
+  document.querySelector('#edit-table tbody').innerHTML = '';
+  addEditRow({
+    task: row.task,
+    person: row.person,
+    state: row.state,
+    modified: row.modified
   });
+  showTab('editTab');
+  await loadPreview();
 }
 
 document.getElementById('comment-send').addEventListener('click', async () => {
@@ -288,10 +302,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Afficher d'emblée l'Historique
   showTab('historyTab');
   await loadHistory();
+  document.getElementById('edit-floor').addEventListener('change', loadPreview);
+  document.getElementById('edit-room').addEventListener('change', loadPreview);
+  document.getElementById('edit-lot').addEventListener('change', loadPreview);
   document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
   document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
   document.getElementById('hist-refresh').addEventListener('click', loadHistory);
   document.querySelector('.tabs').addEventListener('click', e => {
-    if (e.target.tagName === 'BUTTON') showTab(e.target.dataset.tab);
+    if (e.target.tagName === 'BUTTON') {
+      showTab(e.target.dataset.tab);
+      if (e.target.dataset.tab === 'editTab') loadPreview();
+    }
   });
 });
