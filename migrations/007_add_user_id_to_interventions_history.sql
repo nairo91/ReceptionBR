@@ -1,0 +1,2 @@
+ALTER TABLE interventions_history
+  ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
