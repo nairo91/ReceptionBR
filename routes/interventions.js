@@ -57,10 +57,21 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
+    const created = (await pool.query(
+      `INSERT INTO interventions
+         (floor_id, room_id, user_id, lot, task, status, person, action)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [floorId, roomId, userId, lot, task, status || 'ouvert', person || userId, 'Création']
+    )).rows[0];
+
+    // 1️⃣ On ajoute aussi cette création dans l’historique
     await pool.query(
-      'INSERT INTO interventions (floor_id, room_id, user_id, lot, task, status, person, action) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-      [floorId, roomId, userId, lot, task, status, person || userId, 'Création']
+      `INSERT INTO interventions_history
+         (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Création',now())`,
+      [created.id, userId, created.floor_id, created.room_id, created.lot, created.task, created.person, created.status]
     );
+
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -292,7 +303,16 @@ router.post('/bulk', async (req, res) => {
     `;
     for (const { person: user_id, task, state } of rows) {
       if (!user_id || !task) continue;
-      await client.query(text, [floor, room, user_id, lot, task, state || 'ouvert', user_id, 'Création']);
+      const insertedStatus = state || 'ouvert';
+      await client.query(text, [floor, room, user_id, lot, task, insertedStatus, user_id, 'Création']);
+
+      // 1️⃣ On historise la création de chaque ligne
+      await client.query(
+        `INSERT INTO interventions_history
+           (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
+         VALUES (currval('interventions_id_seq'), $1, $2, $3, $4, $5, $6, $7, 'Création', now())`,
+        [user_id, floor, room, lot, task, user_id, insertedStatus]
+      );
     }
     await client.query('COMMIT');
     res.json({ success: true });
