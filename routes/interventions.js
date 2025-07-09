@@ -186,7 +186,7 @@ router.get('/history', async (req, res) => {
 router.get('/:id/history', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM interventions_history WHERE intervention_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM interventions       WHERE id               = $1 ORDER BY created_at DESC',
       [req.params.id]
     );
     res.json(rows);
@@ -194,6 +194,16 @@ router.get('/:id/history', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
+});
+
+router.post('/:id/comment', async (req, res) => {
+  const { text } = req.body;
+  await pool.query(
+    `INSERT INTO interventions_comments (intervention_id, text, created_at)
+     VALUES ($1, $2, now())`,
+    [req.params.id, text]
+  );
+  res.json({ success: true });
 });
 
 // PUT update an intervention
