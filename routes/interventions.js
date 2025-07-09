@@ -159,22 +159,20 @@ router.get('/history', async (req, res) => {
   const sql = `
     SELECT
       i.id,
-      creator.username    AS user,
-      i.floor_id::text    AS floor,
-      i.room_id::text     AS room,
+      i.user_id,
+      i.floor_id::text AS floor,
+      i.room_id::text  AS room,
       i.lot,
       i.task,
-      COALESCE(u.username, i.person) AS person,
-      i.action            AS action,
-      i.status            AS state,
-      i.created_at        AS date
+      i.person,
+      i.action   AS action,
+      i.status   AS state,
+      i.created_at AS date
     FROM interventions i
-      LEFT JOIN users creator  ON creator.id::text     = i.user_id
-      LEFT JOIN users u        ON u.id::text           = i.person
     WHERE ($1 = '' OR i.floor_id::text = $1)
-      AND ($2 = '' OR i.room_id ::text = $2)
-      AND ($3 = '' OR i.lot      = $3)
-    ORDER BY i.created_at DESC
+      AND ($2 = '' OR i.room_id::text  = $2)
+      AND ($3 = '' OR i.lot         = $3)
+    ORDER BY i.created_at DESC;
   `;
   console.log('––– HISTORY SQL –––');
   console.log('SQL:', sql.replace(/\s+/g, ' '));

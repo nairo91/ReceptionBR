@@ -59,10 +59,9 @@ function showTab(tabId) {
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
-  userOptions = '<option value="">--Choisir--</option>'
-    + users
-        .map(u => `<option value="${u.id}">${u.username}</option>`)
-        .join('');
+  window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
+  userOptions = '<option value="">--Choisir--</option>' +
+    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
   document.querySelectorAll('select.person').forEach(sel => {
     const v = sel.value;
     sel.innerHTML = userOptions;
@@ -115,14 +114,14 @@ function renderHistory(rows) {
   rows.forEach(h => {
     const emplacement = `${h.floor} / ${h.room}`;
     const vals = [
-      h.user || '',                     // creator.username
-      h.action,                         // i.action
-      h.lot,
-      emplacement,                      // i.floor / i.room
-      h.task,                           // i.task
-      h.person || '',                   // COALESCE(u.username,i.person)
-      statusLabels[h.state] || h.state, // i.status
-      new Date(h.date).toLocaleString() // i.created_at
+      window.userMap[h.user_id] || h.user_id,          // Utilisateur
+      h.action,                                        // Action
+      h.lot,                                           // Lot
+      emplacement,                                     // Étage-Chambre
+      h.task,                                          // Tâche
+      window.userMap[h.person]  || h.person,           // Personne
+      statusLabels[h.state]  || h.state,               // État
+      new Date(h.date).toLocaleString()                // Date/Heure
     ];
     const tr = document.createElement('tr');
     vals.forEach(v => {
