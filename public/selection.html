@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=0.7, minimum-scale=0.5, maximum-scale=1">
+  <!-- Plus dézoomé par défaut sur mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=0.5, minimum-scale=0.5, maximum-scale=1">
   <title>Gestion des tâches</title>
   <link rel="stylesheet" href="selection.css">
 </head>
@@ -10,8 +11,7 @@
   <nav class="tabs">
     <button data-tab="historyTab">Historique</button>
     <button data-tab="editTab">Ajouter</button>
-    <button data-tab="commentTab">Commentaire</button>
-    <button data-tab="photoTab">Photo</button>
+    <!-- Boutons Commentaire et Photo retirés -->
   </nav>
 
   <section id="historyTab" class="tab-content">
