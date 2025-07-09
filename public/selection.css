@@ -163,7 +163,31 @@ button:focus {
 .back-btn {
   margin-bottom: 0.5rem;
   display: inline-block;
-  background: #eee;
-  padding: 0.3rem;
-  border-radius: 4px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: .4rem .8rem;
+  border-radius: .25rem;
+  cursor: pointer;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.back-btn:hover {
+  background: #0056b3;
+}
+
+/* Nouveau style pour le tableau d’historique */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.history-table th,
+.history-table td {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+.history-table th {
+  background: #f7f7f7;
 }

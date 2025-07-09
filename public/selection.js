@@ -53,16 +53,31 @@ const statusLabels = {
 function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
-  const items = logs.map(l =>
-    `<li>
-       ${new Date(l.created_at).toLocaleString()} —
-       Lot: ${l.lot}, Tâche: ${l.task},
-       Modifié par: ${window.userMap[l.user_id]||l.user_id},
-       Assigné à: ${window.userMap[l.person]||l.person},
-       État: ${l.state}, Action: ${l.action}
-     </li>`
-  ).join('');
-  content.innerHTML = `<ul>${items}</ul>`;
+  const rows = logs.map(l => `
+    <tr>
+      <td>${new Date(l.created_at).toLocaleString()}</td>
+      <td>${l.lot}</td>
+      <td>${l.task}</td>
+      <td>${window.userMap[l.user_id]||l.user_id}</td>
+      <td>${window.userMap[l.person]||l.person}</td>
+      <td>${l.state}</td>
+      <td>${l.action}</td>
+    </tr>
+  `).join('');
+  content.innerHTML = `
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Lot</th><th>Tâche</th>
+          <th>Modifié par</th><th>Assigné à</th>
+          <th>État</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
   modal.hidden = false;
 }
 
@@ -394,8 +409,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (e.target.dataset.tab === 'editTab') loadPreview();
     }
   });
-  document.getElementById('comment-back').addEventListener('click', () => showTab('historyTab'));
-  document.getElementById('photo-back').addEventListener('click', () => showTab('historyTab'));
+  document.getElementById('comment-back')
+    .addEventListener('click', () => showTab('historyTab'));
+  document.getElementById('photo-back')
+    .addEventListener('click', () => showTab('historyTab'));
   const modal = document.getElementById('history-modal');
   document.getElementById('close-history').addEventListener('click', () => {
     modal.hidden = true;
