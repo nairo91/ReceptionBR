@@ -109,7 +109,13 @@ async function loadHistory() {
 }
 
 async function loadPreview() {
-  const floor = document.getElementById('edit-floor').value || '';
+  const floor = document.getElementById('edit-floor').value;
+  const previewSection = document.getElementById('previewTab');
+  if (!floor) {
+    previewSection.hidden = true;
+    return;
+  }
+  previewSection.hidden = false;
   const room  = document.getElementById('edit-room').value || '';
   const lot   = document.getElementById('edit-lot').value || '';
   const params = new URLSearchParams({ etage: floor, chambre: room, lot });
@@ -141,8 +147,8 @@ function renderHistory(rows, tableSelector = '#history-table') {
       td.textContent = v;
       tr.appendChild(td);
     });
-    // seulement pour l'historique "véritable", on ajoute le bouton d'édition
-    if (tableSelector === '#history-table') {
+    // on ajoute le bouton d'édition pour l'historique et la prévisualisation
+    if (['#history-table', '#preview-table'].includes(tableSelector)) {
       const tdEdit = document.createElement('td');
       const btn = document.createElement('button');
       btn.className = 'hist-edit';
