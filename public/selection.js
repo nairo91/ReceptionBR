@@ -285,7 +285,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadFloors('#edit-floor');
   await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
   editSubmitBtn.dataset.id = '';
+  // Afficher d'emblée l'Historique
   showTab('historyTab');
+  await loadHistory();
   document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
   document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
   document.getElementById('hist-refresh').addEventListener('click', loadHistory);
