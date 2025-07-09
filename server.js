@@ -27,6 +27,36 @@ const pool = require("./db");
       created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interventions_history (
+      id              SERIAL      PRIMARY KEY,
+      intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+      floor_id        TEXT        NOT NULL,
+      room_id         TEXT        NOT NULL,
+      lot             TEXT        NOT NULL,
+      task            TEXT        NOT NULL,
+      person          TEXT,
+      status          TEXT        NOT NULL,
+      action          TEXT        NOT NULL,
+      created_at      TIMESTAMPTZ NOT NULL
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interventions_comments (
+      id              SERIAL      PRIMARY KEY,
+      intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+      text            TEXT        NOT NULL,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interventions_photos (
+      id              SERIAL      PRIMARY KEY,
+      intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+      url             TEXT        NOT NULL,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
 })().catch(console.error);
 
 const app = express();
