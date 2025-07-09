@@ -186,7 +186,18 @@ router.get('/history', async (req, res) => {
 router.get('/:id/history', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM interventions       WHERE id               = $1 ORDER BY created_at DESC',
+      `SELECT intervention_id AS id,
+              floor_id,
+              room_id,
+              lot,
+              task,
+              person,
+              status AS state,
+              action,
+              created_at
+         FROM interventions_history
+        WHERE intervention_id = $1
+     ORDER BY created_at DESC`,
       [req.params.id]
     );
     res.json(rows);
@@ -194,6 +205,22 @@ router.get('/:id/history', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
+});
+
+router.get('/:id/comments', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT text, created_at FROM interventions_comments WHERE intervention_id=$1 ORDER BY created_at DESC',
+    [req.params.id]
+  );
+  res.json(rows);
+});
+
+router.get('/:id/photos', async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT url FROM interventions_photos WHERE intervention_id=$1 ORDER BY created_at DESC',
+    [req.params.id]
+  );
+  res.json(rows.map(r => r.url));
 });
 
 router.post('/:id/comment', async (req, res) => {
@@ -211,6 +238,13 @@ router.put('/:id', async (req, res) => {
   const { floor, room, lot, task, person, state, userId } = req.body;
   const action = 'Modification';
   try {
+    await pool.query(
+      `INSERT INTO interventions_history
+         (intervention_id, floor_id, room_id, lot, task, person, status, action, created_at)
+       SELECT id, floor_id, room_id, lot, task, person, status, action, created_at
+         FROM interventions WHERE id=$1`,
+      [req.params.id]
+    );
     await pool.query(
       `UPDATE interventions
          SET floor_id = $1,

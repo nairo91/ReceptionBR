@@ -191,12 +191,14 @@ function renderHistory(rows, tableSelector = '#history-table') {
             console.log('Task history', logs);
           }
         } else if (action === 'add-comment') {
+          currentId = h.id;
           showTab('commentTab');
+          await loadComments();
           document.getElementById('comment-text').focus();
-          currentId = h.id;
         } else if (action === 'add-photo') {
-          showTab('photoTab');
           currentId = h.id;
+          showTab('photoTab');
+          await loadPhotos();
         }
         menu.hidden = true;
       });
@@ -313,8 +315,27 @@ document.getElementById('comment-send').addEventListener('click', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text })
   });
+  await loadComments();
   document.getElementById('comment-text').value = '';
 });
+
+async function loadComments() {
+  if (!currentId) return;
+  const res = await fetch(`/api/interventions/${currentId}/comments`);
+  const comments = await res.json();
+  const list = document.getElementById('comment-list');
+  list.innerHTML = comments
+    .map(c => `<li>${new Date(c.created_at).toLocaleString()}: ${c.text}</li>`)
+    .join('');
+}
+
+async function loadPhotos() {
+  if (!currentId) return;
+  const res = await fetch(`/api/interventions/${currentId}/photos`);
+  const urls = await res.json();
+  document.getElementById('photo-list').innerHTML =
+    urls.map(u => `<li><img src="${u}"></li>`).join('');
+}
 
 document.getElementById('photo-send').addEventListener('click', async () => {
   if (!currentId) return;
@@ -324,7 +345,7 @@ document.getElementById('photo-send').addEventListener('click', async () => {
   const res = await fetch(`/api/interventions/${currentId}/photos`, { method: 'POST', body: fd });
   const urls = await res.json();
   const list = document.getElementById('photo-list');
-  list.innerHTML = urls.map(u => `<li><img src="${u}" /></li>`).join('');
+  list.innerHTML = urls.map(u => `<li><img src="${u}"></li>`).join('');
 });
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -365,6 +386,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (e.target.dataset.tab === 'editTab') loadPreview();
     }
   });
+  document.getElementById('comment-back').addEventListener('click', () => showTab('historyTab'));
+  document.getElementById('photo-back').addEventListener('click', () => showTab('historyTab'));
   const modal = document.getElementById('history-modal');
   document.getElementById('close-history').addEventListener('click', () => {
     modal.hidden = true;
