@@ -58,8 +58,13 @@ function showTaskHistory(logs) {
       <td>${new Date(l.created_at).toLocaleString()}</td>
       <td>${l.lot}</td>
       <td>${l.task}</td>
-      <td>${window.userMap[l.user_id]||l.user_id}</td>
-      <td>${window.userMap[l.person]||l.person}</td>
+      <td>${l.action === 'Création'
+           ? window.userMap[l.user_id] || l.user_id
+           : ''}</td>
+      <td>${l.action !== 'Création'
+           ? window.userMap[l.user_id] || l.user_id
+           : ''}</td>
+      <td>${window.userMap[l.person] || l.person}</td>
       <td>${l.state}</td>
       <td>${l.action}</td>
     </tr>
@@ -68,9 +73,14 @@ function showTaskHistory(logs) {
     <table class="history-table">
       <thead>
         <tr>
-          <th>Date</th><th>Lot</th><th>Tâche</th>
-          <th>Modifié par</th><th>Assigné à</th>
-          <th>État</th><th>Action</th>
+          <th>Date</th>
+          <th>Lot</th>
+          <th>Tâche</th>
+          <th>Créé par</th>
+          <th>Modifié par</th>
+          <th>Assigné à</th>
+          <th>État</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
