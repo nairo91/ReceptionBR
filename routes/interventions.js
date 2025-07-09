@@ -242,8 +242,19 @@ router.put('/:id', async (req, res) => {
     await pool.query(
       `INSERT INTO interventions_history
          (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
-       SELECT id, $2, floor_id, room_id, lot, task, person, status, action, created_at
-         FROM interventions WHERE id=$1`,
+       SELECT
+         i.id,
+         COALESCE($2, i.user_id) AS user_id,
+         i.floor_id,
+         i.room_id,
+         i.lot,
+         i.task,
+         i.person,
+         i.status,
+         i.action,
+         i.created_at
+       FROM interventions i
+      WHERE i.id = $1`,
       [req.params.id, userId]
     );
     await pool.query(
