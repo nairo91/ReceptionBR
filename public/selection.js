@@ -50,8 +50,10 @@ function showTab(tabId) {
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
-  userOptions = '<option value="">--Choisir--</option>' +
-    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+  userOptions = '<option value="">--Choisir--</option>'
+    + users
+        .map(u => `<option value="${u.id}">${u.username}</option>`)
+        .join('');
   document.querySelectorAll('select.person').forEach(sel => {
     const v = sel.value;
     sel.innerHTML = userOptions;
