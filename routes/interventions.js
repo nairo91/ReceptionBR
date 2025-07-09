@@ -164,7 +164,7 @@ router.get('/history', async (req, res) => {
       i.room_id::text     AS room,
       i.lot,
       i.task,
-      COALESCE(u.username, i.person) AS personne,
+      COALESCE(u.username, i.person) AS person,
       i.action            AS action,
       i.status            AS state,
       i.created_at        AS date
