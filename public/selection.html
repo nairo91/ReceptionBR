@@ -53,6 +53,7 @@
           <th>État</th>
           <th>Date/Heure</th>
           <th>Modifier</th>
+          <th>Info</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -66,7 +67,7 @@
         <thead>
           <tr>
             <th>Utilisateur</th><th>Action</th><th>Lot</th><th>Étage</th>
-            <th>Chambre</th><th>Tâche</th><th>Personne</th><th>État</th><th>Date/Heure</th><th>Modifier</th>
+            <th>Chambre</th><th>Tâche</th><th>Personne</th><th>État</th><th>Date/Heure</th><th>Modifier</th><th>Info</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -118,6 +119,13 @@
     <button id="photo-send">Envoyer</button>
     <ul id="photo-list"></ul>
   </section>
+
+  <div id="history-modal" class="modal" hidden>
+    <div class="modal-dialog">
+      <button id="close-history" class="close-btn" aria-label="Fermer">×</button>
+      <div id="history-content"></div>
+    </div>
+  </div>
 
   <script src="selection.js"></script>
 </body>

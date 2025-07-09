@@ -1,19 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../db");
-const multer = require("multer");
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { v2: cloudinary } = require('cloudinary');
 const { Parser } = require("json2csv");
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'receptionbr',
-    allowed_formats: ['jpg','png']
-  }
-});
-const upload = multer({ storage });
+const upload = require('../middlewares/upload');
 
 // Middleware d'authentification désactivé (dev)
 function isAuthenticated(req, res, next) {
@@ -348,6 +337,11 @@ router.get('/:id/history', async (req, res) => {
     [id]
   );
   res.json(logs.rows);
+});
+
+router.post('/:id/photos', upload.array('photos'), async (req, res) => {
+  const urls = req.files.map(f => f.path);
+  res.json(urls);
 });
 
 module.exports = router;
