@@ -31,6 +31,7 @@ const pool = require("./db");
     CREATE TABLE IF NOT EXISTS interventions_history (
       id              SERIAL      PRIMARY KEY,
       intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+      user_id         TEXT        NOT NULL DEFAULT '',
       floor_id        TEXT        NOT NULL,
       room_id         TEXT        NOT NULL,
       lot             TEXT        NOT NULL,
@@ -40,6 +41,10 @@ const pool = require("./db");
       action          TEXT        NOT NULL,
       created_at      TIMESTAMPTZ NOT NULL
     );
+  `);
+  await pool.query(`
+    ALTER TABLE interventions_history
+      ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
   `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS interventions_comments (

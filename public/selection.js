@@ -53,7 +53,15 @@ const statusLabels = {
 function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
-  const items = logs.map(l => `<li>${l.action} - ${l.state} - ${new Date(l.created_at).toLocaleString()}</li>`).join('');
+  const items = logs.map(l =>
+    `<li>
+       ${new Date(l.created_at).toLocaleString()} —
+       Lot: ${l.lot}, Tâche: ${l.task},
+       Modifié par: ${window.userMap[l.user_id]||l.user_id},
+       Assigné à: ${window.userMap[l.person]||l.person},
+       État: ${l.state}, Action: ${l.action}
+     </li>`
+  ).join('');
   content.innerHTML = `<ul>${items}</ul>`;
   modal.hidden = false;
 }

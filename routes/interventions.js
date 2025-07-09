@@ -187,6 +187,7 @@ router.get('/:id/history', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT intervention_id AS id,
+              user_id,
               floor_id,
               room_id,
               lot,
@@ -240,10 +241,10 @@ router.put('/:id', async (req, res) => {
   try {
     await pool.query(
       `INSERT INTO interventions_history
-         (intervention_id, floor_id, room_id, lot, task, person, status, action, created_at)
-       SELECT id, floor_id, room_id, lot, task, person, status, action, created_at
+         (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
+       SELECT id, $2, floor_id, room_id, lot, task, person, status, action, created_at
          FROM interventions WHERE id=$1`,
-      [req.params.id]
+      [req.params.id, userId]
     );
     await pool.query(
       `UPDATE interventions
@@ -293,8 +294,16 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
-router.post('/:id/photos', upload.array('photos'), (req, res) => {
-  res.json(req.files.map(f => f.path));
+router.post('/:id/photos', upload.array('photos'), async (req, res) => {
+  const urls = req.files.map(f => f.path);
+  // persister en base et attendre chaque insertion
+  for (const url of urls) {
+    await pool.query(
+      'INSERT INTO interventions_photos (intervention_id, url, created_at) VALUES ($1, $2, now())',
+      [req.params.id, url]
+    );
+  }
+  res.json(urls);
 });
 
 module.exports = router;
