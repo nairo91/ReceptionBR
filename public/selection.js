@@ -54,8 +54,10 @@ function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
   const rows = logs.map(l => `
-        <tr class="${l.action==='Création' ? 'creation' : 'modification'}">
+        <tr class="${l.action==='Création'?'creation':'modification'}">
           <td>${new Date(l.created_at).toLocaleString()}</td>
+          <td>${l.floor_old||'–'}</td><td>${l.floor_new}</td>
+          <td>${l.room_old||'–'}</td><td>${l.room_new}</td>
           <td>${l.lot_old||'–'}</td><td>${l.lot_new}</td>
           <td>${l.task_old||'–'}</td><td>${l.task_new}</td>
           <td>${l.state_old||'–'}</td><td>${l.state_new}</td>
@@ -68,6 +70,8 @@ function showTaskHistory(logs) {
         <thead>
           <tr>
             <th>Date</th>
+            <th>Étage avant</th><th>Étage après</th>
+            <th>Chambre avant</th><th>Chambre après</th>
             <th>Lot avant</th><th>Lot après</th>
             <th>Tâche avant</th><th>Tâche après</th>
             <th>État avant</th><th>État après</th>

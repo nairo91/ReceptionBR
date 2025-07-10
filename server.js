@@ -28,26 +28,28 @@ const pool = require("./db");
     );
   `);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS interventions_history (
-      id              SERIAL      PRIMARY KEY,
-      intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
-      user_id         TEXT        NOT NULL DEFAULT '',
-      version         SERIAL      NOT NULL,
-      floor_id        TEXT        NOT NULL,
-      room_id         TEXT        NOT NULL,
-      lot             TEXT        NOT NULL,
-      task            TEXT        NOT NULL,
-      person          TEXT,
-      status          TEXT        NOT NULL,
-      lot_old         TEXT,
-      lot_new         TEXT,
-      task_old        TEXT,
-      task_new        TEXT,
-      state_old       TEXT,
-      state_new       TEXT,
-      action          TEXT        NOT NULL,
-      created_at      TIMESTAMPTZ NOT NULL
-    );
+      CREATE TABLE IF NOT EXISTS interventions_history (
+        id              SERIAL      PRIMARY KEY,
+        intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+        user_id         TEXT        NOT NULL DEFAULT '',
+        version         SERIAL      NOT NULL,
+        lot             TEXT        NOT NULL,
+        task            TEXT        NOT NULL,
+        person          TEXT,
+        status          TEXT        NOT NULL,
+        floor_old       TEXT,
+        floor_new       TEXT,
+        room_old        TEXT,
+        room_new        TEXT,
+        lot_old         TEXT,
+        lot_new         TEXT,
+        task_old        TEXT,
+        task_new        TEXT,
+        state_old       TEXT,
+        state_new       TEXT,
+        action          TEXT        NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL
+      );
   `);
   await pool.query(`
     ALTER TABLE interventions_history
@@ -60,6 +62,10 @@ const pool = require("./db");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS task_new TEXT");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS state_old TEXT");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS state_new TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS floor_old TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS floor_new TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS room_old TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS room_new TEXT");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS interventions_comments (
       id              SERIAL      PRIMARY KEY,
