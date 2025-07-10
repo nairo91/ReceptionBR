@@ -94,22 +94,17 @@ app.use(cors({
 
 app.use(express.json());
 
-// Gestion des interventions (POST + GET /api/interventions)
-app.use('/api/interventions', interventionsRoutes);
-app.use('/uploads', express.static('uploads'));
-
-
-// Configuration express-session
+// 1️⃣ Configure express-session dès maintenant
 app.use(session({
-  secret: "tonSecretUltraSecret", // Change cette clé en une valeur complexe
+  secret: "tonSecretUltraSecret",
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: false, // true si HTTPS, false en dev local
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24, // 1 jour
-  },
+  cookie: { secure: false, httpOnly: true, maxAge: 86400000 }
 }));
+
+// 2️⃣ Puis enregistre tes routes API
+app.use('/api/interventions', interventionsRoutes);
+app.use('/uploads', express.static('uploads'));
 
 // Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
