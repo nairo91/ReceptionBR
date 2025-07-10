@@ -191,3 +191,11 @@ button:focus {
 .history-table th {
   background: #f7f7f7;
 }
+
+.history-table tr.creation {
+  background: #e8f5e9;
+}
+
+.history-table tr.modification {
+  background: #e3f2fd;
+}

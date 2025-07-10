@@ -67,9 +67,18 @@ router.post('/', async (req, res) => {
     // 1️⃣ On ajoute aussi cette création dans l’historique
     await pool.query(
       `INSERT INTO interventions_history
-         (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'Création',now())`,
-      [created.id, userId, created.floor_id, created.room_id, created.lot, created.task, created.person, created.status]
+         (intervention_id, user_id,
+          lot_old, lot_new,
+          task_old, task_new,
+          state_old, state_new,
+          action, created_at)
+       VALUES
+         ($1, $2,
+          NULL, $3,
+          NULL, $4,
+          NULL, $5,
+          'Création', now())`,
+      [created.id, userId, created.lot, created.task, created.status]
     );
 
     res.json({ success: true });
@@ -199,17 +208,17 @@ router.get('/:id/history', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT intervention_id AS id,
               user_id,
-              floor_id,
-              room_id,
-              lot,
-              task,
-              person,
-              status AS state,
+              lot_old,
+              lot_new,
+              task_old,
+              task_new,
+              state_old,
+              state_new,
               action,
               created_at
          FROM interventions_history
         WHERE intervention_id = $1
-     ORDER BY created_at DESC`,
+     ORDER BY version DESC`,
       [req.params.id]
     );
     res.json(rows);
@@ -248,37 +257,41 @@ router.post('/:id/comment', async (req, res) => {
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
   const { floor, room, lot, task, person, state, userId } = req.body;
-  const action = 'Modification';
   try {
+    // 1️⃣ récupère l\u2019état courant
+    const before = (await pool.query(
+      'SELECT lot, task, status FROM interventions WHERE id=$1',
+      [req.params.id]
+    )).rows[0];
+
+    // 2️⃣ on historise l\u2019ancien ET le nouveau
     await pool.query(
       `INSERT INTO interventions_history
-         (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
-       SELECT
-         i.id,
-         COALESCE($2, i.user_id) AS user_id,
-         i.floor_id,
-         i.room_id,
-         i.lot,
-         i.task,
-         i.person,
-         i.status,
-         i.action,
-         i.created_at
-       FROM interventions i
-      WHERE i.id = $1`,
-      [req.params.id, userId]
+         (intervention_id, user_id,
+          lot_old, lot_new,
+          task_old, task_new,
+          state_old, state_new,
+          action, created_at)
+       VALUES
+         ($1, $2,
+          $3, $4,
+          $5, $6,
+          $7, $8,
+          'Modification', now())`,
+      [
+        req.params.id, userId,
+        before.lot, lot,
+        before.task, task,
+        before.status, state
+      ]
     );
+
+    // 3️⃣ on applique la mise à jour
     await pool.query(
       `UPDATE interventions
-         SET floor_id = $1,
-             room_id  = $2,
-             lot      = $3,
-             task     = $4,
-             person   = $5,
-             status   = $6,
-             action   = $7
-       WHERE id = $8`,
-      [floor, room, lot, task, person || userId, state, action, req.params.id]
+         SET floor_id=$1, room_id=$2, lot=$3, task=$4, person=$5, status=$6, action=$7
+       WHERE id=$8`,
+      [floor, room, lot, task, person || userId, state, 'Modification', req.params.id]
     );
     res.json({ success: true });
   } catch (err) {
@@ -309,9 +322,17 @@ router.post('/bulk', async (req, res) => {
       // 1️⃣ On historise la création de chaque ligne
       await client.query(
         `INSERT INTO interventions_history
-           (intervention_id, user_id, floor_id, room_id, lot, task, person, status, action, created_at)
-         VALUES (currval('interventions_id_seq'), $1, $2, $3, $4, $5, $6, $7, 'Création', now())`,
-        [user_id, floor, room, lot, task, user_id, insertedStatus]
+           (intervention_id, user_id,
+            lot_old, lot_new,
+            task_old, task_new,
+            state_old, state_new,
+            action, created_at)
+         VALUES (currval('interventions_id_seq'), $1,
+            NULL, $2,
+            NULL, $3,
+            NULL, $4,
+            'Création', now())`,
+        [user_id, lot, task, insertedStatus]
       );
     }
     await client.query('COMMIT');
