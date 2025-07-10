@@ -54,40 +54,29 @@ function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
   const rows = logs.map(l => `
-    <tr>
-      <td>${new Date(l.created_at).toLocaleString()}</td>
-      <td>${l.lot}</td>
-      <td>${l.task}</td>
-      <td>${l.action === 'Création'
-           ? window.userMap[l.user_id] || l.user_id
-           : ''}</td>
-      <td>${l.action !== 'Création'
-           ? window.userMap[l.user_id] || l.user_id
-           : ''}</td>
-      <td>${window.userMap[l.person] || l.person}</td>
-      <td>${l.state}</td>
-      <td>${l.action}</td>
-    </tr>
-  `).join('');
-  content.innerHTML = `
-    <table class="history-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Lot</th>
-          <th>Tâche</th>
-          <th>Créé par</th>
-          <th>Modifié par</th>
-          <th>Assigné à</th>
-          <th>État</th>
-          <th>Action</th>
+        <tr class="${l.action==='Création' ? 'creation' : 'modification'}">
+          <td>${new Date(l.created_at).toLocaleString()}</td>
+          <td>${l.lot_old||'–'}</td><td>${l.lot_new}</td>
+          <td>${l.task_old||'–'}</td><td>${l.task_new}</td>
+          <td>${l.state_old||'–'}</td><td>${l.state_new}</td>
+          <td>${window.userMap[l.user_id]||l.user_id}</td>
+          <td>${l.action}</td>
         </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
-  `;
+    `).join('');
+  content.innerHTML = `
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Lot avant</th><th>Lot après</th>
+            <th>Tâche avant</th><th>Tâche après</th>
+            <th>État avant</th><th>État après</th>
+            <th>Par</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
   modal.hidden = false;
 }
 
