@@ -52,8 +52,10 @@ router.get('/users', async (req, res) => {
 
 // POST new intervention
 router.post('/', async (req, res) => {
-  const { floorId, roomId, userId, lot, task, status, person } = req.body;
-  if (!floorId || !roomId || !userId || !lot || !task) {
+  const userId = req.session?.userId;
+  if (!userId) return res.status(401).json({ error: 'Non authentifié' });
+  const { floorId, roomId, lot, task, status, person } = req.body;
+  if (!floorId || !roomId || !lot || !task) {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
@@ -264,7 +266,9 @@ router.post('/:id/comment', async (req, res) => {
 
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
-  const { floor, room, lot, task, person, state, userId } = req.body;
+  const userId = req.session?.userId;
+  if (!userId) return res.status(401).json({ error: 'Non authentifié' });
+  const { floor, room, lot, task, person, state } = req.body;
   try {
     // 1️⃣ lire l’état courant
     const before = (await pool.query(
