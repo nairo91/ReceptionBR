@@ -136,7 +136,9 @@ async function loadHistory() {
     lot: document.getElementById('hist-lot').value || ''
   });
   console.log('⚙️ HISTORY SQL params:', params.toString());
-  const res = await fetch('/api/interventions/history?' + params.toString());
+  const res = await fetch('/api/interventions/history?' + params.toString(), {
+    credentials: 'include'
+  });
   const rows = await res.json();
   console.log('⚙️ rows returned:', rows);
   renderHistory(rows, '#history-table');
@@ -153,7 +155,9 @@ async function loadPreview() {
   const room  = document.getElementById('edit-room').value || '';
   const lot   = document.getElementById('edit-lot').value || '';
   const params = new URLSearchParams({ etage: floor, chambre: room, lot });
-  const res = await fetch('/api/interventions/history?' + params.toString());
+  const res = await fetch('/api/interventions/history?' + params.toString(), {
+    credentials: 'include'
+  });
   const rows = await res.json();
   renderHistory(rows, '#preview-table');
 }
@@ -209,7 +213,9 @@ function renderHistory(rows, tableSelector = '#history-table') {
       menu.addEventListener('click', async e => {
         const action = e.target.dataset.action;
         if (action === 'view-history') {
-          const res = await fetch(`/api/interventions/${h.id}/history`);
+          const res = await fetch(`/api/interventions/${h.id}/history`, {
+            credentials: 'include'
+          });
           const logs = await res.json();
           if (typeof showTaskHistory === 'function') {
             showTaskHistory(logs);
@@ -291,6 +297,7 @@ editSubmitBtn.addEventListener('click', async function () {
   if (btn.dataset.id) {
     await fetch(`/api/interventions/${btn.dataset.id}`, {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         floor: payload.floor,
@@ -303,6 +310,7 @@ editSubmitBtn.addEventListener('click', async function () {
   } else {
     const res = await fetch('/api/interventions/bulk', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -338,6 +346,7 @@ document.getElementById('comment-send').addEventListener('click', async () => {
   const text = document.getElementById('comment-text').value;
   await fetch(`/api/interventions/${currentId}/comment`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text })
   });
@@ -347,7 +356,9 @@ document.getElementById('comment-send').addEventListener('click', async () => {
 
 async function loadComments() {
   if (!currentId) return;
-  const res = await fetch(`/api/interventions/${currentId}/comments`);
+  const res = await fetch(`/api/interventions/${currentId}/comments`, {
+    credentials: 'include'
+  });
   const comments = await res.json();
   const list = document.getElementById('comment-list');
   list.innerHTML = comments
@@ -357,7 +368,9 @@ async function loadComments() {
 
 async function loadPhotos() {
   if (!currentId) return;
-  const res = await fetch(`/api/interventions/${currentId}/photos`);
+  const res = await fetch(`/api/interventions/${currentId}/photos`, {
+    credentials: 'include'
+  });
   const urls = await res.json();
   document.getElementById('photo-list').innerHTML =
     urls.map(u => `<li><img src="${u}"></li>`).join('');
@@ -368,7 +381,11 @@ document.getElementById('photo-send').addEventListener('click', async () => {
   const files = document.getElementById('photo-file').files;
   const fd = new FormData();
   for (const f of files) fd.append('photos', f);
-  const res = await fetch(`/api/interventions/${currentId}/photos`, { method: 'POST', body: fd });
+  const res = await fetch(`/api/interventions/${currentId}/photos`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd
+  });
   const urls = await res.json();
   const list = document.getElementById('photo-list');
   list.innerHTML = urls.map(u => `<li><img src="${u}"></li>`).join('');
