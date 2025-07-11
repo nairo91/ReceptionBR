@@ -61,7 +61,7 @@ function showTaskHistory(logs) {
           <td>${l.lot_old||'–'}</td><td>${l.lot_new}</td>
           <td>${l.task_old||'–'}</td><td>${l.task_new}</td>
           <td>${l.state_old||'–'}</td><td>${l.state_new}</td>
-          <td>${window.userMap[l.user_id] || l.user_id}</td>
+          <td>${window.userMap[l.user_id]||l.user_id}</td>
           <td>${l.action}</td>
         </tr>
     `).join('');

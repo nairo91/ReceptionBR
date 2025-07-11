@@ -264,10 +264,7 @@ router.post('/:id/comment', async (req, res) => {
 
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
-  // ↪ on prend userId depuis la session
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: 'Non authentifié' });
-  const { floor, room, lot, task, person, state } = req.body;
+  const { floor, room, lot, task, person, state, userId } = req.body;
   try {
     // 1️⃣ lire l’état courant
     const before = (await pool.query(
@@ -292,7 +289,7 @@ router.put('/:id', async (req, res) => {
           $7,$8,
           $9,$10,
           $11,$12,
-          'Modification', now())`,
+          'Modification',now())`,
       [
         req.params.id, userId,
         before.floor_id, floor,
