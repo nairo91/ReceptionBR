@@ -216,17 +216,20 @@ router.get('/:id/history', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT
-         intervention_id AS id,
-         floor_old, floor_new,
-         room_old,  room_new,
-         lot_old,   lot_new,
-         task_old,  task_new,
-         state_old, state_new,
-         user_id,
-         action,    created_at
-       FROM interventions_history
-      WHERE intervention_id = $1
-   ORDER BY version DESC`,
+         ih.intervention_id AS id,
+         ih.floor_old, ih.floor_new,
+         ih.room_old,  ih.room_new,
+         ih.lot_old,   ih.lot_new,
+         ih.task_old,  ih.task_new,
+         ih.state_old, ih.state_new,
+         u.username    AS par,
+         ih.action,
+         ih.created_at
+       FROM interventions_history ih
+       LEFT JOIN users u
+         ON u.id::text = ih.user_id::text
+      WHERE ih.intervention_id = $1
+      ORDER BY ih.version DESC`,
       [req.params.id]
     );
     res.json(rows);
