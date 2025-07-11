@@ -94,11 +94,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Gestion des interventions (POST + GET /api/interventions)
-app.use('/api/interventions', interventionsRoutes);
-app.use('/uploads', express.static('uploads'));
-
-
 // Configuration express-session
 app.use(session({
   secret: "tonSecretUltraSecret", // Change cette clé en une valeur complexe
@@ -110,6 +105,10 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24, // 1 jour
   },
 }));
+
+// Gestion des interventions (POST + GET /api/interventions)
+app.use('/api/interventions', interventionsRoutes);
+app.use('/uploads', express.static('uploads'));
 
 // Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
