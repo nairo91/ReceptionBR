@@ -53,19 +53,20 @@ const statusLabels = {
 function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
-  const rows = logs.map(l => `
-        <tr class="${l.action==='Création'?'creation':'modification'}">
-          <td>${new Date(l.created_at).toLocaleString()}</td>
-          <td>${l.person_old || '–'}</td>
-          <td>${l.person_new || '–'}</td>
-          <td>${l.floor_old||'–'}</td><td>${l.floor_new}</td>
-          <td>${l.room_old||'–'}</td><td>${l.room_new}</td>
-          <td>${l.lot_old||'–'}</td><td>${l.lot_new}</td>
-          <td>${l.task_old||'–'}</td><td>${l.task_new}</td>
-          <td>${l.state_old||'–'}</td><td>${l.state_new}</td>
-          <td>${l.action}</td>
-        </tr>
-    `).join('');
+  const rows = logs
+    .map(l => `
+      <tr class="${l.action === 'Création' ? 'creation' : 'modification'}">
+        <td>${new Date(l.created_at).toLocaleString()}</td>
+        <td>${l.person_old || '–'}</td><td>${l.person_new || '–'}</td>
+        <td>${l.floor_old || '–'}</td><td>${l.floor_new || '–'}</td>
+        <td>${l.room_old  || '–'}</td><td>${l.room_new  || '–'}</td>
+        <td>${l.lot_old   || '–'}</td><td>${l.lot_new   || '–'}</td>
+        <td>${l.task_old  || '–'}</td><td>${l.task_new  || '–'}</td>
+        <td>${l.state_old || '–'}</td><td>${l.state_new || '–'}</td>
+        <td>${l.action}</td>
+      </tr>
+    `)
+    .join('');
   content.innerHTML = `
       <table class="history-table">
         <thead>
