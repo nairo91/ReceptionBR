@@ -73,6 +73,7 @@ router.post('/', async (req, res) => {
           lot_old,   lot_new,
           task_old,  task_new,
           state_old, state_new,
+          person_old, person_new,
           action,    created_at)
        VALUES
          ($1, $2,
@@ -81,13 +82,15 @@ router.post('/', async (req, res) => {
           NULL, $5,
           NULL, $6,
           NULL, $7,
+          NULL, $8,
           'Création', now())`,
       [created.id, userId,
-       created.floor_id, created.floor_id,
-       created.room_id,  created.room_id,
-       created.lot,      created.lot,
-       created.task,     created.task,
-       created.status,   created.status]
+       created.floor_id,
+       created.room_id,
+       created.lot,
+       created.task,
+       created.status,
+       created.person]
     );
 
     res.json({ success: true });
@@ -222,6 +225,7 @@ router.get('/:id/history', async (req, res) => {
          ih.lot_old,   ih.lot_new,
          ih.task_old,  ih.task_new,
          ih.state_old, ih.state_new,
+         ih.person_old, ih.person_new,
          u.username    AS par,
          ih.action,
          ih.created_at
@@ -271,7 +275,7 @@ router.put('/:id', async (req, res) => {
   try {
     // 1️⃣ lire l’état courant
     const before = (await pool.query(
-      'SELECT floor_id,room_id,lot,task,status FROM interventions WHERE id=$1',
+      'SELECT floor_id, room_id, lot, task, status, person FROM interventions WHERE id=$1',
       [req.params.id]
     )).rows[0];
 
@@ -284,6 +288,7 @@ router.put('/:id', async (req, res) => {
           lot_old,  lot_new,
           task_old, task_new,
           state_old,state_new,
+          person_old, person_new,
           action,   created_at)
        VALUES
          ($1,$2,
@@ -292,6 +297,7 @@ router.put('/:id', async (req, res) => {
           $7,$8,
           $9,$10,
           $11,$12,
+          $13,$14,
           'Modification',now())`,
       [
         req.params.id, userId,
@@ -299,7 +305,8 @@ router.put('/:id', async (req, res) => {
         before.room_id,  room,
         before.lot,      lot,
         before.task,     task,
-        before.status,   state
+        before.status,   state,
+        before.person,   person
       ]
     );
 
@@ -346,6 +353,7 @@ router.post('/bulk', async (req, res) => {
             lot_old,   lot_new,
             task_old,  task_new,
             state_old, state_new,
+            person_old, person_new,
             action,    created_at)
          VALUES (currval('interventions_id_seq'), $1,
             NULL, $2,
@@ -353,8 +361,9 @@ router.post('/bulk', async (req, res) => {
             NULL, $4,
             NULL, $5,
             NULL, $6,
+            NULL, $7,
             'Création', now())`,
-        [user_id, floor, room, lot, task, insertedStatus]
+        [user_id, floor, room, lot, task, insertedStatus, user_id]
       );
     }
     await client.query('COMMIT');
