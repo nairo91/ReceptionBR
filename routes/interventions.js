@@ -357,14 +357,20 @@ router.post('/bulk', async (req, res) => {
             state_old, state_new,
             person_old, person_new,
             action,    created_at)
-         VALUES (currval('interventions_id_seq'), $1,
-            NULL, $2,
-            NULL, $3,
-            NULL, $4,
-            NULL, $5,
-            NULL, $6,
-            NULL, $7,
-            'Création', now())`,
+         VALUES
+           (
+             currval('interventions_id_seq'),
+             $1,         -- user_id (celui qui crée)
+             NULL, $2,   -- floor_old / floor_new
+             NULL, $3,   -- room_old  / room_new
+             NULL, $4,   -- lot_old   / lot_new
+             NULL, $5,   -- task_old  / task_new
+             NULL, $6,   -- state_old / state_new
+             NULL,       -- person_old (aucune personne avant)
+             $7,         -- person_new = user_id (qui a créé)
+             'Création',
+             now()
+           )`,
         [user_id, floor, room, lot, task, insertedStatus, user_id]
       );
     }
