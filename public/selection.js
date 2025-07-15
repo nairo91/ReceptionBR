@@ -57,7 +57,7 @@ function showTaskHistory(logs) {
     .map(l => `
       <tr class="${l.action === 'Création' ? 'creation' : 'modification'}">
         <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td>${l.person_old || '–'}</td><td>${l.person_new || '–'}</td>
+        <td>${window.userMap[l.person_old] || l.person_old || '–'}</td><td>${window.userMap[l.person_new] || l.person_new || '–'}</td>
         <td>${l.floor_old || '–'}</td><td>${l.floor_new || '–'}</td>
         <td>${l.room_old  || '–'}</td><td>${l.room_new  || '–'}</td>
         <td>${l.lot_old   || '–'}</td><td>${l.lot_new   || '–'}</td>
