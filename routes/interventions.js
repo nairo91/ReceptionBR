@@ -52,11 +52,8 @@ router.get('/users', async (req, res) => {
 
 // POST new intervention
 router.post('/', async (req, res) => {
-  // ↪ userId depuis la session
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: 'Non authentifié' });
-  const { floorId, roomId, lot, task, status, person } = req.body;
-  if (!floorId || !roomId || !lot || !task) {
+  const { floorId, roomId, userId, lot, task, status, person } = req.body;
+  if (!floorId || !roomId || !userId || !lot || !task) {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
@@ -79,28 +76,21 @@ router.post('/', async (req, res) => {
           person_old, person_new,
           action,    created_at)
        VALUES
-         (
-           $1, $2,
-           NULL, $3,
-           NULL, $4,
-           NULL, $5,
-           NULL, $6,
-           NULL, $7,
-           NULL, $8,        -- person_old = rien avant
-           $8,             -- person_new = id de la personne choisie
-           'Création',
-           now()
-         )`,
-      [
-        created.id,
-        userId,
-        created.floor_id,
-        created.room_id,
-        created.lot,
-        created.task,
-        created.status,
-        person || userId
-      ]
+         ($1, $2,
+          NULL, $3,
+          NULL, $4,
+          NULL, $5,
+          NULL, $6,
+          NULL, $7,
+          NULL, $8,
+          'Création', now())`,
+      [created.id, userId,
+       created.floor_id,
+       created.room_id,
+       created.lot,
+       created.task,
+       created.status,
+       created.person]
     );
 
     res.json({ success: true });
@@ -283,10 +273,7 @@ router.post('/:id/comment', async (req, res) => {
 
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
-  // ↪ userId depuis la session
-  const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: 'Non authentifié' });
-  const { floor, room, lot, task, person, state } = req.body;
+  const { floor, room, lot, task, person, state, userId } = req.body;
   try {
     // 1️⃣ lire l’état courant
     const before = (await pool.query(
@@ -306,26 +293,22 @@ router.put('/:id', async (req, res) => {
           person_old, person_new,
           action,   created_at)
        VALUES
-         (
-           $1, $2,
-           $3, $4,
-           $5, $6,
-           $7, $8,
-           $9, $10,
-           $11, $12,
-           $13, $14,
-           'Modification',
-           now()
-         )`,
+         ($1,$2,
+          $3,$4,
+          $5,$6,
+          $7,$8,
+          $9,$10,
+          $11,$12,
+          $13,$14,
+          'Modification',now())`,
       [
-        req.params.id,
-        userId,
-        before.floor_id,  floor,
-        before.room_id,   room,
-        before.lot,       lot,
-        before.task,      task,
-        before.status,    state,
-        before.person,    person
+        req.params.id, userId,
+        before.floor_id, floor,
+        before.room_id,  room,
+        before.lot,      lot,
+        before.task,     task,
+        before.status,   state,
+        before.person,   person
       ]
     );
 
@@ -374,21 +357,15 @@ router.post('/bulk', async (req, res) => {
             state_old, state_new,
             person_old, person_new,
             action,    created_at)
-         VALUES
-           (
-             currval('interventions_id_seq'),
-             $1,           -- user_id
-             NULL, $2,     -- floor
-             NULL, $3,     -- room
-             NULL, $4,     -- lot
-             NULL, $5,     -- task
-             NULL, $6,     -- state
-             NULL, $1,     -- person_old = (création aucune ancienne)
-             $1,           -- person_new = user_id
-             'Création',
-             now()
-           )`,
-        [user_id, floor, room, lot, task, insertedStatus]
+         VALUES (currval('interventions_id_seq'), $1,
+            NULL, $2,
+            NULL, $3,
+            NULL, $4,
+            NULL, $5,
+            NULL, $6,
+            NULL, $7,
+            'Création', now())`,
+        [user_id, floor, room, lot, task, insertedStatus, user_id]
       );
     }
     await client.query('COMMIT');
