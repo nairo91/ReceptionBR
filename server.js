@@ -66,6 +66,8 @@ const pool = require("./db");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS floor_new TEXT");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS room_old TEXT");
   await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS room_new TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS person_old TEXT");
+  await pool.query("ALTER TABLE interventions_history ADD COLUMN IF NOT EXISTS person_new TEXT");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS interventions_comments (
       id              SERIAL      PRIMARY KEY,
