@@ -220,22 +220,20 @@ router.get('/:id/history', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
          ih.intervention_id AS id,
-         u_old.username AS person_old,
-         u_new.username AS person_new,
-         ih.floor_old,   ih.floor_new,
-         ih.room_old,    ih.room_new,
-         ih.lot_old,     ih.lot_new,
-         ih.task_old,    ih.task_new,
-         ih.state_old,   ih.state_new,
+         ih.floor_old, ih.floor_new,
+         ih.room_old,  ih.room_new,
+         ih.lot_old,   ih.lot_new,
+         ih.task_old,  ih.task_new,
+         ih.state_old, ih.state_new,
+         ih.person_old, ih.person_new,
+         u.username    AS par,
          ih.action,
          ih.created_at
        FROM interventions_history ih
-       LEFT JOIN users u_old
-         ON u_old.id::text = ih.person_old::text
-       LEFT JOIN users u_new
-         ON u_new.id::text = ih.person_new::text
-      WHERE ih.intervention_id=$1
-   ORDER BY ih.version DESC`,
+       LEFT JOIN users u
+         ON u.id::text = ih.user_id::text
+      WHERE ih.intervention_id = $1
+      ORDER BY ih.version DESC`,
       [req.params.id]
     );
     res.json(rows);
