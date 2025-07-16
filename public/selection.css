@@ -193,7 +193,7 @@ button:focus {
 }
 .data-table tbody tr:nth-child(odd),
 .history-table tbody tr:nth-child(odd) {
-  background-color: #f5f5f5;
+  background-color: #eaeaea;
 }
 .history-table th {
   background: #f7f7f7;
@@ -210,6 +210,16 @@ button:focus {
 .history-table td.changed {
   background-color: #ffecec;
   font-weight: 600;
+}
+
+/* Conteneur responsive pour les tableaux */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  min-width: 800px;
 }
 
 /* Styles pour la zone de commentaires */
