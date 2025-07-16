@@ -50,6 +50,10 @@ const statusLabels = {
   a_definir: 'À définir'
 };
 
+function mark(oldVal, newVal) {
+  return oldVal !== newVal ? 'changed' : '';
+}
+
 function showTaskHistory(logs) {
   const modal = document.getElementById('history-modal');
   const content = document.getElementById('history-content');
@@ -57,12 +61,12 @@ function showTaskHistory(logs) {
     .map(l => `
       <tr class="${l.action === 'Création' ? 'creation' : 'modification'}">
         <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td>${window.userMap[l.person_old] || l.person_old || '–'}</td><td>${window.userMap[l.person_new] || l.person_new || '–'}</td>
-        <td>${l.floor_old || '–'}</td><td>${l.floor_new || '–'}</td>
-        <td>${l.room_old  || '–'}</td><td>${l.room_new  || '–'}</td>
-        <td>${l.lot_old   || '–'}</td><td>${l.lot_new   || '–'}</td>
-        <td>${l.task_old  || '–'}</td><td>${l.task_new  || '–'}</td>
-        <td>${l.state_old || '–'}</td><td>${l.state_new || '–'}</td>
+        <td class="${mark(l.person_old, l.person_new)}">${window.userMap[l.person_old] || l.person_old || '–'}</td><td>${window.userMap[l.person_new] || l.person_new || '–'}</td>
+        <td class="${mark(l.floor_old, l.floor_new)}">${l.floor_old || '–'}</td><td>${l.floor_new || '–'}</td>
+        <td class="${mark(l.room_old, l.room_new)}">${l.room_old  || '–'}</td><td>${l.room_new  || '–'}</td>
+        <td class="${mark(l.lot_old, l.lot_new)}">${l.lot_old   || '–'}</td><td>${l.lot_new   || '–'}</td>
+        <td class="${mark(l.task_old, l.task_new)}">${l.task_old  || '–'}</td><td>${l.task_new  || '–'}</td>
+        <td class="${mark(l.state_old, l.state_new)}">${l.state_old || '–'}</td><td>${l.state_new || '–'}</td>
         <td>${l.action}</td>
       </tr>
     `)

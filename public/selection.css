@@ -199,3 +199,8 @@ button:focus {
 .history-table tr.modification {
   background: #e3f2fd;
 }
+
+.history-table td.changed {
+  background-color: #ffecec;
+  font-weight: 600;
+}
