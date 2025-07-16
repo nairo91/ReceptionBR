@@ -249,7 +249,11 @@ router.get('/:id/history', async (req, res) => {
 
 router.get('/:id/comments', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT text, created_at FROM interventions_comments WHERE intervention_id=$1 ORDER BY created_at DESC',
+    `SELECT c.text, c.created_at, c.created_by AS author_id, u.username AS author
+       FROM interventions_comments c
+  LEFT JOIN users u ON u.id = c.created_by
+      WHERE c.intervention_id = $1
+   ORDER BY c.created_at DESC`,
     [req.params.id]
   );
   res.json(rows);
@@ -264,11 +268,11 @@ router.get('/:id/photos', async (req, res) => {
 });
 
 router.post('/:id/comment', async (req, res) => {
-  const { text } = req.body;
+  const { text, author } = req.body;
   await pool.query(
-    `INSERT INTO interventions_comments (intervention_id, text, created_at)
-     VALUES ($1, $2, now())`,
-    [req.params.id, text]
+    `INSERT INTO interventions_comments (intervention_id, text, created_by, created_at)
+     VALUES ($1, $2, $3, now())`,
+    [req.params.id, text, author]
   );
   res.json({ success: true });
 });

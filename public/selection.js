@@ -110,6 +110,12 @@ async function loadUsers() {
   });
 }
 
+// Dès que la page est prête, on injecte les mêmes options de users
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('comment-author');
+  if (sel) sel.innerHTML = userOptions; // userOptions défini dans loadUsers()
+});
+
 async function loadFloors(selector) {
   const res = await fetch('/api/floors');
   const floors = await res.json();
@@ -343,10 +349,11 @@ async function openForEdit(row) {
 document.getElementById('comment-send').addEventListener('click', async () => {
   if (!currentId) return;
   const text = document.getElementById('comment-text').value;
+  const author = document.getElementById('comment-author').value;
   await fetch(`/api/interventions/${currentId}/comment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text, author })
   });
   await loadComments();
   document.getElementById('comment-text').value = '';
@@ -399,6 +406,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     addEditRow();
   });
   await loadUsers();
+  const authorSel = document.getElementById('comment-author');
+  if (authorSel) authorSel.innerHTML = userOptions;
   await loadFloors('#hist-floor');
   const histFloor = document.getElementById('hist-floor');
   histFloor.insertAdjacentHTML('afterbegin',
