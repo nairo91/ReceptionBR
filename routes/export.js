@@ -20,7 +20,7 @@ function loadUsersMap() {
   return map;
 }
 
-async function fetchRows(etage, chambre, lot) {
+async function fetchRows(etage, chambre, lot, start, end) {
   const sql = `
     SELECT user_id, action, lot, floor_id::text AS floor, room_id::text AS room,
            task, status, created_at
@@ -28,8 +28,10 @@ async function fetchRows(etage, chambre, lot) {
       WHERE ($1='' OR floor_id::text=$1)
         AND ($2='' OR room_id::text=$2)
         AND ($3='' OR lot=$3)
+        AND ($4 = '' OR created_at >= $4::date)
+        AND ($5 = '' OR created_at <= $5::date)
       ORDER BY created_at DESC`;
-  const { rows } = await pool.query(sql, [etage, chambre, lot]);
+  const { rows } = await pool.query(sql, [etage, chambre, lot, start, end]);
   return rows;
 }
 
@@ -38,7 +40,9 @@ router.get('/pdf', async (req, res) => {
     const etage = req.query.etage || '';
     const chambre = req.query.chambre || '';
     const lot = req.query.lot || '';
-    const rows = await fetchRows(etage, chambre, lot);
+    const start = req.query.start || '';
+    const end = req.query.end || '';
+    const rows = await fetchRows(etage, chambre, lot, start, end);
     const userMap = loadUsersMap();
 
     const doc = new PDFDocument({ margin: 30, size: 'A4' });
@@ -94,7 +98,9 @@ router.get('/excel', async (req, res) => {
     const etage = req.query.etage || '';
     const chambre = req.query.chambre || '';
     const lot = req.query.lot || '';
-    const rows = await fetchRows(etage, chambre, lot);
+    const start = req.query.start || '';
+    const end = req.query.end || '';
+    const rows = await fetchRows(etage, chambre, lot, start, end);
     const userMap = loadUsersMap();
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Interventions');

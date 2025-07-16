@@ -440,7 +440,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams({
       etage: document.getElementById('hist-floor').value || '',
       chambre: document.getElementById('hist-room').value || '',
-      lot: document.getElementById('hist-lot').value || ''
+      lot: document.getElementById('hist-lot').value || '',
+      start: document.getElementById('date-start').value || '',
+      end: document.getElementById('date-end').value || ''
     });
     downloadFile('/api/export/pdf?' + params.toString(), 'interventions.pdf');
   });
@@ -448,7 +450,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams({
       etage: document.getElementById('hist-floor').value || '',
       chambre: document.getElementById('hist-room').value || '',
-      lot: document.getElementById('hist-lot').value || ''
+      lot: document.getElementById('hist-lot').value || '',
+      start: document.getElementById('date-start').value || '',
+      end: document.getElementById('date-end').value || ''
     });
     downloadFile('/api/export/excel?' + params.toString(), 'interventions.xlsx');
   });
