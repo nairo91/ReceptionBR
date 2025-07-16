@@ -46,13 +46,24 @@ router.get('/pdf', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="interventions.pdf"');
     doc.pipe(res);
 
-    const headers = ['Utilisateur','Action','Lot','Étage','Chambre','Tâche','État','Date'];
-    doc.fontSize(12);
-    doc.text(headers.join(' | '));
-    doc.moveDown();
+    const headers = ['Utilisateur', 'Action', 'Lot', 'Étage', 'Chambre', 'Tâche', 'État', 'Date'];
+    const colWidths = [80, 60, 60, 50, 60, 150, 50, 90];
+    const rowHeight = 20;
+    const startX = 30;
+    let y = 80;
+
+    doc.font('Helvetica-Bold').fontSize(10);
+    let x = startX;
+    headers.forEach((h, idx) => {
+      doc.text(h, x, y, { width: colWidths[idx], align: 'left' });
+      x += colWidths[idx];
+    });
+    y += rowHeight;
+
+    doc.font('Helvetica').fontSize(9);
 
     rows.forEach(r => {
-      const line = [
+      const data = [
         userMap[r.user_id] || r.user_id,
         r.action,
         r.lot,
@@ -61,8 +72,14 @@ router.get('/pdf', async (req, res) => {
         r.task,
         r.status,
         new Date(r.created_at).toLocaleString('fr-FR')
-      ].join(' | ');
-      doc.text(line);
+      ];
+
+      x = startX;
+      data.forEach((d, idx) => {
+        doc.text(String(d), x, y, { width: colWidths[idx], align: 'left' });
+        x += colWidths[idx];
+      });
+      y += rowHeight;
     });
 
     doc.end();
@@ -93,6 +110,9 @@ router.get('/excel', async (req, res) => {
       { header: 'Date', key: 'date', width: 20 },
     ];
 
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).alignment = { horizontal: 'center' };
+
     rows.forEach(r => {
       sheet.addRow({
         utilisateur: userMap[r.user_id] || r.user_id,
@@ -105,6 +125,20 @@ router.get('/excel', async (req, res) => {
         date: new Date(r.created_at).toLocaleString('fr-FR')
       });
     });
+
+    sheet.eachRow(row => {
+      row.eachCell(cell => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { wrapText: true, vertical: 'middle' };
+      });
+    });
+
+    sheet.getRow(1).alignment = { horizontal: 'center', wrapText: true, vertical: 'middle' };
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="interventions.xlsx"');
