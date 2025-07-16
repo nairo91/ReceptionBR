@@ -202,9 +202,9 @@ router.get('/history', async (req, res) => {
       i.status   AS state,
       i.created_at AS date
     FROM interventions i
-    WHERE coalesce(nullif($1, '')::int, i.floor_id) = i.floor_id
-      AND coalesce(nullif($2, '')::int, i.room_id)  = i.room_id
-      AND coalesce(nullif($3, ''),        i.lot)      = i.lot
+    WHERE ($1::text = ''        OR i.floor_id::text = $1::text)
+      AND ($2::text = ''        OR i.room_id::text   = $2::text)
+      AND ($3::text = ''        OR i.lot::text        = $3::text)
     ORDER BY i.created_at DESC;
   `;
   console.log('––– HISTORY SQL –––');
