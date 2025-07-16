@@ -111,9 +111,13 @@
 
   <section id="commentTab" class="tab-content" hidden>
     <button id="comment-back" class="back-btn">← Retour</button>
-    <ul id="comment-list"></ul>
-    <textarea id="comment-text"></textarea>
-    <button id="comment-send">Envoyer</button>
+    <div class="comments-container">
+      <div class="comment-form card">
+        <textarea id="comment-text" placeholder="Écrire un commentaire…"></textarea>
+        <button id="comment-send" class="btn-primary">Envoyer</button>
+      </div>
+      <div id="comment-list"></div>
+    </div>
   </section>
 
   <section id="photoTab" class="tab-content" hidden>
