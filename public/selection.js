@@ -358,7 +358,15 @@ async function loadComments() {
   const comments = await res.json();
   const list = document.getElementById('comment-list');
   list.innerHTML = comments
-    .map(c => `<li>${new Date(c.created_at).toLocaleString()}: ${c.text}</li>`)
+    .map(c => `
+      <div class="comment-card">
+        <div class="comment-header">
+          <span class="comment-author">${c.author || 'Anonyme'}</span>
+          <span class="comment-date">${new Date(c.created_at).toLocaleString()}</span>
+        </div>
+        <div class="comment-body">${c.text}</div>
+      </div>
+    `)
     .join('');
 }
 
