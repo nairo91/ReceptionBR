@@ -10,6 +10,7 @@ const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
 const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
+const exportRoutes = require("./routes/export");
 const pool = require("./db");
 
 (async () => {
@@ -124,6 +125,7 @@ app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
 app.use('/api/bulles', bullesRoutes);
+app.use('/api/export', exportRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));

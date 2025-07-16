@@ -97,6 +97,21 @@ function showTab(tabId) {
   });
 }
 
+function downloadFile(url, filename) {
+  fetch(url)
+    .then(res => res.blob())
+    .then(blob => {
+      const a = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+      a.remove();
+    });
+}
+
 async function loadUsers() {
   const res = await fetch('/api/users');
   const users = await res.json();
@@ -421,6 +436,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
   document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
   document.getElementById('hist-refresh').addEventListener('click', loadHistory);
+  document.getElementById('export-pdf').addEventListener('click', () => {
+    const params = new URLSearchParams({
+      etage: document.getElementById('hist-floor').value || '',
+      chambre: document.getElementById('hist-room').value || '',
+      lot: document.getElementById('hist-lot').value || ''
+    });
+    downloadFile('/api/export/pdf?' + params.toString(), 'interventions.pdf');
+  });
+  document.getElementById('export-excel').addEventListener('click', () => {
+    const params = new URLSearchParams({
+      etage: document.getElementById('hist-floor').value || '',
+      chambre: document.getElementById('hist-room').value || '',
+      lot: document.getElementById('hist-lot').value || ''
+    });
+    downloadFile('/api/export/excel?' + params.toString(), 'interventions.xlsx');
+  });
   document.querySelector('.tabs').addEventListener('click', e => {
     if (e.target.tagName === 'BUTTON') {
       showTab(e.target.dataset.tab);
