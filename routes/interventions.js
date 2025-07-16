@@ -193,8 +193,8 @@ router.get('/history', async (req, res) => {
     SELECT
       i.id,
       i.user_id,
-      i.floor_id::text AS floor,
-      i.room_id::text  AS room,
+      i.floor_id   AS floor,
+      i.room_id    AS room,
       i.lot,
       i.task,
       i.person,
@@ -202,9 +202,9 @@ router.get('/history', async (req, res) => {
       i.status   AS state,
       i.created_at AS date
     FROM interventions i
-    WHERE ($1 = '' OR i.floor_id::text = $1)
-      AND ($2 = '' OR i.room_id::text  = $2)
-      AND ($3 = '' OR i.lot         = $3)
+    WHERE ($1::text = ''  OR i.floor_id = $1::text)
+      AND ($2::text = ''  OR i.room_id  = $2::text)
+      AND ($3::text = ''  OR i.lot      = $3::text)
     ORDER BY i.created_at DESC;
   `;
   console.log('––– HISTORY SQL –––');
