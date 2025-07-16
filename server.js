@@ -73,13 +73,10 @@ const pool = require("./db");
       id              SERIAL      PRIMARY KEY,
       intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
       text            TEXT        NOT NULL,
-      created_by      INTEGER     NOT NULL REFERENCES users(id),
+      created_by      TEXT        NOT NULL,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
-  await pool.query(
-    'ALTER TABLE interventions_comments ADD COLUMN IF NOT EXISTS created_by INTEGER NOT NULL REFERENCES users(id)'
-  );
   await pool.query(`
     CREATE TABLE IF NOT EXISTS interventions_photos (
       id              SERIAL      PRIMARY KEY,
