@@ -343,10 +343,7 @@ router.patch('/:id', async (req, res) => {
     const updates = [], values = [];
     let idx = 1;
     for (const [k, v] of Object.entries(req.body)) {
-      // ici k === 'status'
-      updates.push(`${k}=$${idx}`);
-      values.push(v);
-      idx++;
+      updates.push(`${k}=$${idx}`); values.push(v); idx++;
     }
     values.push(req.params.id);
     await client.query(

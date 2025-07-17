@@ -487,7 +487,14 @@ async function enableInlineEditing() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: newVal })
         });
-        await loadHistory();  // relance le rendu complet
+        td.textContent = field === 'status'
+          ? statusLabels[newVal]
+          : window.userMap[newVal];
+        if (field === 'status') {
+          td.className = `editable ${field}-cell status-${newVal.replace(/\s+/g,'_')}`;
+        } else {
+          td.className = `editable ${field}-cell`;
+        }
       });
       select.addEventListener('blur', () => { td.textContent = td.textContent; });
     });
