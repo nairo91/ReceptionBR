@@ -435,21 +435,26 @@ async function loadPhotos() {
 }
 
 async function enableInlineEditing() {
-  document.querySelectorAll('td.editable').forEach(td => {
+  document.querySelectorAll('td.editable[data-field="status"], td.editable[data-field="person"]').forEach(td => {
     td.addEventListener('click', async () => {
       const field = td.dataset.field;
       const id = td.closest('tr').dataset.id;
       let options = [];
       if (field === 'status') {
-        options = ['ouvert','en cours','termine','en retard'];
+        options = Object.entries(statusLabels).map(([key, label]) => ({ id: key, label }));
       } else {
         options = Object.entries(window.userMap).map(([id, username]) => ({ id, username }));
       }
       const select = document.createElement('select');
       options.forEach(opt => {
         const o = document.createElement('option');
-        if (field === 'status') { o.value = o.text = opt; }
-        else { o.value = opt.id; o.text = opt.username; }
+        if (field === 'status') {
+          o.value = opt.id;
+          o.text  = opt.label;
+        } else {
+          o.value = opt.id;
+          o.text  = opt.username;
+        }
         if (td.textContent.trim() === o.text) o.selected = true;
         select.appendChild(o);
       });
@@ -464,9 +469,13 @@ async function enableInlineEditing() {
           body: JSON.stringify({ [field]: newVal })
         });
         td.textContent = field === 'status'
-          ? newVal.charAt(0).toUpperCase() + newVal.slice(1)
+          ? statusLabels[newVal]
           : window.userMap[newVal];
-        td.className = `editable ${field}-cell status-${newVal.replace(/\s+/g,'_')}`;
+        if (field === 'status') {
+          td.className = `editable ${field}-cell status-${newVal.replace(/\s+/g,'_')}`;
+        } else {
+          td.className = `editable ${field}-cell`;
+        }
       });
       select.addEventListener('blur', () => { td.textContent = td.textContent; });
     });
