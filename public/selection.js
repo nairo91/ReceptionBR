@@ -91,10 +91,13 @@ function showTaskHistory(logs) {
   modal.hidden = false;
 }
 
-function showTab(tabId) {
+async function showTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(sec => {
     sec.hidden = sec.id !== tabId;
   });
+  if (tabId === 'commentTab') {
+    await loadCommentUsers();
+  }
 }
 
 function downloadFile(url, filename) {
@@ -123,6 +126,15 @@ async function loadUsers() {
     sel.innerHTML = userOptions;
     if (v) sel.value = v;
   });
+}
+
+async function loadCommentUsers() {
+  const res = await fetch('/api/users');
+  const users = await res.json();
+  const select = document.getElementById('comment-user');
+  if (!select) return;
+  select.innerHTML = '<option value="">Anonyme</option>' +
+    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
 }
 
 async function loadFloors(selector) {
@@ -240,7 +252,7 @@ function renderHistory(rows, tableSelector = '#history-table') {
           }
         } else if (action === 'add-comment') {
           currentId = h.id;
-          showTab('commentTab');
+          await showTab('commentTab');
           await loadComments();
           document.getElementById('comment-text').focus();
         } else if (action === 'add-photo') {
@@ -358,10 +370,11 @@ async function openForEdit(row) {
 document.getElementById('comment-send').addEventListener('click', async () => {
   if (!currentId) return;
   const text = document.getElementById('comment-text').value;
-  await fetch(`/api/interventions/${currentId}/comment`, {
+  const userId = document.getElementById('comment-user').value;
+  await fetch('/api/comments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ intervention_id: currentId, text, user_id: userId })
   });
   await loadComments();
   document.getElementById('comment-text').value = '';
@@ -369,14 +382,14 @@ document.getElementById('comment-send').addEventListener('click', async () => {
 
 async function loadComments() {
   if (!currentId) return;
-  const res = await fetch(`/api/interventions/${currentId}/comments`);
+  const res = await fetch(`/api/comments?intervention_id=${currentId}`);
   const comments = await res.json();
   const list = document.getElementById('comment-list');
   list.innerHTML = comments
     .map(c => `
       <div class="comment-card">
         <div class="comment-header">
-          <span class="comment-author">${c.author || 'Anonyme'}</span>
+          <span class="comment-author">${c.username}</span>
           <span class="comment-date">${new Date(c.created_at).toLocaleString()}</span>
         </div>
         <div class="comment-body">${c.text}</div>
@@ -414,6 +427,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     addEditRow();
   });
   await loadUsers();
+  await loadCommentUsers();
   await loadFloors('#hist-floor');
   const histFloor = document.getElementById('hist-floor');
   histFloor.insertAdjacentHTML('afterbegin',

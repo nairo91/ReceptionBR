@@ -11,6 +11,7 @@ const usersRoutes = require("./routes/users");
 const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const exportRoutes = require("./routes/export");
+const commentsRoutes = require("./routes/comments");
 const pool = require("./db");
 
 (async () => {
@@ -73,10 +74,12 @@ const pool = require("./db");
     CREATE TABLE IF NOT EXISTS interventions_comments (
       id              SERIAL      PRIMARY KEY,
       intervention_id INTEGER     NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
+      user_id         TEXT,
       text            TEXT        NOT NULL,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  await pool.query("ALTER TABLE interventions_comments ADD COLUMN IF NOT EXISTS user_id TEXT");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS interventions_photos (
       id              SERIAL      PRIMARY KEY,
@@ -126,6 +129,7 @@ app.use("/api/rooms", roomsRoutes);
 app.use("/api/auth", authRoutes);
 app.use('/api/bulles', bullesRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/comments', commentsRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serveur en ligne sur le port ${PORT}`));
