@@ -9,11 +9,14 @@ router.get('/', async (req, res) => {
   }
   try {
     const { rows } = await pool.query(
-      `SELECT c.text, c.created_at, u.username
-        FROM interventions_comments c
-        LEFT JOIN users u ON c.user_id::int = u.id
+      `SELECT c.text,
+              c.created_at,
+              u.username
+         FROM interventions_comments c
+         LEFT JOIN users u
+           ON c.user_id::int = u.id
         WHERE c.intervention_id = $1
-         ORDER BY c.created_at DESC`,
+        ORDER BY c.created_at DESC`,
       [intervention_id]
     );
     const result = rows.map(r => ({
