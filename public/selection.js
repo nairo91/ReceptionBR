@@ -44,6 +44,8 @@ let currentId = null;
 const statusLabels = {
   ouvert: 'Ouvert',
   en_cours: 'En cours',
+  termine: 'Terminé',
+  en_retard: 'En retard',
   attente_validation: 'En attente de validation',
   clos: 'Clos',
   valide: 'Validé',
@@ -174,6 +176,7 @@ async function loadHistory() {
   const rows = await res.json();
   console.log('⚙️ rows returned:', rows);
   renderHistory(rows, '#history-table');
+  enableInlineEditing();
 }
 
 async function loadPreview() {
@@ -190,38 +193,63 @@ async function loadPreview() {
   const res = await fetch('/api/interventions/history?' + params.toString());
   const rows = await res.json();
   renderHistory(rows, '#preview-table');
+  enableInlineEditing();
 }
 
 function renderHistory(rows, tableSelector = '#history-table') {
   const tbody = document.querySelector(`${tableSelector} tbody`);
   tbody.innerHTML = '';
-  rows.forEach(h => {
-    // plus besoin de `emplacement`
-    const vals = [
-      window.userMap[h.user_id] || h.user_id,  // Utilisateur
-      h.action,                                // Action
-      h.lot,                                   // Lot
-      h.floor || '',                           // Étage
-      h.room  || '',                           // Chambre
-      h.task,                                  // Tâche
-      window.userMap[h.person]  || h.person,   // Personne
-      statusLabels[h.state]  || h.state,       // État
-      new Date(h.date).toLocaleString()        // Date/Heure
-    ];
+  rows.forEach(inter => {
     const tr = document.createElement('tr');
-    // cellules de données
-    vals.forEach(v => {
-      const td = document.createElement('td');
-      td.textContent = v;
-      tr.appendChild(td);
-    });
+    tr.dataset.id = inter.id;
+
+    const tdUser = document.createElement('td');
+    tdUser.textContent = window.userMap[inter.user_id] || inter.user_id;
+    tr.appendChild(tdUser);
+
+    const tdAction = document.createElement('td');
+    tdAction.textContent = inter.action;
+    tr.appendChild(tdAction);
+
+    const tdLot = document.createElement('td');
+    tdLot.textContent = inter.lot;
+    tr.appendChild(tdLot);
+
+    const tdFloor = document.createElement('td');
+    tdFloor.textContent = inter.floor || '';
+    tr.appendChild(tdFloor);
+
+    const tdRoom = document.createElement('td');
+    tdRoom.textContent = inter.room || '';
+    tr.appendChild(tdRoom);
+
+    const tdTask = document.createElement('td');
+    tdTask.textContent = inter.task;
+    tr.appendChild(tdTask);
+
+    const tdPerson = document.createElement('td');
+    tdPerson.classList.add('editable', 'person-cell');
+    tdPerson.dataset.field = 'person';
+    tdPerson.textContent = window.userMap[inter.person] || inter.person || '';
+    tr.appendChild(tdPerson);
+
+    const tdStatus = document.createElement('td');
+    const state = inter.state.replace(/\s+/g, '_').toLowerCase();
+    tdStatus.classList.add('editable', 'status-cell', `status-${state}`);
+    tdStatus.dataset.field = 'status';
+    tdStatus.textContent = statusLabels[state] || inter.state;
+    tr.appendChild(tdStatus);
+
+    const tdDate = document.createElement('td');
+    tdDate.textContent = new Date(inter.date).toLocaleString();
+    tr.appendChild(tdDate);
     // on ajoute le bouton d'édition pour l'historique et la prévisualisation
     if (['#history-table', '#preview-table'].includes(tableSelector)) {
       const tdEdit = document.createElement('td');
       const btnEdit = document.createElement('button');
       btnEdit.className = 'hist-edit';
       btnEdit.textContent = '✏️';
-      btnEdit.addEventListener('click', () => openForEdit(h));
+      btnEdit.addEventListener('click', () => openForEdit(inter));
       tdEdit.appendChild(btnEdit);
       tr.appendChild(tdEdit);
 
@@ -243,7 +271,7 @@ function renderHistory(rows, tableSelector = '#history-table') {
       menu.addEventListener('click', async e => {
         const action = e.target.dataset.action;
         if (action === 'view-history') {
-          const res = await fetch(`/api/interventions/${h.id}/history`);
+          const res = await fetch(`/api/interventions/${inter.id}/history`);
           const logs = await res.json();
           if (typeof showTaskHistory === 'function') {
             showTaskHistory(logs);
@@ -251,12 +279,12 @@ function renderHistory(rows, tableSelector = '#history-table') {
             console.log('Task history', logs);
           }
         } else if (action === 'add-comment') {
-          currentId = h.id;
+          currentId = inter.id;
           await showTab('commentTab');
           await loadComments();
           document.getElementById('comment-text').focus();
         } else if (action === 'add-photo') {
-          currentId = h.id;
+          currentId = inter.id;
           showTab('photoTab');
           await loadPhotos();
         }
@@ -404,6 +432,45 @@ async function loadPhotos() {
   const urls = await res.json();
   document.getElementById('photo-list').innerHTML =
     urls.map(u => `<li><img src="${u}"></li>`).join('');
+}
+
+async function enableInlineEditing() {
+  document.querySelectorAll('td.editable').forEach(td => {
+    td.addEventListener('click', async () => {
+      const field = td.dataset.field;
+      const id = td.closest('tr').dataset.id;
+      let options = [];
+      if (field === 'status') {
+        options = ['ouvert','en cours','termine','en retard'];
+      } else {
+        options = Object.entries(window.userMap).map(([id, username]) => ({ id, username }));
+      }
+      const select = document.createElement('select');
+      options.forEach(opt => {
+        const o = document.createElement('option');
+        if (field === 'status') { o.value = o.text = opt; }
+        else { o.value = opt.id; o.text = opt.username; }
+        if (td.textContent.trim() === o.text) o.selected = true;
+        select.appendChild(o);
+      });
+      td.innerHTML = '';
+      td.appendChild(select);
+      select.focus();
+      select.addEventListener('change', async () => {
+        const newVal = select.value;
+        await fetch(`/api/interventions/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: newVal })
+        });
+        td.textContent = field === 'status'
+          ? newVal.charAt(0).toUpperCase() + newVal.slice(1)
+          : window.userMap[newVal];
+        td.className = `editable ${field}-cell status-${newVal.replace(/\s+/g,'_')}`;
+      });
+      select.addEventListener('blur', () => { td.textContent = td.textContent; });
+    });
+  });
 }
 
 document.getElementById('photo-send').addEventListener('click', async () => {
