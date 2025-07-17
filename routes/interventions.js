@@ -329,6 +329,21 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+router.patch('/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = [], values = [];
+  let idx = 1;
+  for (const [k, v] of Object.entries(req.body)) {
+    updates.push(`${k}=$${idx}`);
+    values.push(v);
+    idx++;
+  }
+  values.push(id);
+  const sql = `UPDATE interventions SET ${updates.join(', ')} WHERE id=$${idx}`;
+  await pool.query(sql, values);
+  res.json({ success: true });
+});
+
 // POST /api/interventions/bulk : insertion multiple
 router.post('/bulk', async (req, res) => {
   const { floor, room, lot, rows } = req.body;
