@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT c.text, c.created_at, u.username
          FROM interventions_comments c
-         LEFT JOIN users u ON c.user_id = u.id
+         LEFT JOIN users u ON u.id::text = c.user_id
          WHERE c.intervention_id = $1
          ORDER BY c.created_at DESC`,
       [intervention_id]
