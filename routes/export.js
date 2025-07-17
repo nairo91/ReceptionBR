@@ -119,6 +119,7 @@ router.get('/excel', async (req, res) => {
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).alignment = { horizontal: 'center' };
 
+    const lotStats = {};
     rows.forEach(r => {
       sheet.addRow({
         utilisateur: userMap[r.user_id] || r.user_id,
@@ -130,6 +131,15 @@ router.get('/excel', async (req, res) => {
         etat: r.status,
         date: new Date(r.created_at).toLocaleString('fr-FR')
       });
+      lotStats[r.lot] = (lotStats[r.lot] || 0) + 1;
+    });
+
+    sheet.addRow([]);
+    sheet.addRow(['Statistiques']).font = { bold: true };
+    sheet.addRow(['Nombre total de tâches :', rows.length]);
+    sheet.addRow(['Lot', 'Nombre de tâches']).font = { bold: true };
+    Object.entries(lotStats).forEach(([lot, count]) => {
+      sheet.addRow([lot, count]);
     });
 
     sheet.eachRow(row => {
