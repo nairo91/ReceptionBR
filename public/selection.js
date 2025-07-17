@@ -52,6 +52,15 @@ const statusLabels = {
   a_definir: 'À définir'
 };
 
+const allowedStatuses = [
+  'ouvert',
+  'en_cours',
+  'attente_validation',
+  'clos',
+  'valide',
+  'a_definir'
+];
+
 function mark(oldVal, newVal) {
   return oldVal !== newVal ? 'changed' : '';
 }
@@ -435,13 +444,23 @@ async function loadPhotos() {
 }
 
 async function enableInlineEditing() {
-  document.querySelectorAll('td.editable[data-field="status"], td.editable[data-field="person"]').forEach(td => {
+  document.querySelectorAll(
+    'td.editable[data-field="status"], td.editable[data-field="person"]'
+  ).forEach(td => {
     td.addEventListener('click', async () => {
       const field = td.dataset.field;
       const id = td.closest('tr').dataset.id;
       let options = [];
       if (field === 'status') {
-        options = Object.entries(statusLabels).map(([key, label]) => ({ id: key, label }));
+        const allowedStatuses = [
+          'ouvert',
+          'en_cours',
+          'attente_validation',
+          'clos',
+          'valide',
+          'a_definir'
+        ];
+        options = allowedStatuses.map(key => ({ id: key, label: statusLabels[key] }));
       } else {
         options = Object.entries(window.userMap).map(([id, username]) => ({ id, username }));
       }
