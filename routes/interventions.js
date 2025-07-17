@@ -330,18 +330,74 @@ router.put('/:id', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const { id } = req.params;
-  const updates = [], values = [];
-  let idx = 1;
-  for (const [k, v] of Object.entries(req.body)) {
-    updates.push(`${k}=$${idx}`);
-    values.push(v);
-    idx++;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // 1) before
+    const before = (await client.query(
+      'SELECT lot, task, status, person, floor_id, room_id FROM interventions WHERE id=$1',
+      [req.params.id]
+    )).rows[0];
+
+    // 2) update générique
+    const updates = [], values = [];
+    let idx = 1;
+    for (const [k, v] of Object.entries(req.body)) {
+      updates.push(`${k}=$${idx}`); values.push(v); idx++;
+    }
+    values.push(req.params.id);
+    await client.query(
+      `UPDATE interventions SET ${updates.join(', ')} WHERE id=$${idx}`,
+      values
+    );
+
+    // 3) after
+    const after = (await client.query(
+      'SELECT lot, task, status, person, floor_id, room_id FROM interventions WHERE id=$1',
+      [req.params.id]
+    )).rows[0];
+
+    // 4) historisation
+    await client.query(
+      `INSERT INTO interventions_history
+         (intervention_id, user_id,
+          lot_old, lot_new,
+          task_old, task_new,
+          state_old, state_new,
+          floor_old, floor_new,
+          room_old, room_new,
+          person_old, person_new,
+          action)
+       VALUES
+         ($1, $2,
+          $3,  $4,
+          $5,  $6,
+          $7,  $8,
+          $9,  $10,
+          $11, $12,
+          $13, $14,
+          'Modification')`,
+      [
+        req.params.id,
+        req.session.user?.id || '',
+        before.lot, after.lot,
+        before.task, after.task,
+        before.status, after.status,
+        before.floor_id, after.floor_id,
+        before.room_id, after.room_id,
+        before.person, after.person
+      ]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur modification' });
+  } finally {
+    client.release();
   }
-  values.push(id);
-  const sql = `UPDATE interventions SET ${updates.join(', ')} WHERE id=$${idx}`;
-  await pool.query(sql, values);
-  res.json({ success: true });
 });
 
 // POST /api/interventions/bulk : insertion multiple
