@@ -9,20 +9,31 @@ router.get('/', async (req, res) => {
   }
   try {
     const { rows } = await pool.query(
-      `SELECT c.text,
-              c.created_at,
-              u.username
-         FROM interventions_comments c
-         LEFT JOIN users u
-           ON c.user_id::int = u.id
-        WHERE c.intervention_id = $1
-        ORDER BY c.created_at DESC`,
+      `SELECT user_id, text, created_at
+         FROM interventions_comments
+        WHERE intervention_id = $1
+        ORDER BY created_at DESC`,
       [intervention_id]
     );
+
+    // Charge le mapping [id -> username] depuis users.csv
+    const loadUsersMap = () => {
+      const fs = require('fs');
+      const path = require('path');
+      const csv = fs.readFileSync(path.join(__dirname, '../db/users.csv'), 'latin1');
+      const lines = csv.split(/\r?\n/).slice(1).filter(l => l.trim());
+      const map = {};
+      for (const line of lines) {
+        const [id, name] = line.split(';').map(s => s.trim());
+        if (id) map[id] = name;
+      }
+      return map;
+    };
+    const userMap = loadUsersMap();
     const result = rows.map(r => ({
       text: r.text,
       created_at: r.created_at,
-      username: r.username || 'Anonyme'
+      username: userMap[r.user_id] || 'Anonyme'
     }));
     res.json(result);
   } catch (err) {
