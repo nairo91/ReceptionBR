@@ -273,6 +273,69 @@ router.post('/:id/comment', async (req, res) => {
   res.json({ success: true });
 });
 
+router.patch('/:id', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const before = (await client.query(
+      `SELECT lot, task, status, person, floor_id, room_id
+         FROM interventions
+        WHERE id = $1`,
+      [req.params.id]
+    )).rows[0];
+
+    await client.query(
+      `UPDATE interventions
+          SET status = $1,
+              action = 'Modification'
+        WHERE id = $2`,
+      // on récupère “state” côté JSON
+      [req.body.state, req.params.id]
+    );
+
+    await client.query(
+      `INSERT INTO interventions_history
+         (intervention_id, user_id,
+          lot_old,    lot_new,
+          task_old,   task_new,
+          state_old,  state_new,
+          floor_old,  floor_new,
+          room_old,   room_new,
+          person_old, person_new,
+          action,     created_at)
+       VALUES
+         ($1, $2,
+          $3, $4,
+          $5, $6,
+          $7, $8,
+          $9, $10,
+          $11, $12,
+          $13, $14,
+          'Modification', now())`,
+      [
+        req.params.id,
+        req.session.user?.id || '',
+        before.lot,    before.lot,
+        before.task,   before.task,
+        before.status, req.body.state,
+        before.floor_id, before.floor_id,
+        before.room_id,  before.room_id,
+        before.person,   before.person
+      ]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur modification' });
+  } finally {
+    client.release();
+  }
+});
+
 // PUT update an intervention
 router.put('/:id', async (req, res) => {
   const { floor, room, lot, task, person, state, userId } = req.body;
