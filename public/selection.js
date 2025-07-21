@@ -303,43 +303,54 @@ function renderHistory(rows, tableSelector = '#history-table') {
   });
 }
 
+/**
+ * Transforme chaque <td class="status-cell editable"> en select,
+ * envoie le PATCH, ré-affiche la table et garde le nouveau statut.
+ */
 async function enableInlineEditing() {
-  document.querySelectorAll('td.editable[data-field="status"]').forEach(td => {
+  document.querySelectorAll('td.status-cell.editable').forEach(td => {
     td.addEventListener('click', () => {
-      const id    = td.closest('tr').dataset.id;
-      const field = td.dataset.field;       // === 'status' (on garde le même attribut HTML)
+      const tr    = td.closest('tr');
+      const id    = tr.dataset.id;
+      const currentKey =
+        Object.keys(statusLabels)
+              .find(k => statusLabels[k] === td.textContent.trim());
+
+      // Crée le <select>
       const select = document.createElement('select');
-      // on boucle toujours sur statusLabels, mais on envoie côté serveur “state”
-      allowedStatuses.forEach(key => {
+      Object.entries(statusLabels).forEach(([key,label]) => {
         const o = document.createElement('option');
         o.value = key;
-        o.text  = statusLabels[key];
-        if (td.textContent.trim() === o.text) o.selected = true;
+        o.text  = label;
+        if (key === currentKey) o.selected = true;
         select.appendChild(o);
       });
+
+      // Remplace le texte par le select
       td.innerHTML = '';
       td.appendChild(select);
       select.focus();
+
+      // Quand on change, on patch et on reload la table
       select.addEventListener('change', async () => {
-        const newVal = select.value;
+        const newStatus = select.value;
         const res = await fetch(`/api/interventions/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          // on poste “state” et non “status” pour rester compatible avec ton endpoint
-          body: JSON.stringify({ state: newVal })
+          body: JSON.stringify({ status: newStatus })
         });
         if (!res.ok) {
           console.error('PATCH failed', res.status);
-          return await loadHistory();
+          return await loadHistory();  // rollback visuel
         }
-        td.textContent = statusLabels[newVal];
-        td.className   = `status-cell editable status-${newVal.replace(/\s+/g,'_')}`;
+        // Mise à jour immédiate puis reload pour sync historique
+        td.textContent = statusLabels[newStatus];
+        td.className   = `status-cell editable status-${newStatus}`;
         await loadHistory();
       });
-    });
+    }, { once: true });
   });
 }
-
 function addEditRow(data = {}) {
   const floor = document.getElementById('edit-floor').value;
   const room = document.getElementById('edit-room').value;
