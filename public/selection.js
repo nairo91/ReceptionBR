@@ -479,10 +479,9 @@ async function enableInlineEditing() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: newVal })
         });
-        // relance tout l’historique pour persister l’affichage
+        // Recharge tout l’historique : l’UI se remet proprement.
         await loadHistory();
       });
-      select.addEventListener('blur', () => { td.textContent = td.textContent; });
     });
   });
 }
