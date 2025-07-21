@@ -136,12 +136,13 @@ button:focus {
 
 .close-history {
   position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  border: none;
-  background: transparent;
+  top: 8px;
+  right: 8px;
   font-size: 1.5rem;
+  background: none;
+  border: none;
   cursor: pointer;
+  z-index: 10;
 }
 
 .info-cell {
