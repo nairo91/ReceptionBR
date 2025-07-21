@@ -57,7 +57,8 @@ function mark(oldVal, newVal) {
 }
 
 function showTaskHistory(logs) {
-  const modal = document.getElementById('history-modal');
+  const modal   = document.getElementById('history-modal');
+  const dialog  = modal.querySelector('.modal-dialog');
   const content = document.getElementById('history-content');
   const rows = logs
     .map(l => `
@@ -91,12 +92,12 @@ function showTaskHistory(logs) {
       </table>
     `;
   // ajoute un bouton de fermeture si pas déjà présent
-  if (!modal.querySelector('.close-history')) {
+  if (!dialog.querySelector('.close-history')) {
     const btn = document.createElement('button');
-    btn.textContent = '✕';
     btn.className = 'close-history';
+    btn.textContent = '✕';
     btn.addEventListener('click', () => modal.hidden = true);
-    modal.prepend(btn);
+    dialog.prepend(btn);
   }
   modal.hidden = false;
 }
@@ -177,7 +178,9 @@ async function loadHistory() {
   const params = new URLSearchParams({
     etage: document.getElementById('hist-floor').value || '',
     chambre: document.getElementById('hist-room').value || '',
-    lot: document.getElementById('hist-lot').value || ''
+    lot: document.getElementById('hist-lot').value || '',
+    start: document.getElementById('date-start').value || '',
+    end:   document.getElementById('date-end').value || ''
   });
   console.log('⚙️ HISTORY SQL params:', params.toString());
   const res = await fetch('/api/interventions/history?' + params.toString());
