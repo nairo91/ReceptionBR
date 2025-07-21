@@ -63,12 +63,12 @@ function showTaskHistory(logs) {
     .map(l => `
       <tr class="${l.action === 'Création' ? 'creation' : 'modification'}">
         <td>${new Date(l.created_at).toLocaleString()}</td>
-        <td class="${mark(l.person_old, l.person_new)}">${window.userMap[l.person_old] || l.person_old || '–'}</td><td>${window.userMap[l.person_new] || l.person_new || '–'}</td>
-        <td class="${mark(l.floor_old, l.floor_new)}">${l.floor_old || '–'}</td><td>${l.floor_new || '–'}</td>
-        <td class="${mark(l.room_old, l.room_new)}">${l.room_old  || '–'}</td><td>${l.room_new  || '–'}</td>
-        <td class="${mark(l.lot_old, l.lot_new)}">${l.lot_old   || '–'}</td><td>${l.lot_new   || '–'}</td>
-        <td class="${mark(l.task_old, l.task_new)}">${l.task_old  || '–'}</td><td>${l.task_new  || '–'}</td>
-        <td class="${mark(l.state_old, l.state_new)}">${l.state_old || '–'}</td><td>${l.state_new || '–'}</td>
+        <td class="${mark(l.person_old, l.person_new)}">${window.userMap[l.person_old] || l.person_old || '–'}</td><td class="${mark(l.person_old, l.person_new)}">${mark(l.person_old, l.person_new) === 'changed' ? `<strong>${window.userMap[l.person_new] || l.person_new || '–'}</strong>` : (window.userMap[l.person_new] || l.person_new || '–')}</td>
+        <td class="${mark(l.floor_old, l.floor_new)}">${l.floor_old || '–'}</td><td class="${mark(l.floor_old, l.floor_new)}">${mark(l.floor_old, l.floor_new) === 'changed' ? `<strong>${l.floor_new || '–'}</strong>` : (l.floor_new || '–')}</td>
+        <td class="${mark(l.room_old, l.room_new)}">${l.room_old  || '–'}</td><td class="${mark(l.room_old, l.room_new)}">${mark(l.room_old, l.room_new) === 'changed' ? `<strong>${l.room_new  || '–'}</strong>` : (l.room_new  || '–')}</td>
+        <td class="${mark(l.lot_old, l.lot_new)}">${l.lot_old   || '–'}</td><td class="${mark(l.lot_old, l.lot_new)}">${mark(l.lot_old, l.lot_new) === 'changed' ? `<strong>${l.lot_new   || '–'}</strong>` : (l.lot_new   || '–')}</td>
+        <td class="${mark(l.task_old, l.task_new)}">${l.task_old  || '–'}</td><td class="${mark(l.task_old, l.task_new)}">${mark(l.task_old, l.task_new) === 'changed' ? `<strong>${l.task_new  || '–'}</strong>` : (l.task_new  || '–')}</td>
+        <td class="${mark(l.state_old, l.state_new)}">${l.state_old || '–'}</td><td class="${mark(l.state_old, l.state_new)}">${mark(l.state_old, l.state_new) === 'changed' ? `<strong>${l.state_new || '–'}</strong>` : (l.state_new || '–')}</td>
         <td>${l.action}</td>
       </tr>
     `)
@@ -90,6 +90,14 @@ function showTaskHistory(logs) {
         <tbody>${rows}</tbody>
       </table>
     `;
+  // ajoute un bouton de fermeture si pas déjà présent
+  if (!modal.querySelector('.close-history')) {
+    const btn = document.createElement('button');
+    btn.textContent = '✕';
+    btn.className = 'close-history';
+    btn.addEventListener('click', () => modal.hidden = true);
+    modal.prepend(btn);
+  }
   modal.hidden = false;
 }
 
@@ -322,11 +330,11 @@ async function enableInlineEditing() {
         });
         if (!res.ok) {
           console.error('PATCH failed', res.status);
-          return loadHistory();
+          return await loadHistory();
         }
         td.textContent = statusLabels[newVal];
         td.className   = `status-cell editable status-${newVal.replace(/\s+/g,'_')}`;
-        loadHistory();
+        await loadHistory();
       });
     });
   });
