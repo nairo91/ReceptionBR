@@ -333,25 +333,48 @@ router.patch('/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // 1) lire l'ancien
+
+    // 1️⃣ on lit tout avant
     const before = (await client.query(
-      'SELECT status FROM interventions WHERE id=$1',
+      'SELECT lot, task, status, person, floor_id, room_id FROM interventions WHERE id=$1',
       [req.params.id]
     )).rows[0];
 
-    // 2) appliquer la mise à jour
+    // 2️⃣ on applique la mise à jour du status uniquement
     await client.query(
-      'UPDATE interventions SET status=$1 WHERE id=$2',
-      [req.body.status, req.params.id]
+      'UPDATE interventions SET status=$1, action=$2 WHERE id=$3',
+      [req.body.status, 'Modification', req.params.id]
     );
 
-    // 3) historiser
-    const after = req.body.status;
+    // 3️⃣ on historise **toutes** les colonnes à l\u2019ancienne
     await client.query(
       `INSERT INTO interventions_history
-         (intervention_id, user_id, state_old, state_new, action)
-       VALUES ($1, $2, $3, $4, 'Modification')`,
-      [req.params.id, req.session.user?.id || '', before.status, after]
+         (intervention_id, user_id,
+          lot_old, lot_new,
+          task_old, task_new,
+          state_old, state_new,
+          floor_old, floor_new,
+          room_old, room_new,
+          person_old, person_new,
+          action, created_at)
+       VALUES ($1, $2,
+               $3, $4,
+               $5, $6,
+               $7, $8,
+               $9, $10,
+               $11, $12,
+               $13, $14,
+               'Modification', now())`,
+      [
+        req.params.id,
+        req.session.user?.id || '',
+        before.lot, before.lot,
+        before.task, before.task,
+        before.status, req.body.status,
+        before.floor_id, before.floor_id,
+        before.room_id, before.room_id,
+        before.person, before.person
+      ]
     );
 
     await client.query('COMMIT');

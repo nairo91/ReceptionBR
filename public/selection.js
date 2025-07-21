@@ -474,7 +474,7 @@ async function enableInlineEditing() {
       select.focus();
       select.addEventListener('change', async () => {
         const newVal = select.value;
-        // 1️⃣ on pousse la mise à jour vers le serveur
+        // 🔥 envoi au serveur
         const res = await fetch(`/api/interventions/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -482,15 +482,14 @@ async function enableInlineEditing() {
         });
         if (!res.ok) {
           console.error('PATCH failed', res.status);
-          // si échec, on recharge pour repasser au statut d’avant
-          return loadHistory();
+          return loadHistory();  // rollback visuel
         }
 
-        // 2️⃣ on met à jour la cellule tout de suite
+        // 🔄 mise à jour directe de la cellule
         td.textContent = statusLabels[newVal];
         td.className = `status-cell editable status-${newVal.replace(/\s+/g,'_')}`;
 
-        // 3️⃣ (optionnel) on peut recharger en arrière‐plan pour tout synchroniser
+        // 🔁 (optionnel) rechargement complet pour resynchroniser
         loadHistory();
       });
     });
