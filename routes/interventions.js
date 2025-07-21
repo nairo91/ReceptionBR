@@ -388,6 +388,8 @@ router.post('/bulk', async (req, res) => {
 
 // PATCH /api/interventions/:id — met à jour juste le status et historise TOUTES les colonnes
 router.patch('/:id', async (req, res) => {
+  // 🛠️ on logge l’ID et le corps reçu
+  console.log(`🛠️ PATCH /api/interventions/${req.params.id} → body =`, req.body);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -444,7 +446,7 @@ router.patch('/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err);
+    console.error('🛠️ Erreur lors du PATCH:', err.stack || err);
     res.status(500).json({ error: 'Erreur serveur modification' });
   } finally {
     client.release();
