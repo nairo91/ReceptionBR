@@ -474,15 +474,24 @@ async function enableInlineEditing() {
       select.focus();
       select.addEventListener('change', async () => {
         const newVal = select.value;
-        console.log('🛠️ inline edit:', { id, field, newVal });
+        // 1️⃣ on pousse la mise à jour vers le serveur
         const res = await fetch(`/api/interventions/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [field]: newVal })
+          body: JSON.stringify({ status: newVal })
         });
-        console.log('🛠️ PATCH response:', res.status, await res.json());
-        // Recharge tout l’historique : l’UI se remet proprement.
-        await loadHistory();
+        if (!res.ok) {
+          console.error('PATCH failed', res.status);
+          // si échec, on recharge pour repasser au statut d’avant
+          return loadHistory();
+        }
+
+        // 2️⃣ on met à jour la cellule tout de suite
+        td.textContent = statusLabels[newVal];
+        td.className = `status-cell editable status-${newVal.replace(/\s+/g,'_')}`;
+
+        // 3️⃣ (optionnel) on peut recharger en arrière‐plan pour tout synchroniser
+        loadHistory();
       });
     });
   });
