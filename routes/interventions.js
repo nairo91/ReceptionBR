@@ -432,7 +432,7 @@ router.patch('/:id', async (req, res) => {
           'Modification', now())`,
       [
         req.params.id,
-        req.session.user?.id || '',
+        before.person,
         before.lot,    before.lot,
         before.task,   before.task,
         before.status, req.body.status,
