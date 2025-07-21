@@ -87,8 +87,40 @@ button:focus {
 .status-ouvert { background: #f00; }
 .status-en_cours { background: #f90; }
 .status-attente_validation { background: #09f; }
+
 .status-clos { background: #888; }
 .status-valide { background: #0a0; }
+
+/* États — couleurs plus douces et professionnelles */
+.status-ouvert {
+  background-color: #E0F7FA; /* Bleu très clair */
+  color: #006064;            /* Bleu pétrole */
+}
+
+.status-en_cours {
+  background-color: #E3F2FD; /* Bleu pastel */
+  color: #0D47A1;            /* Bleu plus soutenu */
+}
+
+.status-attente_validation {
+  background-color: #FFF8E1; /* Jaune ivoire */
+  color: #FF6F00;            /* Ambre foncé */
+}
+
+.status-clos {
+  background-color: #ECEFF1; /* Gris clair */
+  color: #37474F;            /* Gris anthracite */
+}
+
+.status-valide {
+  background-color: #E8F5E9; /* Vert pâle */
+  color: #1B5E20;            /* Vert foncé */
+}
+
+.status-a_definir {
+  background-color: #F5F5F5; /* Gris très clair */
+  color: #616161;            /* Gris moyen */
+}
 
 .export-buttons {
   margin-bottom: 1rem;
