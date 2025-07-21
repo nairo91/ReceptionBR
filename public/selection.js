@@ -445,21 +445,13 @@ async function loadPhotos() {
 
 async function enableInlineEditing() {
   document.querySelectorAll(
-    'td.editable[data-field="status"], td.editable[data-field="person"]'
+    'td.editable[data-field="status"]'
   ).forEach(td => {
     td.addEventListener('click', async () => {
       const field = td.dataset.field;
       const id = td.closest('tr').dataset.id;
       let options = [];
       if (field === 'status') {
-        const allowedStatuses = [
-          'ouvert',
-          'en_cours',
-          'attente_validation',
-          'clos',
-          'valide',
-          'a_definir'
-        ];
         options = allowedStatuses.map(key => ({ id: key, label: statusLabels[key] }));
       } else {
         options = Object.entries(window.userMap).map(([id, username]) => ({ id, username }));
@@ -487,14 +479,8 @@ async function enableInlineEditing() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: newVal })
         });
-        td.textContent = field === 'status'
-          ? statusLabels[newVal]
-          : window.userMap[newVal];
-        if (field === 'status') {
-          td.className = `editable ${field}-cell status-${newVal.replace(/\s+/g,'_')}`;
-        } else {
-          td.className = `editable ${field}-cell`;
-        }
+        // relance tout l’historique pour persister l’affichage
+        await loadHistory();
       });
       select.addEventListener('blur', () => { td.textContent = td.textContent; });
     });
