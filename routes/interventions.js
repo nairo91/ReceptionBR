@@ -184,10 +184,8 @@ router.get('/export/pdf', async (req, res) => {
 
 // GET /api/interventions/history?etage=&chambre=&lot=
 router.get('/history', async (req, res) => {
-  // on s’assure que ces 3 variables sont toujours des chaînes
-  const etage   = req.query.etage   || '';
-  const chambre = req.query.chambre || '';
-  const lot     = req.query.lot     || '';
+  // on s’assure que ces variables sont toujours des chaînes
+  const { etage='', chambre='', lot='', start='', end='' } = req.query;
 
   const sql = `
     SELECT
@@ -205,13 +203,15 @@ router.get('/history', async (req, res) => {
     WHERE ($1 = '' OR i.floor_id::text = $1)
       AND ($2 = '' OR i.room_id::text  = $2)
       AND ($3 = '' OR i.lot         = $3)
+      AND ($4 = '' OR i.created_at >= $4::timestamp)
+      AND ($5 = '' OR i.created_at <= $5::timestamp)
     ORDER BY i.created_at DESC;
   `;
   console.log('––– HISTORY SQL –––');
   console.log('SQL:', sql.replace(/\s+/g, ' '));
-  console.log('Params:', { etage, chambre, lot });
+  console.log('Params:', { etage, chambre, lot, start, end });
   console.log('–––––––––––––––––––');
-  const { rows } = await pool.query(sql, [etage, chambre, lot]);
+  const { rows } = await pool.query(sql, [etage, chambre, lot, start, end]);
   res.json(rows);
 });
 
