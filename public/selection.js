@@ -474,11 +474,13 @@ async function enableInlineEditing() {
       select.focus();
       select.addEventListener('change', async () => {
         const newVal = select.value;
-        await fetch(`/api/interventions/${id}`, {
+        console.log('🛠️ inline edit:', { id, field, newVal });
+        const res = await fetch(`/api/interventions/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: newVal })
         });
+        console.log('🛠️ PATCH response:', res.status, await res.json());
         // Recharge tout l’historique : l’UI se remet proprement.
         await loadHistory();
       });

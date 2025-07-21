@@ -330,6 +330,7 @@ router.put('/:id', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
+  console.log('🛠️ PATCH /api/interventions/' + req.params.id, req.body);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -349,6 +350,7 @@ router.patch('/:id', async (req, res) => {
       idx++;
     }
     values.push(req.params.id);
+    console.log('🛠️ SQL UPDATE:', updates.join(', '), values);
     await client.query(
       `UPDATE interventions SET ${updates.join(', ')} WHERE id=$${idx}`,
       values
