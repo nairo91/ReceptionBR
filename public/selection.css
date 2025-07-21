@@ -117,6 +117,7 @@ button:focus {
 }
 
 .modal-dialog {
+  position: relative;
   background: #fff;
   padding: 1rem;
   border-radius: 4px;
@@ -130,6 +131,16 @@ button:focus {
   border: none;
   background: transparent;
   font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.close-history {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
   cursor: pointer;
 }
 
@@ -209,7 +220,7 @@ button:focus {
 
 .history-table td.changed {
   background-color: #ffecec;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 /* Conteneur responsive pour les tableaux */
