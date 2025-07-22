@@ -505,13 +505,11 @@
   });
 
   exportCsvBtn.addEventListener("click", () => {
-    // On assemble les paramètres de filtre
+    // On assemble les params de filtre + columns…
     const params = new URLSearchParams({
       etage:   etageSelect.value   || "",
       chambre: chambreSelect.value || ""
     });
-
-    // On définit la liste des colonnes à exporter, y compris created_by + image
     const cols = [
       "id","user_id","floor_id","room_id","lot",
       "task","status","person","action",
@@ -519,9 +517,8 @@
     ];
     params.set("columns", cols.join(","));
 
-    // On déclenche l'export CSV
-    // Replace /api/bulles/export/csv si ton endpoint est /export/csv
-    const url = `/export/csv?${params.toString()}`;
+    // On pointe vers ton vrai endpoint d’export des bulles
+    const url = `/api/bulles/export/csv?${params.toString()}`;
     window.open(url, "_blank");
   });
 
