@@ -24,8 +24,25 @@ function loadUsersMap() {
 const userMap = loadUsersMap();
 
 async function fetchRows(etage, chambre, lot, state, start, end, cols) {
+  const selectCols = cols
+    .filter(c => c !== 'created_by' && c !== 'image')
+    .map(c => 'i.' + c)
+    .join(', ');
   const sql = `
-    SELECT ${cols.map(c => 'i.' + c).join(', ')}
+    SELECT ${selectCols}
+      , (
+          SELECT ih.person_new
+            FROM interventions_history ih
+           WHERE ih.intervention_id = i.id
+             AND ih.action = 'Création'
+           ORDER BY ih.created_at
+           LIMIT 1
+        ) AS created_by
+      , (
+          SELECT array_agg(url)
+            FROM interventions_photos p
+           WHERE p.intervention_id = i.id
+        ) AS photos
       FROM interventions i
       WHERE ($1='' OR i.floor_id::text=$1)
         AND ($2='' OR i.room_id::text=$2)
@@ -45,20 +62,27 @@ router.get('/:format', async (req, res) => {
       .split(',').map(c => c.trim()).filter(Boolean);
     // ① on récupère les données brutes
     let rows = await fetchRows(etage, chambre, lot, state, start, end, cols);
-    // ② on remplace user_id et person par les noms
+    // ② on remplace user_id, person et created_by par les noms
     rows = rows.map(r => ({
       ...r,
-      user_id: userMap[r.user_id] || r.user_id,
-      person:  userMap[r.person]  || r.person
+      user_id:    userMap[r.user_id]    || r.user_id,
+      person:     userMap[r.person]     || r.person,
+      created_by: userMap[r.created_by] || r.created_by,
+      photos: r.photos || [],
+      image:  (r.photos || []).map(u => `=IMAGE("${u}")`).join(',')
     }));
 
     switch(req.params.format) {
       case 'csv': {
+        if (!cols.includes('created_by')) cols.push('created_by');
+        if (!cols.includes('image'))      cols.push('image');
         // csv : fields → [{ label, value }]
         const csvFields = cols.map(c => {
           let label = c;
-          if (c === 'user_id') label = 'Créateur';
-          if (c === 'person')  label = 'Personne';
+          if (c === 'user_id')   label = 'Créateur';
+          if (c === 'person')    label = 'Personne';
+          if (c === 'created_by') label = 'Créé par';
+          if (c === 'image')     label = 'Image';
           // sinon label = c
           return { label, value: c };
         });
@@ -75,14 +99,21 @@ router.get('/:format', async (req, res) => {
         // colonnes Excel en français
         sheet.columns = cols.map(c => {
           let header = c;
-          if (c === 'user_id') header = 'Créateur';
-          if (c === 'person')  header = 'Personne';
+          if (c === 'user_id')   header = 'Créateur';
+          if (c === 'person')    header = 'Personne';
+          if (c === 'created_by') header = 'Créé par';
+          if (c === 'image')     header = 'Image';
           return { header, key: c, width: 20 };
         });
         rows.forEach(r => {
           const row = {};
-          cols.forEach(c => { row[c] = r[c]; });
-          sheet.addRow(row);
+          cols.forEach(c => { if (c !== 'image') row[c] = r[c]; });
+          const added = sheet.addRow(row);
+          if (cols.includes('image')) {
+            const idx = cols.indexOf('image') + 1;
+            const formula = r.photos && r.photos.length ? `=IMAGE("${r.photos[0]}")` : '';
+            added.getCell(idx).value = { formula };
+          }
         });
         res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.attachment('interventions.xlsx');
@@ -98,8 +129,10 @@ router.get('/:format', async (req, res) => {
 
         // entêtes en français
         const headers = cols.map(c => {
-          if (c === 'user_id') return 'Créateur';
-          if (c === 'person')  return 'Personne';
+          if (c === 'user_id')   return 'Créateur';
+          if (c === 'person')    return 'Personne';
+          if (c === 'created_by') return 'Créé par';
+          if (c === 'image')     return 'Image';
           return c.charAt(0).toUpperCase() + c.slice(1);
         });
 

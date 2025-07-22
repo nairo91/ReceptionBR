@@ -505,15 +505,25 @@
   });
 
   exportCsvBtn.addEventListener("click", () => {
-  const etage = encodeURIComponent(etageSelect.value);
-  const chambre = encodeURIComponent(chambreSelect.value);
+    // On assemble les paramètres de filtre
+    const params = new URLSearchParams({
+      etage:   etageSelect.value   || "",
+      chambre: chambreSelect.value || ""
+    });
 
-  // Construire l'URL de l'export CSV filtré
-  const url = `/api/bulles/export/csv?etage=${etage}&chambre=${chambre}`;
+    // On définit la liste des colonnes à exporter, y compris created_by + image
+    const cols = [
+      "id","user_id","floor_id","room_id","lot",
+      "task","status","person","action",
+      "created_at","created_by","image"
+    ];
+    params.set("columns", cols.join(","));
 
-  // Ouvrir dans un nouvel onglet pour lancer le téléchargement
-  window.open(url, "_blank");
-});
+    // On déclenche l'export CSV
+    // Replace /api/bulles/export/csv si ton endpoint est /export/csv
+    const url = `/export/csv?${params.toString()}`;
+    window.open(url, "_blank");
+  });
 
 
   // Au chargement, on remplit d'abord le menu Chambre pour l'étage par défaut, puis on affiche les bulles
