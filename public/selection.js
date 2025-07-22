@@ -178,9 +178,10 @@ async function loadHistory() {
   const params = new URLSearchParams({
     etage: document.getElementById('hist-floor').value || '',
     chambre: document.getElementById('hist-room').value || '',
-    lot: document.getElementById('hist-lot').value || '',
-    start: document.getElementById('date-start').value || '',
-    end:   document.getElementById('date-end').value || ''
+    lot:    document.getElementById('hist-lot').value || '',
+    state:  document.getElementById('hist-state').value || '',
+    start:  document.getElementById('date-start').value || '',
+    end:    document.getElementById('date-end').value || ''
   });
   console.log('⚙️ HISTORY SQL params:', params.toString());
   const res = await fetch('/api/interventions/history?' + params.toString());
@@ -534,28 +535,35 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('edit-room').addEventListener('change', loadPreview);
   document.getElementById('edit-lot').addEventListener('change', loadPreview);
   document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
+  document.getElementById('hist-state').addEventListener('change', loadHistory);
   document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
   document.getElementById('hist-refresh').addEventListener('click', loadHistory);
-  document.getElementById('export-pdf').addEventListener('click', () => {
+  // ouverture du modal d’export
+  document.getElementById('export-config').onclick = () => {
+    document.getElementById('export-modal').hidden = false;
+  };
+  // fermeture
+  document.querySelector('#export-modal .close-history').onclick = () => {
+    document.getElementById('export-modal').hidden = true;
+  };
+  // lancement export
+  document.getElementById('export-go').onclick = async () => {
+    const cols = Array.from(
+      document.querySelectorAll('#export-modal input[type=checkbox]:checked')
+    ).map(i => i.value).join(',');
+    const fmt = document.querySelector('#export-modal input[name=format]:checked').value;
     const params = new URLSearchParams({
       etage: document.getElementById('hist-floor').value || '',
       chambre: document.getElementById('hist-room').value || '',
       lot: document.getElementById('hist-lot').value || '',
+      state: document.getElementById('hist-state').value || '',
       start: document.getElementById('date-start').value || '',
-      end: document.getElementById('date-end').value || ''
+      end: document.getElementById('date-end').value || '',
+      columns: cols
     });
-    downloadFile('/api/export/pdf?' + params.toString(), 'interventions.pdf');
-  });
-  document.getElementById('export-excel').addEventListener('click', () => {
-    const params = new URLSearchParams({
-      etage: document.getElementById('hist-floor').value || '',
-      chambre: document.getElementById('hist-room').value || '',
-      lot: document.getElementById('hist-lot').value || '',
-      start: document.getElementById('date-start').value || '',
-      end: document.getElementById('date-end').value || ''
-    });
-    downloadFile('/api/export/excel?' + params.toString(), 'interventions.xlsx');
-  });
+    window.location = `/api/export/${fmt}?` + params.toString();
+    document.getElementById('export-modal').hidden = true;
+  };
   document.querySelector('.tabs').addEventListener('click', e => {
     if (e.target.tagName === 'BUTTON') {
       showTab(e.target.dataset.tab);

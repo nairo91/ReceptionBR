@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
+const { Parser } = require('json2csv');
 const fs = require('fs');
 const path = require('path');
 
@@ -20,149 +21,85 @@ function loadUsersMap() {
   return map;
 }
 
-async function fetchRows(etage, chambre, lot, start, end) {
+async function fetchRows(etage, chambre, lot, state, start, end, cols) {
   const sql = `
-    SELECT user_id, action, lot, floor_id::text AS floor, room_id::text AS room,
-           task, status, created_at
-      FROM interventions
-      WHERE ($1='' OR floor_id::text=$1)
-        AND ($2='' OR room_id::text=$2)
-        AND ($3='' OR lot=$3)
-        AND ($4 = '' OR created_at >= $4::date)
-        AND ($5 = '' OR created_at <= $5::date)
-      ORDER BY created_at DESC`;
-  const { rows } = await pool.query(sql, [etage, chambre, lot, start, end]);
+    SELECT ${cols.map(c => 'i.' + c).join(', ')}
+      FROM interventions i
+      WHERE ($1='' OR i.floor_id::text=$1)
+        AND ($2='' OR i.room_id::text=$2)
+        AND ($3='' OR i.lot=$3)
+        AND ($4='' OR i.status=$4::text)
+        AND ($5 = '' OR i.created_at >= $5::timestamp)
+        AND ($6 = '' OR i.created_at <= $6::timestamp)
+      ORDER BY i.created_at DESC`;
+  const { rows } = await pool.query(sql, [etage, chambre, lot, state, start, end]);
   return rows;
 }
 
-router.get('/pdf', async (req, res) => {
+router.get('/:format', async (req, res) => {
   try {
-    const etage = req.query.etage || '';
-    const chambre = req.query.chambre || '';
-    const lot = req.query.lot || '';
-    const start = req.query.start || '';
-    const end = req.query.end || '';
-    const rows = await fetchRows(etage, chambre, lot, start, end);
+    const { etage='', chambre='', lot='', state='', start='', end='', columns } = req.query;
+    const cols = (columns || 'id,user_id,floor_id,room_id,lot,task,status,person,action,created_at')
+      .split(',').map(c => c.trim()).filter(Boolean);
+    const rows = await fetchRows(etage, chambre, lot, state, start, end, cols);
     const userMap = loadUsersMap();
 
-    const doc = new PDFDocument({ margin: 30, size: 'A4' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="interventions.pdf"');
-    doc.pipe(res);
-
-    const headers = ['Utilisateur', 'Action', 'Lot', 'Étage', 'Chambre', 'Tâche', 'État', 'Date'];
-    const colWidths = [80, 60, 60, 50, 60, 150, 50, 90];
-    const rowHeight = 20;
-    const startX = 30;
-    let y = 80;
-
-    doc.font('Helvetica-Bold').fontSize(10);
-    let x = startX;
-    headers.forEach((h, idx) => {
-      doc.text(h, x, y, { width: colWidths[idx], align: 'left' });
-      x += colWidths[idx];
-    });
-    y += rowHeight;
-
-    doc.font('Helvetica').fontSize(9);
-
-    rows.forEach(r => {
-      const data = [
-        userMap[r.user_id] || r.user_id,
-        r.action,
-        r.lot,
-        r.floor,
-        r.room,
-        r.task,
-        r.status,
-        new Date(r.created_at).toLocaleString('fr-FR')
-      ];
-
-      x = startX;
-      data.forEach((d, idx) => {
-        doc.text(String(d), x, y, { width: colWidths[idx], align: 'left' });
-        x += colWidths[idx];
-      });
-      y += rowHeight;
-    });
-
-    doc.end();
+    switch(req.params.format) {
+      case 'csv': {
+        const parser = new Parser({ fields: cols, delimiter: ';', header: true, eol: '\r\n', quote: '"' });
+        let csv = parser.parse(rows);
+        csv = '\uFEFF' + csv;
+        res.header('Content-Type', 'text/csv; charset=utf-8');
+        res.attachment('interventions.csv');
+        return res.send(csv);
+      }
+      case 'excel': {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Interventions');
+        sheet.columns = cols.map(c => ({ header: c, key: c, width: 20 }));
+        rows.forEach(r => {
+          const row = {};
+          cols.forEach(c => { row[c] = r[c]; });
+          sheet.addRow(row);
+        });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment('interventions.xlsx');
+        await workbook.xlsx.write(res);
+        return res.end();
+      }
+      case 'pdf': {
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.attachment('interventions.pdf');
+        doc.pipe(res);
+        const colWidths = cols.map(() => 60);
+        const rowHeight = 20;
+        const startX = 30;
+        let y = 80;
+        doc.font('Helvetica-Bold').fontSize(10);
+        let x = startX;
+        cols.forEach((h, idx) => {
+          doc.text(h, x, y, { width: colWidths[idx], align: 'left' });
+          x += colWidths[idx];
+        });
+        y += rowHeight;
+        doc.font('Helvetica').fontSize(9);
+        rows.forEach(r => {
+          x = startX;
+          cols.forEach((c, idx) => {
+            doc.text(String(r[c] ?? ''), x, y, { width: colWidths[idx], align: 'left' });
+            x += colWidths[idx];
+          });
+          y += rowHeight;
+        });
+        doc.end();
+        return;
+      }
+    }
+    res.status(400).send('Format inconnu');
   } catch (err) {
     console.error(err);
-    res.status(500).send('Erreur export PDF');
-  }
-});
-
-router.get('/excel', async (req, res) => {
-  try {
-    const etage = req.query.etage || '';
-    const chambre = req.query.chambre || '';
-    const lot = req.query.lot || '';
-    const start = req.query.start || '';
-    const end = req.query.end || '';
-    const rows = await fetchRows(etage, chambre, lot, start, end);
-    const userMap = loadUsersMap();
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Interventions');
-
-    sheet.columns = [
-      { header: 'Utilisateur', key: 'utilisateur', width: 20 },
-      { header: 'Action', key: 'action', width: 15 },
-      { header: 'Lot', key: 'lot', width: 15 },
-      { header: 'Étage', key: 'etage', width: 10 },
-      { header: 'Chambre', key: 'chambre', width: 12 },
-      { header: 'Tâche', key: 'tache', width: 30 },
-      { header: 'État', key: 'etat', width: 15 },
-      { header: 'Date', key: 'date', width: 20 },
-    ];
-
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).alignment = { horizontal: 'center' };
-
-    const lotStats = {};
-    rows.forEach(r => {
-      sheet.addRow({
-        utilisateur: userMap[r.user_id] || r.user_id,
-        action: r.action,
-        lot: r.lot,
-        etage: r.floor,
-        chambre: r.room,
-        tache: r.task,
-        etat: r.status,
-        date: new Date(r.created_at).toLocaleString('fr-FR')
-      });
-      lotStats[r.lot] = (lotStats[r.lot] || 0) + 1;
-    });
-
-    sheet.addRow([]);
-    sheet.addRow(['Statistiques']).font = { bold: true };
-    sheet.addRow(['Nombre total de tâches :', rows.length]);
-    sheet.addRow(['Lot', 'Nombre de tâches']).font = { bold: true };
-    Object.entries(lotStats).forEach(([lot, count]) => {
-      sheet.addRow([lot, count]);
-    });
-
-    sheet.eachRow(row => {
-      row.eachCell(cell => {
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-        cell.alignment = { wrapText: true, vertical: 'middle' };
-      });
-    });
-
-    sheet.getRow(1).alignment = { horizontal: 'center', wrapText: true, vertical: 'middle' };
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="interventions.xlsx"');
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Erreur export Excel');
+    res.status(500).send('Erreur export');
   }
 });
 

@@ -39,6 +39,17 @@
         <option value="Repose">Repose</option>
       </select>
     </label>
+    <label>État
+      <select id="hist-state">
+        <option value="">-- Tous les états --</option>
+        <option value="ouvert">Ouvert</option>
+        <option value="en_cours">En cours</option>
+        <option value="attente_validation">En attente de validation</option>
+        <option value="clos">Clos</option>
+        <option value="valide">Validé</option>
+        <option value="a_definir">À définir</option>
+      </select>
+    </label>
     <label>Du
       <input type="date" id="date-start">
     </label>
@@ -46,8 +57,28 @@
       <input type="date" id="date-end">
     </label>
     <button id="hist-refresh">Rafraîchir</button>
-    <button id="export-pdf">Exporter PDF</button>
-    <button id="export-excel">Exporter Excel</button>
+    <button id="export-config" class="btn">Export ▾</button>
+    <div id="export-modal" class="modal" hidden>
+      <div class="modal-dialog">
+        <h3>Exporter</h3>
+        <label><input type="checkbox" value="id" checked> ID</label>
+        <label><input type="checkbox" value="user_id" checked> Utilisateur</label>
+        <label><input type="checkbox" value="action" checked> Action</label>
+        <label><input type="checkbox" value="lot" checked> Lot</label>
+        <label><input type="checkbox" value="floor_id" checked> Étage</label>
+        <label><input type="checkbox" value="room_id" checked> Chambre</label>
+        <label><input type="checkbox" value="task" checked> Tâche</label>
+        <label><input type="checkbox" value="status" checked> État</label>
+        <label><input type="checkbox" value="person" checked> Personne</label>
+        <label><input type="checkbox" value="created_at" checked> Date</label>
+        <hr>
+        <label><input type="radio" name="format" value="csv" checked> CSV</label>
+        <label><input type="radio" name="format" value="pdf"> PDF</label>
+        <label><input type="radio" name="format" value="excel"> Excel</label>
+        <button id="export-go">Télécharger</button>
+        <button class="close-history">✕</button>
+      </div>
+    </div>
     <div class="table-container">
     <table id="history-table" class="data-table">
       <thead>
