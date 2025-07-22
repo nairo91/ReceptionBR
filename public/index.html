@@ -53,37 +53,16 @@
   <div id="app-container" style="display:block;">
     <button id="logoutBtn">Déconnexion</button>
 
+    <label>Chantier :
+      <select id="chantierSelect"></select>
+    </label>
+
     <label>Étage :
-      <select id="etageSelect" data-etage="R+5">
-        <option value="R+5">R+5</option>
-        <option value="R+4">R+4</option>
-        <option value="R+3">R+3</option>
-        <option value="R+2">R+2</option>
-        <option value="R+1">R+1</option>
-        <option value="R+0">R+0</option>
-        <!-- Ajoute d'autres étages ici si besoin -->
-      </select>
+      <select id="etageSelect"></select>
     </label>
 
     <label>Chambre :
-      <select id="chambreSelect" data-etage="R+5">
-        <option value="total">-- Toutes les chambres --</option>
-        <option value="501">Chambre 501</option>
-        <option value="502">Chambre 502</option>
-        <option value="503">Chambre 503</option>
-        <option value="504">Chambre 504</option>
-        <option value="505">Chambre 505</option>
-        <option value="506">Chambre 506</option>
-        <option value="507">Chambre 507</option>
-        <option value="508">Chambre 508</option>
-        <option value="509">Chambre 509</option>
-        <option value="510">Chambre 510</option>
-        <option value="511">Chambre 511</option>
-        <option value="512">Chambre 512</option>
-        <option value="513">Chambre 513</option>
-        <option value="514">Chambre 514</option>
-        <option value="515">Chambre 515</option>
-      </select>
+      <select id="chambreSelect"></select>
     </label>
 
     <button id="exportCsvBtn">Exporter CSV</button>

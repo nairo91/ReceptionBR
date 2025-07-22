@@ -1,6 +1,7 @@
   const plan = document.getElementById("plan");
   const bullesContainer = document.getElementById("bulles-container");
   const chambreSelect = document.getElementById("chambreSelect");
+  const chantierSelect = document.getElementById("chantierSelect");
   const exportCsvBtn = document.getElementById("exportCsvBtn");
   const etageSelect = document.getElementById("etageSelect");
 
@@ -56,26 +57,73 @@
   }
 
   // Fonction pour changer le plan selon l'étage sélectionné
-  function changePlan(etage) {
-    // "R+5" => "5", "R+4" => "4", "R+0" => "0"
-    const cleanEtage = etage.toLowerCase().replace('r', '').replace('+', '');
-    plan.src = `plan-r${cleanEtage}.png`;
-    // Optionnel : console log pour debug
-    // console.log("Plan changé en :", plan.src);
+  let floorsData = [];
+
+  function changePlan(floorId) {
+    const floor = floorsData.find(f => String(f.id) === String(floorId));
+    if (floor && floor.plan_filename) {
+      plan.src = `/uploads/plans/${floor.plan_filename}`;
+    }
   }
 
-  // Fonction pour charger dynamiquement les chambres selon l'étage sélectionné
-  async function updateChambreOptions(etage) {
-    chambreSelect.dataset.etage = etage;
+  async function updateRoomOptions(floorId) {
     try {
-      const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(etage)}`);
+      const res = await fetch(`/api/rooms?floor_id=${encodeURIComponent(floorId)}`);
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const rooms = await res.json();
-      const options = ['<option value="total">-- Toutes les chambres --</option>']
+      const options = ['<option value="">-- Toutes les chambres --</option>']
         .concat(rooms.map(r => `<option value="${r.id}">${r.name}</option>`));
       chambreSelect.innerHTML = options.join('');
     } catch (err) {
-      console.error('Erreur chargement chambres:', err);
+      console.error('Erreur chargement rooms:', err);
+    }
+  }
+
+  async function updateFloorOptions(chantierId) {
+    try {
+      const res = await fetch(`/api/floors?chantier_id=${encodeURIComponent(chantierId)}`);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      floorsData = await res.json();
+      const options = floorsData.map(f => `<option value="${f.id}">${f.name}</option>`);
+      etageSelect.innerHTML = options.join('');
+      if (floorsData[0]) {
+        changePlan(floorsData[0].id);
+        updateRoomOptions(floorsData[0].id);
+      }
+    } catch (err) {
+      console.error('Erreur chargement floors:', err);
+    }
+  }
+
+  async function updateEntrepriseOptions() {
+    try {
+      const res = await fetch('/api/entreprises');
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const entreprises = await res.json();
+      const options = entreprises.map(e => `<option value="${e.id}">${e.name}</option>`);
+      document.querySelectorAll('#entrepriseSelect').forEach(sel => {
+        sel.innerHTML = options.join('');
+      });
+    } catch (err) {
+      console.error('Erreur chargement entreprises:', err);
+    }
+  }
+
+  function attachEntrepriseHandlers(form) {
+    updateEntrepriseOptions();
+    const btn = form.querySelector('#addEntrepriseBtn');
+    if (btn) {
+      btn.onclick = () => {
+        const name = prompt('Nouvelle entreprise:');
+        if (name) {
+          fetch('/api/entreprises', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ name })
+          }).then(updateEntrepriseOptions);
+        }
+      };
     }
   }
 
@@ -86,7 +134,7 @@
     changePlan(etageSelect.value);
 
     let url = `/api/bulles?etage=${encodeURIComponent(etageSelect.value)}`;
-    if (chambreSelect.value !== "total") {
+    if (chambreSelect.value) {
       url += `&chambre=${chambreSelect.value}`;
     }
 
@@ -149,7 +197,10 @@
             ${lotOptions}
           </select>
         </label><br>
-        <input type="text" name="entreprise" placeholder="Entreprise" value="${bulle.entreprise || ''}" /><br>
+        <label>Entreprise :
+          <select name="entreprise_id" id="entrepriseSelect"></select>
+          <button type="button" id="addEntrepriseBtn">+</button>
+        </label><br>
         <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
         <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
         <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
@@ -159,6 +210,8 @@
         <button type="button" id="deleteBtn">🗑️ Supprimer</button>
         <button type="button" onclick="closePopups()">Fermer</button>
       `;
+
+      attachEntrepriseHandlers(form);
 
       const deleteBtn = form.querySelector('#deleteBtn');
       const encodedName = encodeURIComponent(bulle.intitule || '');
@@ -419,7 +472,10 @@
           ${lotOptions}
         </select>
       </label><br>
-      <input type="text" name="entreprise" placeholder="Entreprise" /><br>
+      <label>Entreprise :
+        <select name="entreprise_id" id="entrepriseSelect"></select>
+        <button type="button" id="addEntrepriseBtn">+</button>
+      </label><br>
       <input type="text" name="localisation" placeholder="Localisation" /><br>
       <input type="text" name="observation" placeholder="Observation" /><br>
       <input type="date" name="date_butoir" /><br>
@@ -427,6 +483,8 @@
       <button type="submit">✅ Ajouter</button>
       <button type="button" onclick="closePopups()">Annuler</button>
     `;
+
+    attachEntrepriseHandlers(form);
 
     form.onsubmit = (ev) => {
       ev.preventDefault();
@@ -500,8 +558,11 @@
   chambreSelect.addEventListener("change", loadBulles);
   etageSelect.addEventListener("change", () => {
     changePlan(etageSelect.value);
-    updateChambreOptions(etageSelect.value);
+    updateRoomOptions(etageSelect.value);
     loadBulles();
+  });
+  chantierSelect.addEventListener('change', () => {
+    updateFloorOptions(chantierSelect.value);
   });
 
   exportCsvBtn.addEventListener("click", () => {
@@ -525,6 +586,17 @@
 
   // Au chargement, on remplit d'abord le menu Chambre pour l'étage par défaut, puis on affiche les bulles
   window.onload = () => {
-    updateChambreOptions(etageSelect.value);
+    fetch('/api/chantiers', { credentials: 'include' })
+      .then(r => r.json())
+      .then(chantiers => {
+        chantierSelect.innerHTML = chantiers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        const pre = chantiers.find(c => c.name === 'Ibis');
+        const id = pre ? pre.id : (chantiers[0] && chantiers[0].id);
+        if (id) {
+          chantierSelect.value = id;
+          updateFloorOptions(id);
+        }
+      });
+    updateEntrepriseOptions();
     loadBulles();
   };

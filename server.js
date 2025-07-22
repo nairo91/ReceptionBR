@@ -12,6 +12,9 @@ const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const exportRoutes = require("./routes/export");
 const commentsRoutes = require("./routes/comments");
+const chantiersRoutes = require("./routes/chantiers");
+const entreprisesRoutes = require("./routes/entreprises");
+const { isAuthenticated, isAdmin } = require('./middlewares/auth');
 const pool = require("./db");
 
 (async () => {
@@ -100,11 +103,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Gestion des interventions (POST + GET /api/interventions)
-app.use('/api/interventions', interventionsRoutes);
-app.use('/uploads', express.static('uploads'));
-
-
 // Configuration express-session
 app.use(session({
   secret: "tonSecretUltraSecret", // Change cette clé en une valeur complexe
@@ -117,17 +115,23 @@ app.use(session({
   },
 }));
 
+// Gestion des interventions (POST + GET /api/interventions)
+app.use('/api/interventions', interventionsRoutes);
+app.use('/uploads', express.static('uploads'));
+
 // Servir les fichiers uploadés
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Servir les fichiers statiques front (html, css, js)
 app.use(express.static(path.join(__dirname, "public")));
 
 // Routes API
-app.use("/api/users", usersRoutes);
-app.use("/api/floors", floorsRoutes);
-app.use("/api/rooms", roomsRoutes);
-app.use("/api/auth", authRoutes);
-app.use('/api/bulles', bullesRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/chantiers', isAuthenticated, chantiersRoutes);
+app.use('/api/entreprises', isAuthenticated, entreprisesRoutes);
+app.use('/api/floors', isAuthenticated, floorsRoutes);
+app.use('/api/rooms', isAuthenticated, roomsRoutes);
+app.use('/api/bulles', isAuthenticated, bullesRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/comments', commentsRoutes);
 

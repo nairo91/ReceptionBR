@@ -1,23 +1,25 @@
-const express = require("express");
-const router = express.Router();
+const router = require('express').Router();
+const pool = require('../db');
+const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
-// GET /api/rooms
-// Génère 15 chambres pour l'étage indiqué par floorId (ex: "R+5")
-router.get('/', (req, res) => {
-  const { floorId } = req.query;
-  if (!floorId) {
-    return res.status(400).json({ error: 'floorId requis' });
-  }
+router.get('/', async (req, res) => {
+  const { floor_id } = req.query;
+  if (!floor_id) return res.status(400).json({ error: 'floor_id requis' });
+  const { rows } = await pool.query(
+    'SELECT * FROM rooms WHERE floor_id=$1 ORDER BY id',
+    [floor_id]
+  );
+  res.json(rows);
+});
 
-  const match = /^R\+(\d+)$/.exec(floorId);
-  const floorNumber = match ? parseInt(match[1], 10) : 0;
-
-  const rooms = Array.from({ length: 15 }, (_, i) => {
-    const num = floorNumber * 100 + i + 1;
-    return { id: num.toString(), name: `Chambre ${num}` };
-  });
-  rooms.push({ id: 'couloir', name: 'Couloir' });
-  res.json(rooms);
+router.post('/', isAuthenticated, isAdmin, async (req, res) => {
+  const { name, floor_id } = req.body;
+  if (!name || !floor_id) return res.status(400).json({ error: 'données manquantes' });
+  const { rows } = await pool.query(
+    'INSERT INTO rooms(name, floor_id) VALUES($1,$2) RETURNING *',
+    [name, floor_id]
+  );
+  res.json(rows[0]);
 });
 
 module.exports = router;
