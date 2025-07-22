@@ -21,6 +21,8 @@ function loadUsersMap() {
   return map;
 }
 
+const userMap = loadUsersMap();
+
 async function fetchRows(etage, chambre, lot, state, start, end, cols) {
   const sql = `
     SELECT ${cols.map(c => 'i.' + c).join(', ')}
@@ -41,12 +43,26 @@ router.get('/:format', async (req, res) => {
     const { etage='', chambre='', lot='', state='', start='', end='', columns } = req.query;
     const cols = (columns || 'id,user_id,floor_id,room_id,lot,task,status,person,action,created_at')
       .split(',').map(c => c.trim()).filter(Boolean);
-    const rows = await fetchRows(etage, chambre, lot, state, start, end, cols);
-    const userMap = loadUsersMap();
+    // ① on récupère les données brutes
+    let rows = await fetchRows(etage, chambre, lot, state, start, end, cols);
+    // ② on remplace user_id et person par les noms
+    rows = rows.map(r => ({
+      ...r,
+      user_id: userMap[r.user_id] || r.user_id,
+      person:  userMap[r.person]  || r.person
+    }));
 
     switch(req.params.format) {
       case 'csv': {
-        const parser = new Parser({ fields: cols, delimiter: ';', header: true, eol: '\r\n', quote: '"' });
+        // csv : fields → [{ label, value }]
+        const csvFields = cols.map(c => {
+          let label = c;
+          if (c === 'user_id') label = 'Créateur';
+          if (c === 'person')  label = 'Personne';
+          // sinon label = c
+          return { label, value: c };
+        });
+        const parser = new Parser({ fields: csvFields, delimiter: ';', header: true, eol: '\r\n', quote: '"' });
         let csv = parser.parse(rows);
         csv = '\uFEFF' + csv;
         res.header('Content-Type', 'text/csv; charset=utf-8');
@@ -56,7 +72,13 @@ router.get('/:format', async (req, res) => {
       case 'excel': {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Interventions');
-        sheet.columns = cols.map(c => ({ header: c, key: c, width: 20 }));
+        // colonnes Excel en français
+        sheet.columns = cols.map(c => {
+          let header = c;
+          if (c === 'user_id') header = 'Créateur';
+          if (c === 'person')  header = 'Personne';
+          return { header, key: c, width: 20 };
+        });
         rows.forEach(r => {
           const row = {};
           cols.forEach(c => { row[c] = r[c]; });
@@ -72,13 +94,20 @@ router.get('/:format', async (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         res.attachment('interventions.pdf');
         doc.pipe(res);
-        const colWidths = cols.map(() => 60);
+        // PDF : entêtes en français
+        const headers = cols.map(c => {
+          if (c === 'user_id') return 'Créateur';
+          if (c === 'person')  return 'Personne';
+          return c.charAt(0).toUpperCase() + c.slice(1);
+        });
+        const colWidths = headers.map(() => 60);
         const rowHeight = 20;
         const startX = 30;
         let y = 80;
+        // ligne des entêtes
         doc.font('Helvetica-Bold').fontSize(10);
         let x = startX;
-        cols.forEach((h, idx) => {
+        headers.forEach((h, idx) => {
           doc.text(h, x, y, { width: colWidths[idx], align: 'left' });
           x += colWidths[idx];
         });
