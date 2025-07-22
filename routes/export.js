@@ -90,37 +90,47 @@ router.get('/:format', async (req, res) => {
         return res.end();
       }
       case 'pdf': {
+        // 📄 Export PDF
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
         res.setHeader('Content-Type', 'application/pdf');
         res.attachment('interventions.pdf');
         doc.pipe(res);
-        // PDF : entêtes en français
+
+        // entêtes en français
         const headers = cols.map(c => {
           if (c === 'user_id') return 'Créateur';
           if (c === 'person')  return 'Personne';
           return c.charAt(0).toUpperCase() + c.slice(1);
         });
-        const colWidths = headers.map(() => 60);
-        const rowHeight = 20;
-        const startX = 30;
-        let y = 80;
-        // ligne des entêtes
-        doc.font('Helvetica-Bold').fontSize(10);
+
+        // calcul dynamique des largeurs pour éviter le chevauchement
+        const margin    = 30;
+        const pageWidth = doc.page.width;
+        const availW    = pageWidth - margin * 2;
+        const count     = headers.length;
+        const colWidths = headers.map(() => availW / count);
+        const rowHeight = 18;
+        const startX    = margin;
+        let y           = 80;
+
+        doc.font('Helvetica-Bold').fontSize(9);
         let x = startX;
-        headers.forEach((h, idx) => {
-          doc.text(h, x, y, { width: colWidths[idx], align: 'left' });
-          x += colWidths[idx];
+        headers.forEach((h, i) => {
+          doc.text(h, x, y, { width: colWidths[i], align: 'left' });
+          x += colWidths[i];
         });
         y += rowHeight;
-        doc.font('Helvetica').fontSize(9);
+
+        doc.font('Helvetica').fontSize(8);
         rows.forEach(r => {
           x = startX;
-          cols.forEach((c, idx) => {
-            doc.text(String(r[c] ?? ''), x, y, { width: colWidths[idx], align: 'left' });
-            x += colWidths[idx];
+          cols.forEach((c, i) => {
+            doc.text(String(r[c] ?? ''), x, y, { width: colWidths[i], align: 'left' });
+            x += colWidths[i];
           });
           y += rowHeight;
         });
+
         doc.end();
         return;
       }
