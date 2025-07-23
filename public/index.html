@@ -20,6 +20,30 @@
   <div id="app-container" style="display:none;">
     <h1>Bienvenue</h1>
     <button id="logoutBtn">Déconnexion</button>
+    <label>Chantier :
+      <select id="chantierSelect"></select>
+    </label>
+
+    <label>Étage :
+      <select id="etageSelect" data-etage="R+5">
+        <option value="R+5">R+5</option>
+        <!-- etc. -->
+      </select>
+    </label>
+
+    <label>Chambre :
+      <select id="chambreSelect" data-etage="R+5">
+        <option value="total">-- Toutes les chambres --</option>
+        <!-- etc. -->
+      </select>
+    </label>
+
+    <button id="exportCsvBtn">Exporter CSV</button>
+
+    <div id="plan-container">
+      <img id="plan" src="plan-r5.png" alt="Plan étage" />
+      <div id="bulles-container"></div>
+    </div>
   </div>
 
   <script src="script.js"></script>
