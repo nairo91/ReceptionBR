@@ -40,6 +40,7 @@ async function fetchRows(etage, chambre, lot, state, start, end, cols) {
       ORDER BY i.created_at DESC`;
   const { rows } = await pool.query(sql, [etage, chambre, lot, state, start, end]);
   return rows;
+} // ← fermer fetchRows ici, avant le router.get
 
 // Export des bulles en différents formats
 router.get('/', async (req, res) => {
@@ -86,8 +87,6 @@ router.get('/', async (req, res) => {
       res.csv(rows, true);
     }
   }
-} // fin du router.get
-);
+});  // ← fermeture du router.get
 
-// Exporte le routeur
 module.exports = router;
