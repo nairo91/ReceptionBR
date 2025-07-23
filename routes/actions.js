@@ -3,14 +3,18 @@ const pool = require('../db');
 const router = express.Router();
 
 // POST /api/bulles/actions
-// body = { user, action, etage, chambre, x, y, nomBulle, description, timestamp }
+// body = { user, action, etage, chambre, x, y, nomBulle, description,
+//          lot, entreprise, localisation, observation, timestamp }
 router.post('/', async (req, res) => {
   try {
-    const { user, action, etage, chambre, x, y, nomBulle, description, timestamp } = req.body;
+    const {
+      user, action, etage, chambre, x, y, nomBulle, description,
+      lot, entreprise, localisation, observation, timestamp
+    } = req.body;
     await pool.query(
-      `INSERT INTO local_actions (user_id, action, etage, chambre, x, y, nom_bulle, description, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [user, action, etage, chambre, x, y, nomBulle, description, timestamp]
+      `INSERT INTO local_actions (user_id, action, etage, chambre, x, y, nom_bulle, description, lot, entreprise, localisation, observation, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [user, action, etage, chambre, x, y, nomBulle, description, lot, entreprise, localisation, observation, timestamp]
     );
     res.status(201).end();
   } catch (err) {

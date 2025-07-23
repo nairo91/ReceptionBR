@@ -14,17 +14,26 @@ window.addEventListener('DOMContentLoaded', () => {
         actions.forEach(a => {
           const row = document.createElement('tr');
 
-          const emplacement = a.chambre
-            ? `${a.etage} / ${a.chambre}`
-            : `${a.etage} (${Number(a.x).toFixed(2)}, ${Number(a.y).toFixed(2)})`;
+          // n° de bulle
+          const numero = a.nom_bulle.match(/^Bulle (\d+)/)?.[1] || '';
+
+          // user : prefixe avant le premier point de l’email
+          const userLabel = a.user_id
+            ? a.user_id.split('@')[0].split('.')[0]
+            : '';
 
           const values = [
-            a.user_id || a.user,
+            userLabel,
             a.action,
-            emplacement,
-            a.nom_bulle || a.nomBulle || '',
-            a.description || '',
-            new Date(a.created_at || a.timestamp).toLocaleString()
+            a.etage,
+            a.chambre || '',
+            numero,
+            a.lot || '',
+            a.entreprise  || '',
+            a.localisation || '',
+            a.observation || '',
+            a.description  || '',
+            new Date(a.created_at||a.timestamp).toLocaleString()
           ];
           values.forEach(val => {
             const td = document.createElement('td');
