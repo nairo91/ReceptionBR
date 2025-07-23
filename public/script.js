@@ -1,6 +1,9 @@
 // historique local des bulles
 const actions = JSON.parse(localStorage.getItem('actions') || '[]');
 
+// juste avant document.addEventListener(...)
+let nextNumero = 1;
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginContainer = document.getElementById('login-container');
   const loginForm = document.getElementById('login-form');
@@ -97,6 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => res.json())
         .then(data => {
           data.forEach(bulle => createBulle(bulle));
+          // calcul du prochain numéro global
+          nextNumero = data.length > 0
+            ? Math.max(...data.map(b => b.numero || 0)) + 1
+            : 1;
           ajusterTailleBulles();
         });
     }
@@ -170,6 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const formData = new FormData(form);
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
+          const lot = formData.get('lot');
+          const entreprise = formData.get('entreprise');
+          const localisation = formData.get('localisation');
+          const observation = formData.get('observation');
           fetch(`/api/bulles/${bulle.id}`, {
             method: 'PUT',
             credentials: 'include',
@@ -179,7 +190,18 @@ document.addEventListener('DOMContentLoaded', () => {
             closePopups();
             const relX = parseFloat(div.dataset.x);
             const relY = parseFloat(div.dataset.y);
-            recordAction('modification', { etage: bulle.etage, chambre: bulle.chambre, x: relX, y: relY, nomBulle, description: desc });
+              recordAction('modification', {
+                etage: bulle.etage,
+                chambre: bulle.chambre,
+                x: relX,
+                y: relY,
+                nomBulle: `Bulle ${bulle.numero}`,
+                description: desc,
+                lot,
+                entreprise,
+                localisation,
+                observation
+              });
           });
         };
 
@@ -269,6 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
         y: loc.y,
         nomBulle: loc.nomBulle || '',
         description: loc.description || '',
+        lot: loc.lot || '',
+        entreprise: loc.entreprise || '',
+        localisation: loc.localisation || '',
+        observation: loc.observation || '',
         timestamp: new Date().toISOString()
       };
       actions.push(entry);
@@ -277,15 +303,19 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user:       loc.user || user,
-          action:     type,
-          etage:      loc.etage,
-          chambre:    loc.chambre,
-          x:          loc.x,
-          y:          loc.y,
-          nomBulle:   loc.nomBulle,
-          description:loc.description,
-          timestamp:  new Date().toISOString()
+          user:        loc.user || user,
+          action:      type,
+          etage:       loc.etage,
+          chambre:     loc.chambre,
+          x:           loc.x,
+          y:           loc.y,
+          nomBulle:    loc.nomBulle,
+          description: loc.description,
+          lot:         loc.lot,
+          entreprise:  loc.entreprise,
+          localisation:loc.localisation,
+          observation: loc.observation,
+          timestamp:   new Date().toISOString()
         }),
       }).catch(console.error);
     }
@@ -305,8 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function deleteBulle(bulle) {
       fetch(`/api/bulles/${bulle.id}`, { method: 'DELETE', credentials: 'include' })
         .then(() => loadBulles());
-      const { etage, chambre, x, y, numero } = bulle;
-      recordAction('suppression', { etage, chambre, x, y, nomBulle: numero, description: '' });
+      const { etage, chambre, x, y, numero, lot, entreprise, localisation, observation } = bulle;
+      recordAction('suppression', { etage, chambre, x, y, nomBulle: `Bulle ${numero}`, description: '', lot, entreprise, localisation, observation });
     }
 
     function zoomImage(src) {
@@ -447,8 +477,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const yRatio = y / rect.height;
         formData.append('x', xRatio);
         formData.append('y', yRatio);
+        formData.append('numero', nextNumero);
+        const assignedNumero = nextNumero;
+        nextNumero++;
         const nomBulle = formData.get('intitule');
         const desc = formData.get('description');
+        const lot = formData.get('lot');
+        const entreprise = formData.get('entreprise');
+        const localisation = formData.get('localisation');
+        const observation = formData.get('observation');
         fetch('/api/bulles', {
           method: 'POST',
           credentials: 'include',
@@ -456,14 +493,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(() => {
           loadBulles();
           closePopups();
-          recordAction('creation', {
-            etage: etageSelect.value,
-            chambre: chambreSelect.value,
-            x: xRatio,
-            y: yRatio,
-            nomBulle,
-            description: desc
-          });
+            recordAction('creation', {
+              etage: etageSelect.value,
+              chambre: chambreSelect.value,
+              x: xRatio,
+              y: yRatio,
+              nomBulle: `Bulle ${assignedNumero}`,
+              description: desc,
+              lot,
+              entreprise,
+              localisation,
+              observation
+            });
         });
       };
 

@@ -110,9 +110,17 @@ const { isAuthenticated } = require("./middlewares/auth");
       y REAL,
       nom_bulle TEXT,
       description TEXT,
+      lot TEXT,
+      entreprise TEXT,
+      localisation TEXT,
+      observation TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  await pool.query("ALTER TABLE local_actions ADD COLUMN IF NOT EXISTS lot TEXT");
+  await pool.query("ALTER TABLE local_actions ADD COLUMN IF NOT EXISTS entreprise TEXT");
+  await pool.query("ALTER TABLE local_actions ADD COLUMN IF NOT EXISTS localisation TEXT");
+  await pool.query("ALTER TABLE local_actions ADD COLUMN IF NOT EXISTS observation TEXT");
 })().catch(console.error);
 
 const app = express();
