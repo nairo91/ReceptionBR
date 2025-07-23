@@ -247,6 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         p.remove();
       });
     }
+    // rendre la fonction accessible depuis l’attribut onclick inline
+    window.closePopups = closePopups;
 
     function confirmDelete(id) {
       if (!user) {
