@@ -1,19 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
 
 // GET /api/floors
-// Renvoie la liste des étages depuis la table `floors`
-router.get('/', async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      'SELECT id, name FROM floors ORDER BY id'
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Erreur GET /api/floors', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
+// Renvoie une liste statique d'étages R+0 à R+5
+router.get('/', (req, res) => {
+  const floors = Array.from({ length: 6 }, (_, i) => {
+    const name = `R+${i}`;
+    return { id: name, name };
+  });
+  res.json(floors);
 });
 
 module.exports = router;
