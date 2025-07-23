@@ -283,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function recordAction(type, loc) {
       if (!user) return;
       const entry = {
-        user,
+        // stocke juste l'email pour l'historique local
+        user: (loc.user && loc.user.email) || user.email,
         action: type,
         etage: loc.etage,
         chambre: loc.chambre,
