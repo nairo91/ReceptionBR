@@ -12,6 +12,7 @@ const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const exportRoutes = require("./routes/export");
 const commentsRoutes = require("./routes/comments");
+const actionsRoutes = require('./routes/actions');
 const chantiersRoutes = require('./routes/chantiers');
 const pool = require("./db");
 const { isAuthenticated } = require("./middlewares/auth");
@@ -98,6 +99,20 @@ const { isAuthenticated } = require("./middlewares/auth");
       role TEXT NOT NULL DEFAULT 'user'
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS local_actions (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT,
+      action TEXT,
+      etage TEXT,
+      chambre TEXT,
+      x REAL,
+      y REAL,
+      nom_bulle TEXT,
+      description TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
 })().catch(console.error);
 
 const app = express();
@@ -148,6 +163,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use('/api/bulles', bullesRoutes);
+app.use('/api/bulles/actions', actionsRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/comments', commentsRoutes);
 
