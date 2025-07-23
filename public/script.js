@@ -283,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function recordAction(type, loc) {
       if (!user) return;
       const entry = {
-        user,
+        // stocke juste l'email pour l'historique local
+        user: (loc.user && loc.user.email) || user.email,
         action: type,
         etage: loc.etage,
         chambre: loc.chambre,
@@ -303,7 +304,8 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user:        loc.user || user,
+          // on n’envoie que l’email
+          user:        (loc.user && loc.user.email) || user.email,
           action:      type,
           etage:       loc.etage,
           chambre:     loc.chambre,

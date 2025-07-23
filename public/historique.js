@@ -18,9 +18,9 @@ window.addEventListener('DOMContentLoaded', () => {
           const numero = a.nom_bulle.match(/^Bulle (\d+)/)?.[1] || '';
 
           // user : prefixe avant le premier point de l’email
-          const userLabel = a.user_id
-            ? a.user_id.split('@')[0].split('.')[0]
-            : '';
+          const userLabel = (a.user || a.user_id || '')
+            .split('@')[0]
+            .split('.')[0];
 
           const values = [
             userLabel,
