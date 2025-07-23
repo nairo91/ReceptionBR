@@ -162,8 +162,11 @@ app.use('/api/interventions', interventionsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
-app.use('/api/bulles', bullesRoutes);
+// Monter d'abord la route "actions"
 app.use('/api/bulles/actions', actionsRoutes);
+
+// Puis toutes les autres sous /api/bulles
+app.use('/api/bulles', bullesRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/comments', commentsRoutes);
 
