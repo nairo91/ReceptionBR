@@ -81,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const rooms = await res.json();
+        // on commence toujours par l’option “Toutes les chambres”
         const options = ['<option value="total">-- Toutes les chambres --</option>']
           .concat(rooms.map(r => `<option value="${r.id}">${r.name}</option>`));
         chambreSelect.innerHTML = options.join('');
