@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chantierSelect  = document.getElementById("chantierSelect");
     const etageSelect     = document.getElementById("etageSelect");
     const chambreSelect   = document.getElementById("chambreSelect");
-    const exportCsvBtn    = document.getElementById("exportCsvBtn");
+    const exportBtn    = document.getElementById("exportBtn");
+    const formatSelect = document.getElementById("export-format");
     const plan            = document.getElementById("plan");
     const bullesContainer = document.getElementById("bulles-container");
 
@@ -538,17 +539,17 @@ document.addEventListener('DOMContentLoaded', () => {
     chantierSelect.onchange = () => updateFloorOptions(chantierSelect.value);
     etageSelect.onchange = () => { changePlan(etageSelect.value); updateRoomOptions(etageSelect.value); loadBulles(); };
     chambreSelect.onchange = loadBulles;
-    exportCsvBtn.onclick = () => {
-      const params = new URLSearchParams({
-        etage: etageSelect.value,
-        chambre: chambreSelect.value,
-        columns: [
-          'id','user_id','floor_id','room_id','lot',
-          'task','status','person','action',
-          'created_at','created_by','image'
-        ].join(',')
-      });
-      window.open(`/api/bulles/export/csv?${params}`, '_blank');
+    exportBtn.onclick = () => {
+      const etage   = etageSelect.value;
+      const chambre = chambreSelect.value;
+      const format  = formatSelect.value; // csv, xlsx ou pdf
+
+      const cols = Array.from(
+        document.querySelectorAll('#export-columns input[name="col"]:checked')
+      ).map(cb => cb.value).join(',');
+
+      const params = new URLSearchParams({ etage, chambre, format, columns: cols });
+      window.open(`/api/bulles/export?${params}`, "_blank");
     };
 
     window.addEventListener('resize', ajusterTailleBulles);

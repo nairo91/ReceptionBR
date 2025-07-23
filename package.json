@@ -21,7 +21,8 @@
     "pg": "^8.11.3",
     "cloudinary": "^1.37.2",
     "multer-storage-cloudinary": "^4.0.0",
-    "pdfkit": "^0.15.0",
-    "exceljs": "^4.3.0"
+    "exceljs": "^4.3.0",
+    "pdfkit": "^0.13.0",
+    "csv-express": "^1.1.1"
   }
 }
