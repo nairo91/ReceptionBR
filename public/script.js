@@ -286,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // stocke juste l'email pour l'historique local
         user: (loc.user && loc.user.email) || user.email,
         action: type,
+        etat:   loc.etat || loc.state || '',
         etage: loc.etage,
         chambre: loc.chambre,
         x: loc.x,
@@ -307,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // on n’envoie que l’email
           user:        (loc.user && loc.user.email) || user.email,
           action:      type,
+          etat:        loc.etat || loc.state || '',
           etage:       loc.etage,
           chambre:     loc.chambre,
           x:           loc.x,

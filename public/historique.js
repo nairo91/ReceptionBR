@@ -25,6 +25,7 @@ window.addEventListener('DOMContentLoaded', () => {
           const values = [
             userLabel,
             a.action,
+            a.etat || '',
             a.etage,
             a.chambre || '',
             numero,
