@@ -10,7 +10,6 @@ const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
 const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
-const exportRoutes = require("./routes/export");
 const commentsRoutes = require("./routes/comments");
 const actionsRoutes = require('./routes/actions');
 const chantiersRoutes = require('./routes/chantiers');
@@ -173,9 +172,11 @@ app.use("/api/rooms", roomsRoutes);
 // Monter d'abord la route "actions"
 app.use('/api/bulles/actions', actionsRoutes);
 
-// Puis toutes les autres sous /api/bulles
+// Export CSV / XLSX / PDF des bulles
+app.use('/api/bulles/export', require('./routes/export'));
+
+// Toutes les autres routes bulles (UI, CRUD, etc.)
 app.use('/api/bulles', bullesRoutes);
-app.use('/api/export', exportRoutes);
 app.use('/api/comments', commentsRoutes);
 
 const PORT = process.env.PORT || 3000;

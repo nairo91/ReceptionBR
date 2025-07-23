@@ -46,7 +46,32 @@
       </select>
     </label>
 
-    <button id="exportCsvBtn">Exporter CSV</button>
+    <!-- Format d’export -->
+    <label for="export-format">Format :</label>
+    <select id="export-format">
+      <option value="csv">CSV</option>
+      <option value="xlsx">Excel</option>
+      <option value="pdf">PDF</option>
+    </select>
+    <fieldset id="export-columns">
+      <legend>Colonnes à inclure :</legend>
+      <label><input type="checkbox" name="col" value="id" checked> ID</label>
+      <label><input type="checkbox" name="col" value="user_id" checked> Utilisateur</label>
+      <label><input type="checkbox" name="col" value="floor_id" checked> Étage</label>
+      <label><input type="checkbox" name="col" value="room_id" checked> Chambre</label>
+      <label><input type="checkbox" name="col" value="numero" checked> N°</label>
+      <label><input type="checkbox" name="col" value="lot" checked> Lot</label>
+      <label><input type="checkbox" name="col" value="intitule" checked> Intitulé</label>
+      <label><input type="checkbox" name="col" value="description" checked> Description</label>
+      <label><input type="checkbox" name="col" value="etat" checked> État</label>
+      <label><input type="checkbox" name="col" value="entreprise" checked> Entreprise</label>
+      <label><input type="checkbox" name="col" value="localisation" checked> Localisation</label>
+      <label><input type="checkbox" name="col" value="observation" checked> Observation</label>
+      <label><input type="checkbox" name="col" value="date_butoir" checked> Date butoir</label>
+      <label><input type="checkbox" name="col" value="created_at" checked> Création</label>
+    </fieldset>
+    <!-- Nouveau bouton Export -->
+    <button id="exportBtn">Exporter</button>
 
     <div id="plan-container">
       <img id="plan" src="plan-r5.png" alt="Plan étage" />
