@@ -4,12 +4,9 @@ const pool = require('../db');
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 const { Parser } = require('json2csv');
-const csvExpress = require('csv-express');
 const fs = require('fs');
 const path = require('path');
 
-// expose res.csv()
-router.use(csvExpress());
 
 function loadUsersMap() {
   const csvPath = path.join(__dirname, '../db/users.csv');
@@ -83,8 +80,14 @@ router.get('/', async (req, res) => {
       return;
     }
     default: {
-      res.setHeader('Content-Disposition', 'attachment; filename=bulles.csv');
-      res.csv(rows, true);
+      // CSV via json2csv
+      const parser = new Parser({ fields: cols });
+      let csv = parser.parse(rows);
+      // ajoute BOM pour Excel
+      csv = '\uFEFF' + csv;
+      res.header('Content-Type', 'text/csv; charset=utf-8');
+      res.attachment('bulles.csv');
+      return res.send(csv);
     }
   }
 });  // ← fermeture du router.get
