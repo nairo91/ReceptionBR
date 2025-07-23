@@ -51,7 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateFloorOptions(chId) {
       try {
-        const res = await fetch(`/api/floors?chantier_id=${encodeURIComponent(chId)}`, { credentials: 'include' });
+        const res = await fetch(
+          `/api/floors?chantier_id=${encodeURIComponent(chId)}`,
+          { credentials: 'include' }
+        );
         const floors = await res.json();
         etageSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
         etageSelect.value = floors[0]?.id || '';

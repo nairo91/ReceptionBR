@@ -103,7 +103,10 @@ const app = express();
 
 // Configuration CORS pour autoriser les cookies/sessions
 app.use(cors({
-  origin: "http://localhost:3000", // Remplace par l'URL de ton frontend en prod
+  origin: [
+    "http://localhost:3000",
+    "https://receptionbr.onrender.com",
+  ],
   credentials: true,
 }));
 
