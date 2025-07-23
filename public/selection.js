@@ -112,7 +112,7 @@ async function showTab(tabId) {
 }
 
 function downloadFile(url, filename) {
-  fetch(url)
+  fetch(url, { credentials: 'include' })
     .then(res => res.blob())
     .then(blob => {
       const a = document.createElement('a');
@@ -127,7 +127,7 @@ function downloadFile(url, filename) {
 }
 
 async function loadUsers() {
-  const res = await fetch('/api/users');
+  const res = await fetch('/api/users', { credentials: 'include' });
   const users = await res.json();
   window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
   userOptions = '<option value="">--Choisir--</option>' +
@@ -140,7 +140,7 @@ async function loadUsers() {
 }
 
 async function loadCommentUsers() {
-  const res = await fetch('/api/users');
+  const res = await fetch('/api/users', { credentials: 'include' });
   const users = await res.json();
   const select = document.getElementById('comment-user');
   if (!select) return;
@@ -149,7 +149,7 @@ async function loadCommentUsers() {
 }
 
 async function loadFloors(selector) {
-  const res = await fetch('/api/floors');
+  const res = await fetch('/api/floors', { credentials: 'include' });
   const floors = await res.json();
   const sel = document.querySelector(selector);
   sel.innerHTML = '<option value="">-- Choisir un étage --</option>' +
@@ -167,7 +167,10 @@ async function loadRooms(floorId, selectorRoom) {
     }
     return;
   }
-  const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
+  const res = await fetch(
+    `/api/rooms?floorId=${encodeURIComponent(floorId)}`,
+    { credentials: 'include' }
+  );
   const rooms = await res.json();
   sel.innerHTML = '<option value="">-- Choisir une chambre --</option>' +
     rooms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
@@ -184,7 +187,10 @@ async function loadHistory() {
     end:    document.getElementById('date-end').value || ''
   });
   console.log('⚙️ HISTORY SQL params:', params.toString());
-  const res = await fetch('/api/interventions/history?' + params.toString());
+  const res = await fetch(
+    '/api/interventions/history?' + params.toString(),
+    { credentials: 'include' }
+  );
   const rows = await res.json();
   console.log('⚙️ rows returned:', rows);
   renderHistory(rows, '#history-table');
@@ -202,7 +208,10 @@ async function loadPreview() {
   const room  = document.getElementById('edit-room').value || '';
   const lot   = document.getElementById('edit-lot').value || '';
   const params = new URLSearchParams({ etage: floor, chambre: room, lot });
-  const res = await fetch('/api/interventions/history?' + params.toString());
+  const res = await fetch(
+    '/api/interventions/history?' + params.toString(),
+    { credentials: 'include' }
+  );
   const rows = await res.json();
   renderHistory(rows, '#preview-table');
   enableInlineEditing();
@@ -282,7 +291,10 @@ function renderHistory(rows, tableSelector = '#history-table') {
       menu.addEventListener('click', async e => {
         const action = e.target.dataset.action;
         if (action === 'view-history') {
-          const res = await fetch(`/api/interventions/${inter.id}/history`);
+          const res = await fetch(
+            `/api/interventions/${inter.id}/history`,
+            { credentials: 'include' }
+          );
           const logs = await res.json();
           if (typeof showTaskHistory === 'function') {
             showTaskHistory(logs);
@@ -341,6 +353,7 @@ async function enableInlineEditing() {
         const res = await fetch(`/api/interventions/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ status: newStatus })
         });
         if (!res.ok) {
@@ -413,6 +426,7 @@ editSubmitBtn.addEventListener('click', async function () {
     await fetch(`/api/interventions/${btn.dataset.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         floor: payload.floor,
         room: payload.room,
@@ -425,6 +439,7 @@ editSubmitBtn.addEventListener('click', async function () {
     const res = await fetch('/api/interventions/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload)
     });
     const result = await res.json();
@@ -461,6 +476,7 @@ document.getElementById('comment-send').addEventListener('click', async () => {
   await fetch('/api/comments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ intervention_id: currentId, text, user_id: userId })
   });
   await loadComments();
@@ -469,7 +485,10 @@ document.getElementById('comment-send').addEventListener('click', async () => {
 
 async function loadComments() {
   if (!currentId) return;
-  const res = await fetch(`/api/comments?intervention_id=${currentId}`);
+  const res = await fetch(
+    `/api/comments?intervention_id=${currentId}`,
+    { credentials: 'include' }
+  );
   const comments = await res.json();
   const list = document.getElementById('comment-list');
   list.innerHTML = comments
@@ -487,7 +506,10 @@ async function loadComments() {
 
 async function loadPhotos() {
   if (!currentId) return;
-  const res = await fetch(`/api/interventions/${currentId}/photos`);
+  const res = await fetch(
+    `/api/interventions/${currentId}/photos`,
+    { credentials: 'include' }
+  );
   const urls = await res.json();
   document.getElementById('photo-list').innerHTML =
     urls.map(u => `<li><img src="${u}"></li>`).join('');
@@ -498,7 +520,11 @@ document.getElementById('photo-send').addEventListener('click', async () => {
   const files = document.getElementById('photo-file').files;
   const fd = new FormData();
   for (const f of files) fd.append('photos', f);
-  const res = await fetch(`/api/interventions/${currentId}/photos`, { method: 'POST', body: fd });
+  const res = await fetch(`/api/interventions/${currentId}/photos`, {
+    method: 'POST',
+    body: fd,
+    credentials: 'include'
+  });
   const urls = await res.json();
   const list = document.getElementById('photo-list');
   list.innerHTML = urls.map(u => `<li><img src="${u}"></li>`).join('');
