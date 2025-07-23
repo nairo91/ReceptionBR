@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
   const { etage, chambre, format } = req.query;
   const cols = (
     req.query.columns ||
-    'id,user_id,floor_id,room_id,numero,lot,intitule,description,etat,entreprise,localisation,observation,date_butoir,created_at'
+    'id,numero,intitule,description,etat,lot,entreprise,localisation,observation,date_butoir,created_at,created_by,etage,chambre'
   )
     .split(',')
     .filter(Boolean);
