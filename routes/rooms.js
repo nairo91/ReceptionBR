@@ -1,23 +1,21 @@
 const express = require("express");
 const router = express.Router();
+const pool = require("../db");
 
 // GET /api/rooms
-// Génère 15 chambres pour l'étage indiqué par floorId (ex: "R+5")
-router.get('/', (req, res) => {
-  const { floorId } = req.query;
-  if (!floorId) {
-    return res.status(400).json({ error: 'floorId requis' });
+router.get('/', async (req, res) => {
+  const floorId = req.query.floor_id;
+  // requête SQL qui filtre bien sur la colonne floor_id
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name FROM rooms WHERE floor_id = $1 ORDER BY name',
+      [floorId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-
-  const match = /^R\+(\d+)$/.exec(floorId);
-  const floorNumber = match ? parseInt(match[1], 10) : 0;
-
-  const rooms = Array.from({ length: 15 }, (_, i) => {
-    const num = floorNumber * 100 + i + 1;
-    return { id: num.toString(), name: `Chambre ${num}` };
-  });
-  rooms.push({ id: 'couloir', name: 'Couloir' });
-  res.json(rooms);
 });
 
 module.exports = router;
