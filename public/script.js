@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .join("");
     const defaultCh = chantiers.find(c => c.name === "Ibis")?.id || chantiers[0].id;
     chantierSelect.value = defaultCh;
+    await updateFloorOptions(defaultCh);
 
     // 2) Fonctions utilitaires
     function changePlan(etage) {
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function updateFloorOptions(chId) {
       try {
-        const res = await fetch(`/api/floors?chantierId=${encodeURIComponent(chId)}`, { credentials: 'include' });
+        const res = await fetch(`/api/floors?chantier_id=${encodeURIComponent(chId)}`, { credentials: 'include' });
         const floors = await res.json();
         etageSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
         etageSelect.value = floors[0]?.id || '';
@@ -65,7 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function updateRoomOptions(floorId) {
       chambreSelect.dataset.etage = floorId;
       try {
-        const res = await fetch(`/api/rooms?floorId=${encodeURIComponent(floorId)}`);
+        const res = await fetch(
+          `/api/rooms?floor_id=${encodeURIComponent(floorId)}`,
+          { credentials: 'include' }
+        );
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const rooms = await res.json();
         const options = ['<option value="total">-- Toutes les chambres --</option>']
@@ -444,8 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', ajusterTailleBulles);
     window.addEventListener('orientationchange', ajusterTailleBulles);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', ajusterTailleBulles);
-
-    await updateFloorOptions(defaultCh);
   }
 
   loginForm.addEventListener('submit', async (e) => {
