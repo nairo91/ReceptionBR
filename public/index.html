@@ -34,9 +34,13 @@
 
     <label>Étage :
       <select id="etageSelect">
-        <!-- l'ID numérique est stocké dans data-floor-id -->
+        <!-- valeur lisible R+X mais l'identifiant numérique est dans data-floor-id -->
+        <option value="R+0" data-floor-id="0">R+0</option>
+        <option value="R+1" data-floor-id="1">R+1</option>
+        <option value="R+2" data-floor-id="2">R+2</option>
+        <option value="R+3" data-floor-id="3">R+3</option>
+        <option value="R+4" data-floor-id="4">R+4</option>
         <option value="R+5" data-floor-id="5">R+5</option>
-        <!-- etc. -->
       </select>
     </label>
 
