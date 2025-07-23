@@ -481,5 +481,11 @@ document.addEventListener('DOMContentLoaded', () => {
     await refresh();
   });
 
+  document.getElementById('nav-selection')
+    .addEventListener('click', e => {
+      e.preventDefault();
+      window.location.href = 'selection.html';
+  });
+
   refresh();
 });
