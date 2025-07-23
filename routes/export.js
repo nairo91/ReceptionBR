@@ -86,6 +86,8 @@ router.get('/', async (req, res) => {
       res.csv(rows, true);
     }
   }
-});
+} // fin du router.get
+);
 
+// Exporte le routeur
 module.exports = router;
