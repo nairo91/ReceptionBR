@@ -9,3 +9,10 @@ CREATE TABLE IF NOT EXISTS bulles (
   description TEXT,
   photo TEXT
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user'
+);
