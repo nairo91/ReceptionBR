@@ -6,7 +6,9 @@ const pool = require('../db');
 // Renvoie la liste des chantiers depuis la base
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, name FROM chantiers ORDER BY id');
+    const { rows } = await pool.query(
+      'SELECT id, nom AS name FROM chantiers ORDER BY id'
+    );
     res.json(rows);
   } catch (err) {
     console.error('Erreur GET /api/chantiers', err);
