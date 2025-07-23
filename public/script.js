@@ -1,3 +1,6 @@
+// historique local des bulles
+const actions = JSON.parse(localStorage.getItem('actions') || '[]');
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginContainer = document.getElementById('login-container');
   const loginForm = document.getElementById('login-form');
@@ -156,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const deleteBtn = form.querySelector('#deleteBtn');
-        deleteBtn.onclick = () => confirmDelete(bulle.id);
+        deleteBtn.onclick = () => confirmDelete(bulle);
 
         form.onsubmit = e => {
           e.preventDefault();
@@ -165,6 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
           const formData = new FormData(form);
+          const nomBulle = formData.get('intitule');
+          const desc = formData.get('description');
           fetch(`/api/bulles/${bulle.id}`, {
             method: 'PUT',
             credentials: 'include',
@@ -172,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }).then(() => {
             loadBulles();
             closePopups();
+            const relX = parseFloat(div.dataset.x);
+            const relY = parseFloat(div.dataset.y);
+            recordAction('modification', { etage: bulle.etage, chambre: bulle.chambre, x: relX, y: relY, nomBulle, description: desc });
           });
         };
 
@@ -250,18 +258,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // rendre la fonction accessible depuis l’attribut onclick inline
     window.closePopups = closePopups;
 
-    function confirmDelete(id) {
+    function recordAction(type, loc) {
+      if (!user) return;
+      const entry = {
+        user,
+        action: type,
+        etage: loc.etage,
+        chambre: loc.chambre,
+        x: loc.x,
+        y: loc.y,
+        nomBulle: loc.nomBulle || '',
+        description: loc.description || '',
+        timestamp: new Date().toISOString()
+      };
+      actions.push(entry);
+      localStorage.setItem("actions", JSON.stringify(actions));
+    }
+    // rendre la fonction dispo partout
+    window.recordAction = recordAction;
+
+    function confirmDelete(bulle) {
       if (!user) {
         alert('Vous devez être connecté pour supprimer.');
         return;
       }
       if (confirm('Voulez-vous vraiment supprimer cette bulle ?')) {
-        deleteBulle(id);
+        deleteBulle(bulle);
       }
     }
 
-    function deleteBulle(id) {
-      fetch(`/api/bulles/${id}`, { method: 'DELETE', credentials: 'include' }).then(() => loadBulles());
+    function deleteBulle(bulle) {
+      fetch(`/api/bulles/${bulle.id}`, { method: 'DELETE', credentials: 'include' })
+        .then(() => loadBulles());
+      const { etage, chambre, x, y, numero } = bulle;
+      recordAction('suppression', { etage, chambre, x, y, nomBulle: numero, description: '' });
     }
 
     function zoomImage(src) {
@@ -402,6 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const yRatio = y / rect.height;
         formData.append('x', xRatio);
         formData.append('y', yRatio);
+        const nomBulle = formData.get('intitule');
+        const desc = formData.get('description');
         fetch('/api/bulles', {
           method: 'POST',
           credentials: 'include',
@@ -409,6 +441,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(() => {
           loadBulles();
           closePopups();
+          recordAction('creation', {
+            etage: etageSelect.value,
+            chambre: chambreSelect.value,
+            x: xRatio,
+            y: yRatio,
+            nomBulle,
+            description: desc
+          });
         });
       };
 
@@ -492,8 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('historiqueBtn')
     .addEventListener('click', () => {
       // on peut aussi réenregistrer tout le tableau d’actions si besoin
-      // localStorage.setItem('actions', JSON.stringify(actions));
-      localStorage.setItem('historicTimestamp', new Date().toISOString());
+      // on garde le tableau "actions" tel quel
       window.location.href = 'historique.html';
   });
 
