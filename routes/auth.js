@@ -1,37 +1,43 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const pool = require("../db");
-const bcrypt = require("bcrypt");
+const pool = require('../db');
+const bcrypt = require('bcrypt');
 
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ message: "Username et mot de passe requis" });
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email et mot de passe requis' });
   }
-
   try {
-    const result = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Utilisateur non trouvé" });
+    const { rows } = await pool.query('SELECT id, email, password_hash, role FROM users WHERE email = $1', [email]);
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Utilisateur non trouv\u00e9' });
     }
-    const user = result.rows[0];
-
+    const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      return res.status(401).json({ message: "Mot de passe incorrect" });
+      return res.status(401).json({ message: 'Mot de passe incorrect' });
     }
-
-    req.session.user = { id: user.id, username: user.username };
-    res.json({ message: "Connecté avec succès", user: req.session.user });
+    const sessionUser = { id: user.id, email: user.email, role: user.role };
+    req.session.user = sessionUser;
+    res.json({ user: sessionUser });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 
-router.post("/logout", (req, res) => {
-  req.session.destroy();
-  res.json({ message: "Déconnecté avec succès" });
+router.post('/logout', (req, res) => {
+  req.session.destroy(() => {});
+  res.json({ success: true });
+});
+
+router.get('/me', (req, res) => {
+  if (req.session.user) {
+    res.json({ user: req.session.user });
+  } else {
+    res.status(401).json({ message: 'Non authentifi\u00e9' });
+  }
 });
 
 module.exports = router;

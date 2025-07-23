@@ -13,6 +13,7 @@ const roomsRoutes = require("./routes/rooms");
 const exportRoutes = require("./routes/export");
 const commentsRoutes = require("./routes/comments");
 const pool = require("./db");
+const { isAuthenticated } = require("./middlewares/auth");
 
 (async () => {
   await pool.query(`
@@ -88,6 +89,14 @@ const pool = require("./db");
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user'
+    );
+  `);
 })().catch(console.error);
 
 const app = express();
@@ -100,24 +109,29 @@ app.use(cors({
 
 app.use(express.json());
 
-// Gestion des interventions (POST + GET /api/interventions)
-app.use('/api/interventions', interventionsRoutes);
-app.use('/uploads', express.static('uploads'));
-
-
 // Configuration express-session
 app.use(session({
-  secret: "tonSecretUltraSecret", // Change cette clé en une valeur complexe
+  secret: process.env.SESSION_SECRET || "changeMe",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // true si HTTPS, false en dev local
+    secure: false,
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24, // 1 jour
+    maxAge: 1000 * 60 * 60 * 24,
   },
 }));
 
+// Routes authentification
+app.use("/api/auth", authRoutes);
+
+// Toutes les routes suivantes nécessitent l'authentification
+app.use(isAuthenticated);
+
+// Gestion des interventions (POST + GET /api/interventions)
+app.use('/api/interventions', interventionsRoutes);
+
 // Servir les fichiers uploadés
+app.use('/uploads', express.static('uploads'));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Servir les fichiers statiques front (html, css, js)
 app.use(express.static(path.join(__dirname, "public")));
@@ -126,7 +140,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
-app.use("/api/auth", authRoutes);
 app.use('/api/bulles', bullesRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/comments', commentsRoutes);

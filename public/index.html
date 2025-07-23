@@ -3,95 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reception</title>
+  <title>Auth Demo</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Reception</h1>
-  
-  <label>Utilisateur :
-    <select id="userSelect">
-      <option value="">-- Sélectionner --</option>
-      <option>ATHARI Keivan</option>
-      <option>BLOT Valentin</option>
-      <option>COULIBALY Baba</option>
-      <option>DA COSTA André</option>
-      <option>GOURDEL Yoann</option>
-      <option>GUEGAN Maxime</option>
-      <option>LAUNAY Jérémy</option>
-      <option>MARZOUKI Adam</option>
-      <option>MAZZUCCO Ryan</option>
-      <option>PENA Angel</option>
-      <option>PEREIRA Romain</option>
-      <option>RADWAN Mahmoud</option>
-      <option>ROUAULT Christophe</option>
-      <option>TABLETTE DÉPÔT</option>
-      <option>VAUTHIER Philippe</option>
-      <option>VAZ Xavier</option>
-    </select>
-  </label>
-  <button id="historiqueBtn">Historique</button>
-  <a href="dashboard.html">Dashboard</a>
-  <a href="/selection.html" id="nav-selection">Gestion tâche</a>
-  </header>
-
-  <!-- FORMULAIRE LOGIN -->
-  <!--
   <div id="login-container">
     <h2>Connexion</h2>
     <form id="login-form">
-      <input type="text" id="username" placeholder="Nom utilisateur" required />
+      <input type="email" id="email" placeholder="Email" required />
       <input type="password" id="password" placeholder="Mot de passe" required />
       <button type="submit">Se connecter</button>
     </form>
     <div id="login-error" style="color:red;"></div>
   </div>
-  -->
 
-  <!-- CONTENU PRINCIPAL (affiché directement pour test) -->
-  <div id="app-container" style="display:block;">
+  <div id="app-container" style="display:none;">
+    <h1>Bienvenue</h1>
     <button id="logoutBtn">Déconnexion</button>
-
-    <label>Étage :
-      <select id="etageSelect" data-etage="R+5">
-        <option value="R+5">R+5</option>
-        <option value="R+4">R+4</option>
-        <option value="R+3">R+3</option>
-        <option value="R+2">R+2</option>
-        <option value="R+1">R+1</option>
-        <option value="R+0">R+0</option>
-        <!-- Ajoute d'autres étages ici si besoin -->
-      </select>
-    </label>
-
-    <label>Chambre :
-      <select id="chambreSelect" data-etage="R+5">
-        <option value="total">-- Toutes les chambres --</option>
-        <option value="501">Chambre 501</option>
-        <option value="502">Chambre 502</option>
-        <option value="503">Chambre 503</option>
-        <option value="504">Chambre 504</option>
-        <option value="505">Chambre 505</option>
-        <option value="506">Chambre 506</option>
-        <option value="507">Chambre 507</option>
-        <option value="508">Chambre 508</option>
-        <option value="509">Chambre 509</option>
-        <option value="510">Chambre 510</option>
-        <option value="511">Chambre 511</option>
-        <option value="512">Chambre 512</option>
-        <option value="513">Chambre 513</option>
-        <option value="514">Chambre 514</option>
-        <option value="515">Chambre 515</option>
-      </select>
-    </label>
-
-    <button id="exportCsvBtn">Exporter CSV</button>
-
-    <div id="plan-container">
-      <img id="plan" src="plan-r5.png" alt="Plan étage" />
-      <div id="bulles-container"></div>
-    </div>
   </div>
 
   <script src="script.js"></script>
