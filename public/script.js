@@ -63,9 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
           { credentials: 'include' }
         );
         const floors = await res.json();
-        etageSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
-        etageSelect.value = floors[0]?.id || '';
-        await updateRoomOptions(etageSelect.value);
+        etageSelect.innerHTML = floors.map(f =>
+          `<option value="${f.name}" data-floor-id="${f.id}">${f.name}</option>`
+        ).join('');
+        etageSelect.value = floors[0]?.name || '';
+        const floorId = etageSelect.selectedOptions[0]?.dataset.floorId;
+        await updateRoomOptions(floorId);
         changePlan(etageSelect.value);
         loadBulles();
       } catch (err) {
@@ -77,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chambreSelect.dataset.etage = floorId;
       try {
         const res = await fetch(
-          `/api/rooms?floor_id=${encodeURIComponent(floorId)}`,
+          `/api/rooms?floor_id=${floorId}`,
           { credentials: 'include' }
         );
         if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -537,7 +540,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     chantierSelect.onchange = () => updateFloorOptions(chantierSelect.value);
-    etageSelect.onchange = () => { changePlan(etageSelect.value); updateRoomOptions(etageSelect.value); loadBulles(); };
+    etageSelect.onchange = () => {
+      const floorId = etageSelect.selectedOptions[0]?.dataset.floorId;
+      changePlan(etageSelect.value);
+      updateRoomOptions(floorId);
+      loadBulles();
+    };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
       const etage   = etageSelect.value;
