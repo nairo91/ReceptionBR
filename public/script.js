@@ -489,5 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = 'selection.html';
   });
 
+  document.getElementById('historiqueBtn')
+    .addEventListener('click', () => {
+      // on peut aussi réenregistrer tout le tableau d’actions si besoin
+      // localStorage.setItem('actions', JSON.stringify(actions));
+      localStorage.setItem('historicTimestamp', new Date().toISOString());
+      window.location.href = 'historique.html';
+  });
+
   refresh();
 });
