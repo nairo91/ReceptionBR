@@ -122,7 +122,13 @@ app.use(session({
 }));
 
 // Routes authentification
+
 app.use("/api/auth", authRoutes);
+
+// Servir les fichiers uploadés sans authentification
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Servir les fichiers statiques front (html, css, js) sans authentification
+app.use(express.static(path.join(__dirname, "public")));
 
 // Toutes les routes suivantes nécessitent l'authentification
 app.use(isAuthenticated);
@@ -130,11 +136,6 @@ app.use(isAuthenticated);
 // Gestion des interventions (POST + GET /api/interventions)
 app.use('/api/interventions', interventionsRoutes);
 
-// Servir les fichiers uploadés
-app.use('/uploads', express.static('uploads'));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-// Servir les fichiers statiques front (html, css, js)
-app.use(express.static(path.join(__dirname, "public")));
 
 // Routes API
 app.use("/api/users", usersRoutes);
