@@ -12,6 +12,7 @@ const floorsRoutes = require("./routes/floors");
 const roomsRoutes = require("./routes/rooms");
 const exportRoutes = require("./routes/export");
 const commentsRoutes = require("./routes/comments");
+const chantiersRoutes = require('./routes/chantiers');
 const pool = require("./db");
 const { isAuthenticated } = require("./middlewares/auth");
 
@@ -135,6 +136,8 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Toutes les routes suivantes nécessitent l'authentification
 app.use(isAuthenticated);
+// Route pour récupérer la liste des chantiers
+app.use('/api/chantiers', chantiersRoutes);
 
 // Gestion des interventions (POST + GET /api/interventions)
 app.use('/api/interventions', interventionsRoutes);
