@@ -273,6 +273,21 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       actions.push(entry);
       localStorage.setItem("actions", JSON.stringify(actions));
+      fetch('/api/bulles/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user:       loc.user || user,
+          action:     type,
+          etage:      loc.etage,
+          chambre:    loc.chambre,
+          x:          loc.x,
+          y:          loc.y,
+          nomBulle:   loc.nomBulle,
+          description:loc.description,
+          timestamp:  new Date().toISOString()
+        }),
+      }).catch(console.error);
     }
     // rendre la fonction dispo partout
     window.recordAction = recordAction;
