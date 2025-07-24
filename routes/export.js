@@ -27,12 +27,14 @@ router.get('/', async (req, res) => {
   const sql = `
     SELECT
       b.*,
-      h.user  AS created_by_email,
-      h2.user AS modified_by_email
+      u1.email  AS created_by_email,
+      u2.email  AS modified_by_email
     FROM bulles b
     LEFT JOIN interventions_history h
       ON h.intervention_id = b.id
       AND h.action = 'creation'
+    LEFT JOIN users u1
+      ON u1.id = h.user_id
     LEFT JOIN interventions_history h2
       ON h2.intervention_id = b.id
       AND h2.action <> 'creation'
@@ -42,6 +44,8 @@ router.get('/', async (req, res) => {
         WHERE ih.intervention_id = b.id
           AND ih.action <> 'creation'
       )
+    LEFT JOIN users u2
+      ON u2.id = h2.user_id
     ${where}
     ORDER BY b.id
   `;
