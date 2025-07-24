@@ -23,12 +23,12 @@ router.get('/', async (req, res) => {
   }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
-  // Récupérer * toutes * les colonnes avec info create/modify
+  // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
   const sql = `
     SELECT
       b.*,
-      u1.email  AS created_by_email,
-      u2.email  AS modified_by_email
+      u1.email AS created_by_email,
+      u2.email AS modified_by_email
     FROM bulles b
     LEFT JOIN interventions_history h
       ON h.intervention_id = b.id
