@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   const { etage = '', chambre = '', format = 'csv', columns } = req.query;
   // Colonnes par défaut exactement celles de la table `bulles`
   const cols = (columns ||
-    'id,numero,intitule,description,etat,lot,entreprise,localisation,observation,date_butoir,created_at,created_by,etage,chambre'
+    'id,etage,chambre,numero,intitule,description,etat,lot,entreprise,localisation,observation,date_butoir,photo,created_by,modified_by,levee_par,entreprise_id,chantier_id'
   )
     .split(',')
     .map(c => c.trim())
@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
   if (chambre && chambre !== 'total') { params.push(chambre); conds.push(`chambre = $${params.length}`); }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
   // Exécution
-  const sql = `SELECT ${cols.join(', ')} FROM bulles ${where} ORDER BY created_at`;
+  const sql = `SELECT ${cols.join(', ')} FROM bulles ${where} ORDER BY id`;
   const { rows } = await pool.query(sql, params);
 
   // CSV via json2csv
