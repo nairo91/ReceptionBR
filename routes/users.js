@@ -1,29 +1,17 @@
-const fs   = require('fs');
-const path = require('path');
-const router = require('express').Router();
+const express = require('express');
+const router = express.Router();
+const pool = require('../db');
 
 // GET /api/users
-// Lit db/users.csv et renvoie [{ id, username }, …]
-router.get('/', (req, res) => {
-  const csvPath = path.join(__dirname, '../db/users.csv');
-  const text = fs.readFileSync(csvPath, 'latin1');
-  const lines = text.split(/\r?\n/).slice(1).filter(l => l.trim());
-  const users = lines.map((line, idx) => {
-    const cols = line.split(';');
-    const id   = cols[0].trim() || String(idx+1);
-    const name = cols[1].trim();
-    return { id, username: name };
-  });
-  const excluded = [
-    "MIRONA",
-    "MONTEIRO",
-    "SIMON",
-    "GUEGAN",
-    "GRECO",
-    "MURCY"
-  ];
-  const filtered = users.filter(u => !excluded.includes(u.username));
-  res.json(filtered);
+// Sélectionne id et email depuis la table "users"
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, email AS username FROM users ORDER BY email');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 module.exports = router;
