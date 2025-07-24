@@ -202,7 +202,7 @@ router.get('/history', async (req, res) => {
       i.created_at AS date
     FROM interventions i
     JOIN floors f ON f.id = i.floor_id
-    WHERE ($1 = '' OR i.floor_id::text = $1)
+    WHERE ($1 = '' OR f.name = $1)
       AND ($2 = '' OR i.room_id::text  = $2)
       AND ($3 = '' OR i.lot         = $3)
       AND ($4 = '' OR i.status = $4::text)
