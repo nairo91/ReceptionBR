@@ -13,6 +13,7 @@ const roomsRoutes = require("./routes/rooms");
 const commentsRoutes = require("./routes/comments");
 const actionsRoutes = require('./routes/actions');
 const chantiersRoutes = require('./routes/chantiers');
+const entreprisesRoutes = require('./routes/entreprises');
 const pool = require("./db");
 const { isAuthenticated } = require("./middlewares/auth");
 
@@ -169,6 +170,7 @@ app.use('/api/interventions', interventionsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
+app.use('/api/entreprises', entreprisesRoutes);
 // Monter d'abord la route "actions"
 app.use('/api/bulles/actions', actionsRoutes);
 
