@@ -543,10 +543,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
-      const floorId = etageSelect.selectedOptions[0].dataset.floorId;
+      const floorLabel = etageSelect.value;      // "R+5"
       const roomId  = chambreSelect.value;       // “total” ou un ID
       const format  = formatSelect.value;        // csv, xlsx ou pdf
-      const params = new URLSearchParams({ floor_id: floorId, room_id: roomId, format });
+
+      const params = new URLSearchParams({
+        floor_id: floorLabel,
+        room_id:  roomId,
+        format
+      });
       window.open(`/api/bulles/export?${params}`, '_blank');
     };
 
