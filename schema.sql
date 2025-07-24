@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS bulles (
   y REAL,
   numero INTEGER,
   description TEXT,
-  photo TEXT
+  photo TEXT,
+  created_by INTEGER REFERENCES users(id),
+  modified_by INTEGER REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS users (

@@ -10,14 +10,16 @@ function isAuthenticated(req, res, next) {
   next();
 }
 
-// POST : création bulle avec created_by = null (pas d'utilisateur connecté)
+// POST : création bulle avec created_by = l'utilisateur en session
 router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res) => {
   try {
     const {
       etage, chambre, x, y, numero, description,
       intitule, etat, lot, entreprise, localisation, observation, date_butoir,
-      userId
     } = req.body;
+
+    // ID de l'utilisateur authentifié
+    const userId = req.session.user.id;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? req.file.path : null;
@@ -68,8 +70,9 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
     const { id } = req.params;
     const {
       description, intitule, etat, lot, entreprise, localisation, observation, date_butoir,
-      userId
     } = req.body;
+
+    const userId = req.session.user.id;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const photo = req.file ? req.file.path : null;
