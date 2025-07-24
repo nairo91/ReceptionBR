@@ -168,7 +168,7 @@ async function loadRooms(floorId, selectorRoom) {
     return;
   }
   const res = await fetch(
-    `/api/rooms?floorId=${encodeURIComponent(floorId)}`,
+    `/api/rooms?floor_id=${encodeURIComponent(floorId)}`,
     { credentials: 'include' }
   );
   const rooms = await res.json();
@@ -578,16 +578,18 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('#export-modal input[type=checkbox]:checked')
     ).map(i => i.value).join(',');
     const fmt = document.querySelector('#export-modal input[name=format]:checked').value;
-    const params = new URLSearchParams({
-      etage: document.getElementById('hist-floor').value || '',
-      chambre: document.getElementById('hist-room').value || '',
-      lot: document.getElementById('hist-lot').value || '',
-      state: document.getElementById('hist-state').value || '',
-      start: document.getElementById('date-start').value || '',
-      end: document.getElementById('date-end').value || '',
-      columns: cols
+    // On exporte via votre route /api/bulles/export
+    const exportParams = new URLSearchParams({
+      floor_id: document.getElementById('hist-floor').value || '',
+      room_id:  document.getElementById('hist-room').value || '',
+      lot:      document.getElementById('hist-lot').value || '',
+      state:    document.getElementById('hist-state').value || '',
+      start:    document.getElementById('date-start').value || '',
+      end:      document.getElementById('date-end').value || '',
+      format:   fmt,
+      columns:  cols
     });
-    window.location = `/api/export/${fmt}?` + params.toString();
+    window.location = `/api/bulles/export?` + exportParams.toString();
     document.getElementById('export-modal').hidden = true;
   };
   document.querySelector('.tabs').addEventListener('click', e => {
