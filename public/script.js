@@ -129,7 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
         form.enctype = 'multipart/form-data';
         const lotsListe = [
           'Installation Chantier','Depose','Platerie','Electricite','Plomberie','Menuiserie',
-          'Revetement SDB','Peinture','Revetement de sol','Repose','F','G','H','I','PMR'
+          'Revetement SDB','Peinture','Revetement de sol','Repose'
+          // F, G, H, I et PMR retirés
         ];
         const lotOptions = lotsListe.map(lot =>
           `<option value="${lot}" ${lot === bulle.lot ? 'selected' : ''}>${lot}</option>`
@@ -431,7 +432,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const lotsListe = [
         'Installation Chantier','Depose','Platerie','Electricite','Plomberie','Menuiserie',
-        'Revetement SDB','Peinture','Revetement de sol','Repose','F','G','H','I','PMR'
+        'Revetement SDB','Peinture','Revetement de sol','Repose'
+        // F, G, H, I et PMR retirés
       ];
 
       const form = document.createElement('form');
