@@ -152,8 +152,18 @@ async function loadFloors(selector) {
   const res = await fetch('/api/floors', { credentials: 'include' });
   const floors = await res.json();
   const sel = document.querySelector(selector);
-  sel.innerHTML = '<option value="">-- Choisir un étage --</option>' +
-    floors.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+
+  // On adapte le texte du placeholder selon le contexte
+  const isHistory = selector === '#hist-floor';
+  const placeholder = isHistory
+    ? '-- Tous les étages --'
+    : '-- Choisir un étage --';
+
+  const options = floors
+    .map(f => `<option value="${f.id}">${f.name}</option>`)
+    .join('');
+
+  sel.innerHTML = `<option value="">${placeholder}</option>${options}`;
 }
 
 async function loadRooms(floorId, selectorRoom) {
@@ -542,10 +552,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadUsers();
   await loadCommentUsers();
   await loadFloors('#hist-floor');
-  const histFloor = document.getElementById('hist-floor');
-  histFloor.insertAdjacentHTML('afterbegin',
-    '<option value="">-- Tous les étages --</option>'
-  );
   await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
   const histLot = document.getElementById('hist-lot');
   histLot.insertAdjacentHTML('afterbegin',
