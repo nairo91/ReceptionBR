@@ -24,14 +24,18 @@ router.get('/', async (req, res) => {
   }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
-  // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
+  // Récupérer * toutes * les colonnes et remonter les noms plutôt que les IDs
   const sql = `
     SELECT
-      b.*,
-      u1.email AS created_by_email,
-      u2.email AS modified_by_email
+      -- toutes les colonnes de b sauf les champs numériques created_by / modified_by
+      b.id, b.etage, b.chambre, b.x, b.y, b.numero,
+      b.intitule, b.description, b.etat, b.lot, b.entreprise,
+      b.localisation, b.observation, b.date_butoir, b.photo,
+      -- remplacez par u1.username si vous préférez le login plutôt que l'email
+      u1.username   AS created_by,
+      u2.username   AS modified_by
     FROM bulles b
-    LEFT JOIN users u1 ON b.created_by = u1.id
+    LEFT JOIN users u1 ON b.created_by   = u1.id
     LEFT JOIN users u2 ON b.modified_by = u2.id
     ${where}
     ORDER BY b.id
