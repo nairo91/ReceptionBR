@@ -39,7 +39,9 @@ router.get('/', async (req, res) => {
   const { rows } = await pool.query(sql, params);
 
   // On extrait dynamiquement les noms de colonnes
-  const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+  let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+  // On retire les champs numériques qui ne nous intéressent plus
+  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
 
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
