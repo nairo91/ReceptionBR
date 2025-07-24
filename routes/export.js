@@ -23,8 +23,28 @@ router.get('/', async (req, res) => {
   }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
-  // Récupérer * toutes * les colonnes
-  const sql = `SELECT * FROM bulles ${where} ORDER BY id`;
+  // Récupérer * toutes * les colonnes avec info create/modify
+  const sql = `
+    SELECT
+      b.*,
+      h.user  AS created_by_email,
+      h2.user AS modified_by_email
+    FROM bulles b
+    LEFT JOIN interventions_history h
+      ON h.intervention_id = b.id
+      AND h.action = 'creation'
+    LEFT JOIN interventions_history h2
+      ON h2.intervention_id = b.id
+      AND h2.action <> 'creation'
+      AND h2.id = (
+        SELECT MAX(id)
+        FROM interventions_history ih
+        WHERE ih.intervention_id = b.id
+          AND ih.action <> 'creation'
+      )
+    ${where}
+    ORDER BY b.id
+  `;
   const { rows } = await pool.query(sql, params);
 
   // On extrait dynamiquement les noms de colonnes
