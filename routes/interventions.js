@@ -42,7 +42,7 @@ router.get('/rooms', async (req, res) => {
 // GET users
 router.get('/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username FROM users ORDER BY username');
+    const result = await pool.query('SELECT id, email AS username FROM users ORDER BY email');
     res.json(result.rows);
   } catch (err) {
     console.error(err);

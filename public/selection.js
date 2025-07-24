@@ -129,9 +129,9 @@ function downloadFile(url, filename) {
 async function loadUsers() {
   const res = await fetch('/api/users', { credentials: 'include' });
   const users = await res.json();
-  window.userMap = users.reduce((m, u) => (m[u.id] = u.username, m), {});
+  window.userMap = users.reduce((m, u) => (m[u.id] = u.email,   m), {});
   userOptions = '<option value="">--Choisir--</option>' +
-    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+    users.map(u => `<option value="${u.id}">${u.email}</option>`).join('');
   document.querySelectorAll('select.person').forEach(sel => {
     const v = sel.value;
     sel.innerHTML = userOptions;
@@ -145,7 +145,7 @@ async function loadCommentUsers() {
   const select = document.getElementById('comment-user');
   if (!select) return;
   select.innerHTML = '<option value="">Anonyme</option>' +
-    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
+    users.map(u => `<option value="${u.id}">${u.email}</option>`).join('');
 }
 
 async function loadFloors(selector) {
