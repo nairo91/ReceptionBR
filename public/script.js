@@ -56,24 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
       plan.src = `plan-r${clean}.png`;
     }
 
-    async function updateFloorOptions(chId) {
-      try {
-        const res = await fetch(
-          `/api/floors?chantier_id=${encodeURIComponent(chId)}`,
-          { credentials: 'include' }
-        );
-        const floors = await res.json();
-        etageSelect.innerHTML = floors.map(f =>
-          `<option value="${f.name}" data-floor-id="${f.id}">${f.name}</option>`
-        ).join('');
-        etageSelect.value = floors[0]?.name || '';
-        const floorId = etageSelect.selectedOptions[0]?.dataset.floorId;
-        await updateRoomOptions(floorId);
-        changePlan(etageSelect.value);
-        loadBulles();
-      } catch (err) {
-        console.error('Erreur chargement étages:', err);
-      }
+    async function updateFloorOptions(chantierId) {
+      const res = await fetch(`/api/floors?chantier_id=${chantierId}`, { credentials:'include' });
+      const floors = await res.json();
+      etageSelect.innerHTML = floors.map(f =>
+        `<option data-floor-id="${f.id}">${f.name}</option>`
+      ).join('');
+      // on choisit la première option et on charge ses chambres
+      etageSelect.selectedIndex = 0;
+      const firstFloorId = etageSelect.selectedOptions[0].dataset.floorId;
+      await updateRoomOptions(firstFloorId);
+
+      changePlan(etageSelect.value);
+      loadBulles();
     }
 
     async function updateRoomOptions(floorId) {
@@ -541,24 +536,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chantierSelect.onchange = () => updateFloorOptions(chantierSelect.value);
     etageSelect.onchange = () => {
-      const floorId = etageSelect.selectedOptions[0]?.dataset.floorId;
+      const floorId = etageSelect.selectedOptions[0].dataset.floorId;
       changePlan(etageSelect.value);
       updateRoomOptions(floorId);
       loadBulles();
     };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
-      // on extrait juste le nombre : "R+3" → 3
-      const etage   = parseInt(etageSelect.value.replace(/^R\+?/, ''), 10);
-      const chambre = chambreSelect.value;
-      const format  = formatSelect.value; // csv, xlsx ou pdf
-
-      const cols = Array.from(
-        document.querySelectorAll('#export-columns input[name="col"]:checked')
-      ).map(cb => cb.value).join(',');
-
-      const params = new URLSearchParams({ etage, chambre, format, columns: cols });
-      window.open(`/api/bulles/export?${params}`, "_blank");
+      const floorId = etageSelect.selectedOptions[0].dataset.floorId;
+      const roomId  = chambreSelect.value;       // “total” ou un ID
+      const format  = formatSelect.value;        // csv, xlsx ou pdf
+      const params = new URLSearchParams({ floor_id: floorId, room_id: roomId, format });
+      window.open(`/api/bulles/export?${params}`, '_blank');
     };
 
     window.addEventListener('resize', ajusterTailleBulles);
