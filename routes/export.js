@@ -1,30 +1,37 @@
 const express = require('express');
-const router = express.Router();
-const pool = require('../db');
+const router  = express.Router();
+const pool    = require('../db');
+const { Parser } = require('json2csv');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 
-// GET /api/bulles/export
 router.get('/', async (req, res) => {
-  const { etage = '', chambre = '', format = 'csv', columns } = req.query;
-  // Colonnes par défaut exactement celles de la table `bulles`
-  const cols = (columns ||
-    'id,etage,chambre,numero,intitule,description,etat,lot,entreprise,localisation,observation,date_butoir,photo,created_by,modified_by,levee_par,entreprise_id,chantier_id'
-  )
-    .split(',')
-    .map(c => c.trim())
-    .filter(Boolean);
-  // WHERE dynamique
+  // on passe désormais étage et chambre comme nombres
+  const floorId = req.query.floor_id || '';
+  const roomId  = req.query.room_id  || '';
+
+  // Construire WHERE
   const params = [];
   const conds  = [];
-  if (etage)     { params.push(etage);   conds.push(`etage   = $${params.length}`); }
-  if (chambre && chambre !== 'total') { params.push(chambre); conds.push(`chambre = $${params.length}`); }
+  if (floorId !== '') {
+    params.push(floorId);
+    conds.push(`etage = $${params.length}`);
+  }
+  if (roomId && roomId !== 'total') {
+    params.push(roomId);
+    conds.push(`chambre = $${params.length}`);
+  }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
-  // Exécution
-  const sql = `SELECT ${cols.join(', ')} FROM bulles ${where} ORDER BY id`;
+
+  // Récupérer * toutes * les colonnes
+  const sql = `SELECT * FROM bulles ${where} ORDER BY id`;
   const { rows } = await pool.query(sql, params);
 
-  // CSV via json2csv
+  // On extrait dynamiquement les noms de colonnes
+  const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+  const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
-    const { Parser } = require('json2csv');
     const parser = new Parser({ fields: cols });
     let csv = '\uFEFF' + parser.parse(rows);
     res.header('Content-Type', 'text/csv; charset=utf-8');
@@ -32,9 +39,7 @@ router.get('/', async (req, res) => {
     return res.send(csv);
   }
 
-  // Excel
   if (format === 'xlsx') {
-    const ExcelJS = require('exceljs');
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
     ws.addRow(cols);
@@ -43,20 +48,19 @@ router.get('/', async (req, res) => {
     return wb.xlsx.write(res).then(() => res.end());
   }
 
-  // PDF
   if (format === 'pdf') {
-    const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({ size: 'A4', margin: 30 });
     res.header('Content-Disposition', 'attachment; filename=bulles.pdf');
     doc.pipe(res);
     doc.text('Export des bulles', { align: 'center' }).moveDown();
+    // On utilise pdfkit-table ou un helper similaire
     const table = { headers: cols, rows: rows.map(r => cols.map(c => r[c])) };
     doc.table(table, { width: 500 });
     doc.end();
     return;
   }
 
-  // Format inconnu
+  // Si format inconnu
   return res.status(400).send('Format inconnu');
 });
 
