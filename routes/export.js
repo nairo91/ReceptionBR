@@ -27,10 +27,11 @@ router.get('/', async (req, res) => {
   // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
   const sql = `
     SELECT
-      b.*,
+      b.*, e.nom AS entreprise,
       u1.email AS created_by_email,
       u2.email AS modified_by_email
     FROM bulles b
+    LEFT JOIN entreprises e ON b.entreprise_id = e.id
     LEFT JOIN users u1 ON b.created_by = u1.id
     LEFT JOIN users u2 ON b.modified_by = u2.id
     ${where}

@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
 
   let user = null;
+  let entreprises = [];
 
   async function refresh() {
     try {
@@ -49,6 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultCh = chantiers.find(c => c.name === "Ibis")?.id || chantiers[0].id;
     chantierSelect.value = defaultCh;
     await updateFloorOptions(defaultCh);
+
+    // Charger les entreprises
+    async function loadEntreprises() {
+      const res = await fetch('/api/entreprises', { credentials: 'include' });
+      entreprises = await res.json();
+    }
+    await loadEntreprises();
 
     // 2) Fonctions utilitaires
     function changePlan(etage) {
@@ -155,7 +163,10 @@ document.addEventListener('DOMContentLoaded', () => {
               ${lotOptions}
             </select>
           </label><br>
-          <input type="text" name="entreprise" placeholder="Entreprise" value="${bulle.entreprise || ''}" /><br>
+          <label>Entreprise :
+            <select name="entreprise_id"></select>
+            ${user && user.email === 'launay.jeremy@batirenov.info' ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
+          </label><br>
           <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
           <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
@@ -169,6 +180,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const deleteBtn = form.querySelector('#deleteBtn');
         deleteBtn.onclick = () => confirmDelete(bulle);
 
+        const entrepriseSelect = form.querySelector('select[name="entreprise_id"]');
+        entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}" ${e.id === bulle.entreprise_id ? 'selected' : ''}>${e.nom}</option>`).join('');
+
+        const addEntBtn = form.querySelector('#addEntrepriseBtn');
+        if (addEntBtn) {
+          addEntBtn.onclick = async () => {
+            const nom = prompt('Nom de la nouvelle entreprise');
+            if (!nom) return;
+            await fetch('/api/entreprises', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ nom })
+            });
+            await loadEntreprises();
+            entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
+          };
+        }
+
         form.onsubmit = e => {
           e.preventDefault();
           if (!user) {
@@ -179,7 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
-          const entreprise = formData.get('entreprise');
+          const entrepriseId = formData.get('entreprise_id');
+          const entreprise = entrepriseSelect.selectedOptions[0]?.textContent || '';
           const localisation = formData.get('localisation');
           const observation = formData.get('observation');
           fetch(`/api/bulles/${bulle.id}`, {
@@ -460,7 +491,10 @@ document.addEventListener('DOMContentLoaded', () => {
             ${lotOptions}
           </select>
         </label><br>
-        <input type="text" name="entreprise" placeholder="Entreprise" /><br>
+        <label>Entreprise :
+          <select name="entreprise_id"></select>
+          ${user && user.email === 'launay.jeremy@batirenov.info' ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
+        </label><br>
         <input type="text" name="localisation" placeholder="Localisation" /><br>
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
@@ -468,6 +502,25 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="submit">✅ Ajouter</button>
         <button type="button" onclick="closePopups()">Annuler</button>
       `;
+
+      const entrepriseSelect = form.querySelector('select[name="entreprise_id"]');
+      entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
+
+      const addEntBtn = form.querySelector('#addEntrepriseBtn');
+      if (addEntBtn) {
+        addEntBtn.onclick = async () => {
+          const nom = prompt('Nom de la nouvelle entreprise');
+          if (!nom) return;
+          await fetch('/api/entreprises', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ nom })
+          });
+          await loadEntreprises();
+          entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
+        };
+      }
 
       form.onsubmit = ev => {
         ev.preventDefault();
@@ -489,7 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const nomBulle = formData.get('intitule');
         const desc = formData.get('description');
         const lot = formData.get('lot');
-        const entreprise = formData.get('entreprise');
+        const entrepriseSelect2 = form.querySelector('select[name="entreprise_id"]');
+        const entrepriseId = formData.get('entreprise_id');
+        const entreprise = entrepriseSelect2.selectedOptions[0]?.textContent || '';
         const localisation = formData.get('localisation');
         const observation = formData.get('observation');
         fetch('/api/bulles', {
