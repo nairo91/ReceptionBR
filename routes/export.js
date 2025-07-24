@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
       ON h.intervention_id = b.id
       AND h.action = 'creation'
     LEFT JOIN users u1
-      ON u1.id = h.user_id
+      ON u1.id = (h.user_id::integer)
     LEFT JOIN interventions_history h2
       ON h2.intervention_id = b.id
       AND h2.action <> 'creation'
@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
           AND ih.action <> 'creation'
       )
     LEFT JOIN users u2
-      ON u2.id = h2.user_id
+      ON u2.id = (h2.user_id::integer)
     ${where}
     ORDER BY b.id
   `;
