@@ -43,6 +43,28 @@ router.get('/', async (req, res) => {
   // On retire les champs numériques qui ne nous intéressent plus
   cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
 
+  // --- BEGIN : Réordonnage fixe des colonnes ---
+  // On veut d'abord ces colonnes dans cet ordre :
+  const desiredOrder = [
+    'etage',
+    'chambre',
+    'numero',
+    'intitule',
+    'photo',
+    'etat',
+    'lot',
+    'entreprise',
+    'localisation',
+    'created_by_email',
+    'modified_by_email'
+  ];
+  // On filtre pour ne garder que celles qui existent encore dans cols
+  const head = desiredOrder.filter(c => cols.includes(c));
+  // Puis on rajoute toutes les autres colonnes restantes
+  const tail = cols.filter(c => !desiredOrder.includes(c));
+  cols = [...head, ...tail];
+  // --- END : Réordonnage fixe des colonnes ---
+
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
     const parser = new Parser({ fields: cols });
