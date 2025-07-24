@@ -548,7 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
-      const etage   = etageSelect.value;
+      // on extrait juste le nombre : "R+3" → 3
+      const etage   = parseInt(etageSelect.value.replace(/^R\+?/, ''), 10);
       const chambre = chambreSelect.value;
       const format  = formatSelect.value; // csv, xlsx ou pdf
 
