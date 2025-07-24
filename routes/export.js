@@ -55,8 +55,41 @@ router.get('/', async (req, res) => {
   if (format === 'xlsx') {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
-    ws.addRow(cols);
-    rows.forEach(r => ws.addRow(cols.map(c => r[c])));
+
+    // Header stylé
+    const headerRow = ws.addRow(cols);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1F497D' }
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    ws.columns.forEach(col => { col.width = 20; });
+
+    // Lignes de données avec effet zèbre
+    rows.forEach((r, idx) => {
+      const row = ws.addRow(cols.map(c => r[c]));
+      const isEven = idx % 2 === 0;
+      row.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: isEven ? 'FFDCE6F1' : 'FFFFFFFF' }
+      };
+    });
+
+    // Bordures
+    ws.eachRow({ includeEmpty: false }, row => {
+      row.eachCell(cell => {
+        cell.border = {
+          top:    { style: 'thin' },
+          left:   { style: 'thin' },
+          bottom: { style: 'thin' },
+          right:  { style: 'thin' }
+        };
+      });
+    });
+
     res.header('Content-Disposition', 'attachment; filename=bulles.xlsx');
     return wb.xlsx.write(res).then(() => res.end());
   }
