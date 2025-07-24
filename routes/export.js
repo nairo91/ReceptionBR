@@ -6,18 +6,21 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
 router.get('/', async (req, res) => {
-  // on passe désormais étage et chambre comme nombres
-  const floorId = req.query.floor_id || '';
-  const roomId  = req.query.room_id  || '';
+  // Récupérer et forcer des entiers pour éviter integer = text
+  const rawFloor = req.query.floor_id || '';
+  const rawRoom  = req.query.room_id  || '';
+  const floorId = parseInt(rawFloor.replace(/\D/g,''), 10);
+  const roomId  = parseInt(rawRoom.replace(/\D/g,''), 10);
 
   // Construire WHERE
   const params = [];
   const conds  = [];
-  if (floorId !== '') {
+  // On ne pousse le paramètre que s'il est un entier valide
+  if (!isNaN(floorId)) {
     params.push(floorId);
     conds.push(`etage = $${params.length}`);
   }
-  if (roomId && roomId !== 'total') {
+  if (!isNaN(roomId)) {
     params.push(roomId);
     conds.push(`chambre = $${params.length}`);
   }
