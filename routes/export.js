@@ -17,15 +17,15 @@ router.get('/', async (req, res) => {
   const conds  = [];
   if (chantierFilter) {
     params.push(chantierFilter);
-    conds.push(`chantier_id = $${params.length}`);
+    conds.push(`b.chantier_id = $${params.length}`);
   }
   if (etageFilter) {
     params.push(etageFilter);
-    conds.push(`etage_id = $${params.length}`);
+    conds.push(`b.etage_id = $${params.length}`);
   }
   if (!isNaN(roomId)) {
     params.push(roomId);
-    conds.push(`chambre = $${params.length}`);
+    conds.push(`b.chambre = $${params.length}`);
   }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
