@@ -2,13 +2,17 @@ const router = require('express').Router();
 const pool = require('../db');
 
 router.get('/', async (req, res) => {
-  const { etage, lot } = req.query;
+  const { chantier_id, etage_id, lot } = req.query;
   const params = [];
   let idx = 1;
   let where = '1=1';
-  if (etage) {
-    where += ` AND b.etage = $${idx++}`;
-    params.push(etage);
+  if (chantier_id) {
+    where += ` AND b.chantier_id = $${idx++}`;
+    params.push(chantier_id);
+  }
+  if (etage_id) {
+    where += ` AND b.etage_id = $${idx++}`;
+    params.push(etage_id);
   }
   if (lot) {
     where += ` AND b.lot = $${idx++}`;
@@ -16,9 +20,10 @@ router.get('/', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      `SELECT rh.*, u.username, b.etage, b.chambre, b.lot, b.numero AS bulle_numero
+      `SELECT rh.*, u.username, f.name AS etage, b.chambre, b.lot, b.numero AS bulle_numero
        FROM reserve_history rh
        JOIN bulles b ON b.id = rh.bulle_id
+       LEFT JOIN floors f ON b.etage_id = f.id
        JOIN users u ON u.id = rh.user_id
        WHERE ${where}
        ORDER BY rh.created_at DESC`,

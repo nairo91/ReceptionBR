@@ -41,15 +41,76 @@ document.addEventListener('DOMContentLoaded', () => {
     const plan            = document.getElementById("plan");
     const bullesContainer = document.getElementById("bulles-container");
 
-    // 1) Charger les chantiers
-    const chRes = await fetch("/api/chantiers", { credentials: "include" });
-    const chantiers = await chRes.json();
-    chantierSelect.innerHTML = chantiers
-      .map(c => `<option value="${c.id}">${c.name}</option>`)
-      .join("");
-    const defaultCh = chantiers.find(c => c.name === "Ibis")?.id || chantiers[0].id;
-    chantierSelect.value = defaultCh;
-    await updateFloorOptions(defaultCh);
+    // Boutons d'ajout visibles uniquement pour Jeremy Launay
+    if (user && user.email === 'launay.jeremy@batirenov.info') {
+      const chBtn = document.createElement('button');
+      chBtn.id = 'addChantierBtn';
+      chBtn.textContent = '+ Nouveau chantier';
+      chantierSelect.parentNode.appendChild(chBtn);
+      chBtn.onclick = async () => {
+        const nom = prompt('Nom du chantier');
+        if (!nom) return;
+        await fetch('/api/chantiers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ nom })
+        });
+        await loadChantiers();
+      };
+
+      const etBtn = document.createElement('button');
+      etBtn.id = 'addEtageBtn';
+      etBtn.textContent = '+ Nouvel étage';
+      etageSelect.parentNode.appendChild(etBtn);
+      etBtn.onclick = async () => {
+        const nom = prompt('Nom de l\'étage');
+        if (!nom) return;
+        await fetch('/api/floors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ chantier_id: chantierSelect.value, name: nom })
+        });
+        await updateFloorOptions(chantierSelect.value);
+      };
+
+      const uploadInput = document.createElement('input');
+      uploadInput.type = 'file';
+      uploadInput.accept = '.pdf,.png';
+      uploadInput.style.display = 'none';
+      etageSelect.parentNode.appendChild(uploadInput);
+      const uploadBtn = document.createElement('button');
+      uploadBtn.id = 'uploadPlanBtn';
+      uploadBtn.textContent = '📎 Upload plan';
+      etageSelect.parentNode.appendChild(uploadBtn);
+      uploadBtn.onclick = () => uploadInput.click();
+      uploadInput.onchange = async () => {
+        const file = uploadInput.files[0];
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('plan', file);
+        await fetch(`/api/floors/${etageSelect.value}/plan`, {
+          method: 'POST',
+          credentials: 'include',
+          body: fd
+        });
+        await loadPlan(etageSelect.value);
+      };
+    }
+
+    async function loadChantiers() {
+      const chRes = await fetch('/api/chantiers', { credentials: 'include' });
+      const chantiers = await chRes.json();
+      chantierSelect.innerHTML = chantiers
+        .map(c => `<option value="${c.id}">${c.nom}</option>`)
+        .join('');
+      const first = chantiers[0];
+      if (first) chantierSelect.value = first.id;
+      await updateFloorOptions(chantierSelect.value);
+    }
+
+    await loadChantiers();
 
     // Charger les entreprises
     async function loadEntreprises() {
@@ -59,23 +120,26 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadEntreprises();
 
     // 2) Fonctions utilitaires
-    function changePlan(etage) {
-      const clean = etage.toLowerCase().replace('r','').replace('+','');
-      plan.src = `plan-r${clean}.png`;
+    async function loadPlan(etageId) {
+      const res = await fetch(`/api/floors/${etageId}/plan`, { credentials:'include' });
+      if (res.ok) {
+        const data = await res.json();
+        plan.src = data.path;
+      } else {
+        plan.src = '';
+      }
     }
 
     async function updateFloorOptions(chantierId) {
       const res = await fetch(`/api/floors?chantier_id=${chantierId}`, { credentials:'include' });
-      const floors = await res.json();
-      etageSelect.innerHTML = floors.map(f =>
-        `<option data-floor-id="${f.id}">${f.name}</option>`
+      const etages = await res.json();
+      etageSelect.innerHTML = etages.map(e =>
+        `<option value="${e.id}">${e.name}</option>`
       ).join('');
-      // on choisit la première option et on charge ses chambres
+      if (!etages.length) return;
       etageSelect.selectedIndex = 0;
-      const firstFloorId = etageSelect.selectedOptions[0].dataset.floorId;
-      await updateRoomOptions(firstFloorId);
-
-      changePlan(etageSelect.value);
+      await updateRoomOptions(etages[0].id);
+      await loadPlan(etages[0].id);
       loadBulles();
     }
 
@@ -99,8 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadBulles() {
       bullesContainer.innerHTML = '';
-      const etage = etageSelect.value;
-      let url = `/api/bulles?etage=${encodeURIComponent(etage)}`;
+      const chantierId = chantierSelect.value;
+      const etageId = etageSelect.value;
+      let url = `/api/bulles?chantier_id=${chantierId}&etage_id=${etageId}`;
       if (chambreSelect.value !== 'total') {
         url += `&chambre=${chambreSelect.value}`;
       }
@@ -206,6 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
           const formData = new FormData(form);
+          formData.append('chantier_id', chantierSelect.value);
+          formData.append('etage_id', etageSelect.value);
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
@@ -223,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const relX = parseFloat(div.dataset.x);
             const relY = parseFloat(div.dataset.y);
               recordAction('modification', {
-                etage: bulle.etage,
+                etage: etageSelect.selectedOptions[0].textContent,
                 chambre: bulle.chambre,
                 x: relX,
                 y: relY,
@@ -371,8 +438,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function deleteBulle(bulle) {
       fetch(`/api/bulles/${bulle.id}`, { method: 'DELETE', credentials: 'include' })
         .then(() => loadBulles());
-      const { etage, chambre, x, y, numero, lot, entreprise, localisation, observation } = bulle;
-      recordAction('suppression', { etage, chambre, x, y, nomBulle: `Bulle ${numero}`, description: '', lot, entreprise, localisation, observation });
+      const { chambre, x, y, numero, lot, entreprise, localisation, observation } = bulle;
+      recordAction('suppression', {
+        etage: etageSelect.selectedOptions[0].textContent,
+        chambre,
+        x,
+        y,
+        nomBulle: `Bulle ${numero}`,
+        description: '',
+        lot,
+        entreprise,
+        localisation,
+        observation
+      });
     }
 
     function zoomImage(src) {
@@ -529,7 +607,8 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         const formData = new FormData(form);
-        formData.append('etage', etageSelect.value);
+        formData.append('chantier_id', chantierSelect.value);
+        formData.append('etage_id', etageSelect.value);
         formData.append('chambre', chambreSelect.value);
         const rect = plan.getBoundingClientRect();
         const xRatio = x / rect.width;
@@ -555,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
           loadBulles();
           closePopups();
             recordAction('creation', {
-              etage: etageSelect.value,
+              etage: etageSelect.selectedOptions[0].textContent,
               chambre: chambreSelect.value,
               x: xRatio,
               y: yRatio,
@@ -591,21 +670,26 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    chantierSelect.onchange = () => updateFloorOptions(chantierSelect.value);
+    chantierSelect.onchange = () => {
+      nextNumero = 1;
+      updateFloorOptions(chantierSelect.value);
+    };
     etageSelect.onchange = () => {
-      const floorId = etageSelect.selectedOptions[0].dataset.floorId;
-      changePlan(etageSelect.value);
-      updateRoomOptions(floorId);
+      const id = etageSelect.value;
+      loadPlan(id);
+      updateRoomOptions(id);
       loadBulles();
     };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
-      const floorLabel = etageSelect.value;      // "R+5"
+      const chantierId = chantierSelect.value;
+      const floorLabel = etageSelect.value;      // ID
       const roomId  = chambreSelect.value;       // “total” ou un ID
       const format  = formatSelect.value;        // csv, xlsx ou pdf
 
       const params = new URLSearchParams({
-        floor_id: floorLabel,
+        chantier_id: chantierId,
+        etage_id: floorLabel,
         room_id:  roomId,
         format
       });

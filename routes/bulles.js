@@ -14,7 +14,8 @@ function isAuthenticated(req, res, next) {
 router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res) => {
   try {
     const {
-      etage, chambre, x, y, numero, description,
+      chantier_id, etage_id,
+      chambre, x, y, numero, description,
       intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
     } = req.body;
 
@@ -26,9 +27,9 @@ router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res)
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
-      (etage, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [etage, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId]
+      (chantier_id, etage_id, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [chantier_id || null, etage_id || null, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId]
     );
 
     const newBulle = insertRes.rows[0];
@@ -47,23 +48,25 @@ router.post("/", /* isAuthenticated, */ upload.single("photo"), async (req, res)
 
 // GET bulles
 router.get("/", async (req, res) => {
-  const { etage, chambre } = req.query;
-  let result;
-  if (!chambre || chambre === "total") {
-    result = await pool.query(
-      `SELECT b.*, e.nom AS entreprise FROM bulles b
-       LEFT JOIN entreprises e ON b.entreprise_id = e.id
-       WHERE b.etage = $1`,
-      [etage]
-    );
-  } else {
-    result = await pool.query(
-      `SELECT b.*, e.nom AS entreprise FROM bulles b
-       LEFT JOIN entreprises e ON b.entreprise_id = e.id
-       WHERE b.etage = $1 AND b.chambre = $2`,
-      [etage, chambre]
-    );
-  }
+  const { chantier_id, etage_id, chambre } = req.query;
+  const params = [];
+  const conds = [];
+  if (chantier_id) { params.push(chantier_id); conds.push(`b.chantier_id = $${params.length}`); }
+  if (etage_id) { params.push(etage_id); conds.push(`b.etage_id = $${params.length}`); }
+  if (chambre && chambre !== 'total') { params.push(chambre); conds.push(`b.chambre = $${params.length}`); }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  const result = await pool.query(
+    `SELECT b.id, b.chantier_id, b.etage_id, b.chambre, b.x, b.y, b.numero,
+            b.description, b.photo, b.intitule, b.etat, b.lot,
+            b.entreprise_id, b.localisation, b.observation, b.date_butoir,
+            b.created_by, b.modified_by, b.levee_par,
+            e.nom AS entreprise, f.name AS etage
+     FROM bulles b
+     LEFT JOIN entreprises e ON b.entreprise_id = e.id
+     LEFT JOIN floors f ON b.etage_id = f.id
+     ${where}`,
+    params
+  );
   res.json(result.rows);
 });
 
@@ -79,6 +82,7 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
   try {
     const { id } = req.params;
     const {
+      chantier_id, etage_id,
       description, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
     } = req.body;
 
@@ -99,16 +103,16 @@ router.put("/:id", /* isAuthenticated, */ upload.single("photo"), async (req, re
     if (photo) {
       await pool.query(
         `UPDATE bulles
-         SET description = $1, photo = $2, intitule = $3, etat = $4, lot = $5, entreprise_id = $6, localisation = $7, observation = $8, date_butoir = $9, modified_by = $10${leveeParClause}
-         WHERE id = $11`,
-        [description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
+         SET chantier_id=$1, etage_id=$2, description = $3, photo = $4, intitule = $5, etat = $6, lot = $7, entreprise_id = $8, localisation = $9, observation = $10, date_butoir = $11, modified_by = $12${leveeParClause}
+         WHERE id = $13`,
+        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
       );
     } else {
       await pool.query(
         `UPDATE bulles
-         SET description = $1, intitule = $2, etat = $3, lot = $4, entreprise_id = $5, localisation = $6, observation = $7, date_butoir = $8, modified_by = $9${leveeParClause}
-         WHERE id = $10`,
-        [description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
+         SET chantier_id=$1, etage_id=$2, description = $3, intitule = $4, etat = $5, lot = $6, entreprise_id = $7, localisation = $8, observation = $9, date_butoir = $10, modified_by = $11${leveeParClause}
+         WHERE id = $12`,
+        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
       );
     }
 
@@ -133,12 +137,13 @@ router.get("/export/csv/all", async (req, res) => {
     const result = await pool.query(
       `SELECT b.id, b.numero, b.intitule, b.description, b.etat,
               b.lot, e.nom AS entreprise, b.localisation, b.observation,
-              b.date_butoir, b.photo, b.x, b.y, b.etage, b.chambre,
+              b.date_butoir, b.photo, b.x, b.y, f.name AS etage, b.chambre,
               u1.username AS created_by,
               u2.username AS modified_by,
               b.levee_par
        FROM bulles b
        LEFT JOIN entreprises e ON b.entreprise_id = e.id
+       LEFT JOIN floors f ON b.etage_id = f.id
        LEFT JOIN LATERAL (
          SELECT user_id
          FROM reserve_history rh
@@ -201,16 +206,17 @@ router.get("/export/csv/all", async (req, res) => {
 // Export CSV filtré
 router.get("/export/csv", async (req, res) => {
   try {
-    const { etage, chambre } = req.query;
+    const { etage_id, chambre } = req.query;
 
     let result;
     if (!chambre || chambre === "total") {
       result = await pool.query(
-        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
+        `SELECT f.name AS etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
                 b.lot, b.photo, b.levee_par,
                 u1.username AS created_by,
                 u2.username AS modified_by
          FROM bulles b
+         LEFT JOIN floors f ON b.etage_id = f.id
          LEFT JOIN LATERAL (
            SELECT user_id
            FROM reserve_history rh
@@ -230,16 +236,17 @@ router.get("/export/csv", async (req, res) => {
            LIMIT 1
          ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
-         WHERE b.etage = $1 ORDER BY b.numero`,
-        [etage]
+         WHERE b.etage_id = $1 ORDER BY b.numero`,
+        [etage_id]
       );
     } else {
       result = await pool.query(
-        `SELECT b.etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
+        `SELECT f.name AS etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
                 b.lot, b.photo, b.levee_par,
                 u1.username AS created_by,
                 u2.username AS modified_by
          FROM bulles b
+         LEFT JOIN floors f ON b.etage_id = f.id
          LEFT JOIN LATERAL (
            SELECT user_id
            FROM reserve_history rh
@@ -259,8 +266,8 @@ router.get("/export/csv", async (req, res) => {
            LIMIT 1
          ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
-         WHERE b.etage = $1 AND b.chambre = $2 ORDER BY b.numero`,
-        [etage, chambre]
+         WHERE b.etage_id = $1 AND b.chambre = $2 ORDER BY b.numero`,
+        [etage_id, chambre]
       );
     }
 
@@ -296,7 +303,7 @@ router.get("/export/csv", async (req, res) => {
     csv = BOM + csv;
 
     res.header("Content-Type", "text/csv; charset=utf-8");
-    res.attachment(`bulles_${etage}_${chambre}.csv`);
+    res.attachment(`bulles_${etage_id}_${chambre}.csv`);
     return res.send(csv);
   } catch (err) {
     console.error(err);

@@ -6,17 +6,22 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
 router.get('/', async (req, res) => {
-  // on récupère la chaîne "R+X" pour filtrer sur la colonne textuelle `etage`
-  const etageFilter = req.query.floor_id || '';
+  // récupère les filtres chantier/étage/room
+  const chantierFilter = req.query.chantier_id || '';
+  const etageFilter = req.query.etage_id || '';
   const rawRoom  = req.query.room_id  || '';
   const roomId  = parseInt(rawRoom.replace(/\D/g,''), 10);
 
   // Construire WHERE
   const params = [];
   const conds  = [];
+  if (chantierFilter) {
+    params.push(chantierFilter);
+    conds.push(`chantier_id = $${params.length}`);
+  }
   if (etageFilter) {
     params.push(etageFilter);
-    conds.push(`etage = $${params.length}`);
+    conds.push(`etage_id = $${params.length}`);
   }
   if (!isNaN(roomId)) {
     params.push(roomId);
@@ -27,10 +32,12 @@ router.get('/', async (req, res) => {
   // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
   const sql = `
     SELECT
-      b.*, e.nom AS entreprise,
+      b.*, f.name AS etage,
+      e.nom AS entreprise,
       u1.email AS created_by_email,
       u2.email AS modified_by_email
     FROM bulles b
+    LEFT JOIN floors f ON b.etage_id = f.id
     LEFT JOIN entreprises e ON b.entreprise_id = e.id
     LEFT JOIN users u1 ON b.created_by = u1.id
     LEFT JOIN users u2 ON b.modified_by = u2.id
