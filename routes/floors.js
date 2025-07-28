@@ -6,11 +6,12 @@ const upload = require('../middlewares/upload');
 // GET /api/floors?chantier_id=...
 router.get('/', async (req, res) => {
   const { chantier_id } = req.query;
+  const sql = chantier_id
+    ? 'SELECT id, name, plan_path FROM floors WHERE chantier_id = $1 ORDER BY id'
+    : 'SELECT id, name, plan_path FROM floors ORDER BY id';
+  const params = chantier_id ? [chantier_id] : [];
   try {
-    const { rows } = await pool.query(
-      'SELECT id, name, plan_path FROM floors WHERE chantier_id = $1 ORDER BY id',
-      [chantier_id]
-    );
+    const { rows } = await pool.query(sql, params);
     res.json(rows);
   } catch (err) {
     console.error('Erreur GET /api/floors', err);
