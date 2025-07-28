@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(
       `SELECT
          rh.*,
-         u.username,
+        u.email       AS username,
          b.etat,
          b.intitule   AS intitule,
          f.name      AS etage,
