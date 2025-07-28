@@ -73,6 +73,13 @@ router.get('/', async (req, res) => {
   cols = [...head, ...tail];
   // --- END : Réordonnage fixe des colonnes ---
 
+  if (req.query.columns) {
+    const sel = Array.isArray(req.query.columns)
+      ? req.query.columns
+      : [req.query.columns];
+    cols = sel.filter(c => cols.includes(c));
+  }
+
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
     const parser = new Parser({ fields: cols });

@@ -682,18 +682,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     chambreSelect.onchange = loadBulles;
     exportBtn.onclick = () => {
-      const chantierId = chantierSelect.value;
-      const floorLabel = etageSelect.value;      // ID
-      const roomId  = chambreSelect.value;       // “total” ou un ID
-      const format  = formatSelect.value;        // csv, xlsx ou pdf
+      const params = new URLSearchParams();
+      params.set('chantier_id', chantierSelect.value);
+      params.set('etage_id',    etageSelect.value);
+      params.set('room_id',     chambreSelect.value);
+      params.set('format',      formatSelect.value);
 
-      const params = new URLSearchParams({
-        chantier_id: chantierId,
-        etage_id: floorLabel,
-        room_id:  roomId,
-        format
-      });
-      window.open(`/api/bulles/export?${params}`, '_blank');
+      document.querySelectorAll('#export-columns input[name="col"]:checked')
+        .forEach(cb => params.append('columns', cb.value));
+
+      window.open(`/api/bulles/export?${params.toString()}`, '_blank');
     };
 
     window.addEventListener('resize', ajusterTailleBulles);
