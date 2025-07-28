@@ -20,11 +20,24 @@ router.get('/', async (req, res) => {
   }
   try {
     const result = await pool.query(
-      `SELECT rh.*, u.username, f.name AS etage, b.chambre, b.lot, b.numero AS bulle_numero
+      `SELECT
+         rh.*,
+         u.username,
+         b.etat,
+         b.intitule   AS intitule,
+         f.name      AS etage,
+         b.chambre,
+         b.lot,
+         b.numero    AS bulle_numero,
+         e.nom       AS entreprise,
+         b.localisation,
+         b.observation,
+         b.description
        FROM reserve_history rh
-       JOIN bulles b ON b.id = rh.bulle_id
+       JOIN bulles b   ON b.id = rh.bulle_id
        LEFT JOIN floors f ON b.etage_id = f.id
-       JOIN users u ON u.id = rh.user_id
+       LEFT JOIN entreprises e ON b.entreprise_id = e.id
+       JOIN users u    ON u.id = rh.user_id
        WHERE ${where}
        ORDER BY rh.created_at DESC`,
       params
