@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chambreSelect.dataset.etage = floorId;
       try {
         const res = await fetch(
-          `/api/rooms?floor_id=${floorId}`,
+          `/api/rooms?floorId=${floorId}`,
           { credentials: 'include' }
         );
         if (!res.ok) throw new Error(`Status ${res.status}`);
