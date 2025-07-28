@@ -218,9 +218,9 @@ router.get('/:id/history', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
        ih.intervention_id AS id,
-       -- on affiche d’abord le username, sinon on retombe sur l’ID stocké
-       COALESCE(u_old.username, ih.person_old::text) AS person_old,
-       COALESCE(u_new.username, ih.person_new::text) AS person_new,
+      -- on affiche d’abord l’email (username), sinon on retombe sur l’ID stocké
+      COALESCE(u_old.email, ih.person_old::text) AS person_old,
+      COALESCE(u_new.email, ih.person_new::text) AS person_new,
        ih.floor_old,   ih.floor_new,
        ih.room_old,    ih.room_new,
        ih.lot_old,     ih.lot_new,
