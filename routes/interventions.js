@@ -187,34 +187,29 @@ router.get('/history', async (req, res) => {
   // on s’assure que ces variables sont toujours des chaînes
   const { etage='', chambre='', lot='', state='', start='', end='' } = req.query;
 
+  const params = [etage, chambre, lot, state, start, end];
   const sql = `
     SELECT
       i.id,
-      i.user_id,
-      f.name       AS floor,
-      i.floor_id  AS floor_id,
-      i.room_id::text  AS room,
+      u1.email        AS created_by,
+      u2.email        AS last_modified_by,
       i.lot,
       i.task,
-      i.person,
-      i.action   AS action,
-      i.status   AS state,
-      i.created_at AS date
+      i.status        AS state,
+      i.created_at    AS date
     FROM interventions i
-    JOIN floors f ON f.id = i.floor_id
-    WHERE ($1 = '' OR f.name = $1)
-      AND ($2 = '' OR i.room_id::text  = $2)
-      AND ($3 = '' OR i.lot         = $3)
-      AND ($4 = '' OR i.status = $4::text)
+    JOIN floors f     ON f.id = i.floor_id
+    LEFT JOIN users u1 ON u1.id::text = i.user_id
+    LEFT JOIN users u2 ON u2.id::text = i.person
+    WHERE ($1 = '' OR f.name      = $1)
+      AND ($2 = '' OR i.room_id::text = $2)
+      AND ($3 = '' OR i.lot       = $3)
+      AND ($4 = '' OR i.status    = $4)
       AND ($5 = '' OR i.created_at >= $5::timestamp)
       AND ($6 = '' OR i.created_at <= $6::timestamp)
-    ORDER BY i.created_at DESC;
+    ORDER BY i.created_at DESC
   `;
-  console.log('––– HISTORY SQL –––');
-  console.log('SQL:', sql.replace(/\s+/g, ' '));
-  console.log('Params:', { etage, chambre, lot, state, start, end });
-  console.log('–––––––––––––––––––');
-  const { rows } = await pool.query(sql, [etage, chambre, lot, state, start, end]);
+  const { rows } = await pool.query(sql, params);
   res.json(rows);
 });
 
