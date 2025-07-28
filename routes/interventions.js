@@ -17,12 +17,12 @@ router.get('/floors', async (req, res) => {
 
 // GET rooms for a floor
 router.get('/rooms', async (req, res) => {
-  const { floorId } = req.query;
-  if (!floorId) {
+  const raw = req.query.floorId ?? req.query.floor_id;
+  if (!raw) {
     return res.status(400).json({ error: 'floorId requis' });
   }
   // on s’assure que floorId est un entier
-  const fid = parseInt(floorId, 10);
+  const fid = parseInt(raw, 10);
   if (Number.isNaN(fid)) {
     return res.status(400).json({ error: 'floorId doit être un entier' });
   }
@@ -57,11 +57,34 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Données manquantes' });
   }
   try {
+    const { rows: floors } = await pool.query(
+      'SELECT name FROM floors WHERE id=$1',
+      [floorId]
+    );
+    const { rows: rooms } = await pool.query(
+      'SELECT name FROM rooms WHERE id=$1',
+      [roomId]
+    );
+    const old_floor_name = floors[0]?.name || '';
+    const old_room_name  = rooms[0]?.name || '';
+
     const created = (await pool.query(
       `INSERT INTO interventions
-         (floor_id, room_id, user_id, lot, task, status, person, action)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [floorId, roomId, userId, lot, task, status || 'ouvert', person || userId, 'Création']
+         (floor_id, room_id, old_floor_name, old_room_name,
+          user_id, lot, task, status, person, action)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [
+        floorId,
+        roomId,
+        old_floor_name,
+        old_room_name,
+        userId,
+        lot,
+        task,
+        status || 'ouvert',
+        person || userId,
+        'Création'
+      ]
     )).rows[0];
 
     // ↪ historiser la création before/after

@@ -180,7 +180,7 @@ async function loadRooms(floorId, selectorRoom) {
     return;
   }
   const res = await fetch(
-    `/api/rooms?floor_id=${encodeURIComponent(floorId)}`,
+    `/api/rooms?floorId=${encodeURIComponent(floorId)}`,
     { credentials: 'include' }
   );
   const rooms = await res.json();

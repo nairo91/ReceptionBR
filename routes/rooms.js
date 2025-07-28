@@ -4,9 +4,9 @@ const pool = require("../db");
 
 // GET /api/rooms
 router.get('/', async (req, res) => {
-  // s’assurer d’avoir toujours un entier
-  const raw = req.query.floor_id || '';
-  const floorId = parseInt(raw.replace(/\D/g, ''), 10) || 0;
+  // accepter floorId ou floor_id pour compatibilite
+  const fidRaw = req.query.floorId ?? req.query.floor_id ?? '';
+  const floorId = parseInt(String(fidRaw).replace(/\D/g, ''), 10) || 0;
   // requête SQL qui filtre bien sur la colonne floor_id
   try {
     const { rows } = await pool.query(
