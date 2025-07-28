@@ -253,7 +253,8 @@ router.get('/:id/comments', async (req, res) => {
          ic.created_at,
          u.email AS username
        FROM interventions_comments ic
-       LEFT JOIN users u ON u.id = ic.user_id
+       LEFT JOIN users u
+         ON u.id::text = ic.user_id
        WHERE ic.intervention_id = $1
        ORDER BY ic.created_at DESC`,
       [req.params.id]
@@ -274,11 +275,12 @@ router.get('/:id/photos', async (req, res) => {
 });
 
 router.post('/:id/comment', async (req, res) => {
-  const { text } = req.body;
+  const { text, user_id } = req.body;
   await pool.query(
-    `INSERT INTO interventions_comments (intervention_id, text, created_at)
-     VALUES ($1, $2, now())`,
-    [req.params.id, text]
+    `INSERT INTO interventions_comments
+       (intervention_id, text, user_id, created_at)
+     VALUES ($1, $2, $3, now())`,
+    [req.params.id, text, user_id]
   );
   res.json({ success: true });
 });

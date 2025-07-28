@@ -148,8 +148,10 @@ async function loadCommentUsers() {
     users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
 }
 
-async function loadFloors(selector) {
-  const res = await fetch('/api/floors', { credentials: 'include' });
+async function loadFloors(selector, chantierId = '') {
+  const url = new URL('/api/floors', location.origin);
+  if (chantierId) url.searchParams.set('chantier_id', chantierId);
+  const res = await fetch(url, { credentials: 'include' });
   const floors = await res.json();
   const sel = document.querySelector(selector);
 
@@ -542,6 +544,8 @@ document.getElementById('photo-send').addEventListener('click', async () => {
   list.innerHTML = urls.map(u => `<li><img src="${u}"></li>`).join('');
 });
 
+const CURRENT_CHANTIER_ID = 2;
+
 window.addEventListener('DOMContentLoaded', async () => {
   const lotOptions = Object.keys(lotTasks)
     .map(l => `<option value="${l}">${l}</option>`)
@@ -551,8 +555,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('#edit-table tbody').innerHTML = '';
     addEditRow();
   });
-  await loadFloors('#hist-floor');
-  await loadFloors('#edit-floor');
+  await loadFloors('#hist-floor', CURRENT_CHANTIER_ID);
+  await loadFloors('#edit-floor', CURRENT_CHANTIER_ID);
   await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
   await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
   await loadUsers();
