@@ -234,9 +234,10 @@ function renderHistory(rows, tableSelector = '#history-table') {
     const tr = document.createElement('tr');
     tr.dataset.id = inter.id;
 
-    const tdUser = document.createElement('td');
-    tdUser.textContent = window.userMap[inter.user_id] || inter.user_id;
-    tr.appendChild(tdUser);
+    // Créé par
+    const tdCreated = document.createElement('td');
+    tdCreated.textContent = inter.created_by || '–';
+    tr.appendChild(tdCreated);
 
     const tdAction = document.createElement('td');
     tdAction.textContent = inter.action;
@@ -258,9 +259,10 @@ function renderHistory(rows, tableSelector = '#history-table') {
     tdTask.textContent = inter.task;
     tr.appendChild(tdTask);
 
-    const tdPerson = document.createElement('td');
-    tdPerson.textContent = window.userMap[inter.person] || inter.person;
-    tr.appendChild(tdPerson);
+    // Dernière Modif (nom)
+    const tdLastMod = document.createElement('td');
+    tdLastMod.textContent = inter.last_modified_by || '–';
+    tr.appendChild(tdLastMod);
 
     const tdStatus = document.createElement('td');
     // on continue à utiliser “inter.state” (c’est le JSON “i.status AS state”)
