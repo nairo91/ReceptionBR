@@ -8,6 +8,7 @@ const bullesRoutes = require("./routes/bulles");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
 const usersRoutes = require("./routes/users");
+const historyRoutes = require("./routes/history");
 const roomsRoutes = require("./routes/rooms");
 const commentsRoutes = require("./routes/comments");
 const actionsRoutes = require('./routes/actions');
@@ -168,6 +169,7 @@ app.use('/api/interventions', interventionsRoutes);
 
 // Routes API
 app.use("/api/users", usersRoutes);
+app.use("/api/history", historyRoutes);
 app.use("/api/floors", floorsRoutes);
 app.use("/api/rooms", roomsRoutes);
 app.use('/api/entreprises', entreprisesRoutes);
