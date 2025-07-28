@@ -246,11 +246,23 @@ router.get('/:id/history', async (req, res) => {
 });
 
 router.get('/:id/comments', async (req, res) => {
-  const { rows } = await pool.query(
-    'SELECT text, created_at FROM interventions_comments WHERE intervention_id=$1 ORDER BY created_at DESC',
-    [req.params.id]
-  );
-  res.json(rows);
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         ic.text,
+         ic.created_at,
+         u.email AS username
+       FROM interventions_comments ic
+       LEFT JOIN users u ON u.id = ic.user_id
+       WHERE ic.intervention_id = $1
+       ORDER BY ic.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 router.get('/:id/photos', async (req, res) => {

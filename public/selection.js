@@ -129,9 +129,9 @@ function downloadFile(url, filename) {
 async function loadUsers() {
   const res = await fetch('/api/users', { credentials: 'include' });
   const users = await res.json();
-  window.userMap = users.reduce((m, u) => (m[u.id] = u.email,   m), {});
+  window.userMap = users.reduce((m, u) => (m[u.id] = u.username,   m), {});
   userOptions = '<option value="">--Choisir--</option>' +
-    users.map(u => `<option value="${u.id}">${u.email}</option>`).join('');
+    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
   document.querySelectorAll('select.person').forEach(sel => {
     const v = sel.value;
     sel.innerHTML = userOptions;
@@ -145,7 +145,7 @@ async function loadCommentUsers() {
   const select = document.getElementById('comment-user');
   if (!select) return;
   select.innerHTML = '<option value="">Anonyme</option>' +
-    users.map(u => `<option value="${u.id}">${u.email}</option>`).join('');
+    users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
 }
 
 async function loadFloors(selector) {
@@ -551,16 +551,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('#edit-table tbody').innerHTML = '';
     addEditRow();
   });
+  await loadFloors('#hist-floor');
+  await loadFloors('#edit-floor');
+  await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
+  await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
   await loadUsers();
   await loadCommentUsers();
-  await loadFloors('#hist-floor');
-  await loadRooms(document.getElementById('hist-floor').value, '#hist-room');
   const histLot = document.getElementById('hist-lot');
   histLot.insertAdjacentHTML('afterbegin',
     '<option value="">-- Tous les lots --</option>'
   );
-  await loadFloors('#edit-floor');
-  await loadRooms(document.getElementById('edit-floor').value, '#edit-room');
   editSubmitBtn.dataset.id = '';
   // Afficher d'emblée l'Historique
   showTab('historyTab');
