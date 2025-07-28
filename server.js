@@ -7,6 +7,7 @@ const session = require("express-session");
 const bullesRoutes = require("./routes/bulles");
 const authRoutes = require("./routes/auth");
 const interventionsRoutes = require("./routes/interventions");
+const interventionsExportRoutes  = require('./routes/interventionsExport');
 const usersRoutes = require("./routes/users");
 const historyRoutes = require("./routes/history");
 const roomsRoutes = require("./routes/rooms");
@@ -164,6 +165,9 @@ app.use(isAuthenticated);
 app.use('/api/chantiers', chantiersRoutes);
 
 // Gestion des interventions (POST + GET /api/interventions)
+// Monter d'abord la route d'export pour qu'elle ne soit pas capturée par la
+// route générique ci-dessous
+app.use('/api/interventions/export', interventionsExportRoutes);
 app.use('/api/interventions', interventionsRoutes);
 
 

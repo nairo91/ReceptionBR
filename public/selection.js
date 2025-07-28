@@ -583,8 +583,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cols = Array.from(
       document.querySelectorAll('#export-modal input[type=checkbox]:checked')
     ).map(i => i.value).join(',');
-    const fmt = document.querySelector('#export-modal input[name=format]:checked').value;
-    // On exporte via votre route /api/bulles/export
+    const format = document.querySelector('#export-modal input[name="format"]:checked').value;
     const exportParams = new URLSearchParams({
       floor_id: document.getElementById('hist-floor').value || '',
       room_id:  document.getElementById('hist-room').value || '',
@@ -592,10 +591,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       state:    document.getElementById('hist-state').value || '',
       start:    document.getElementById('date-start').value || '',
       end:      document.getElementById('date-end').value || '',
-      format:   fmt,
-      columns:  cols
+      columns:  cols,
+      format
     });
-    window.location = `/api/bulles/export?` + exportParams.toString();
+    window.location = `/api/interventions/export?` + exportParams.toString();
     document.getElementById('export-modal').hidden = true;
   };
   document.querySelector('.tabs').addEventListener('click', e => {
