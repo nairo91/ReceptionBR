@@ -221,13 +221,15 @@ router.get('/history', async (req, res) => {
       i.status        AS state,
       i.created_at    AS date,
       f.name          AS floor,
-      r.name          AS room
+      r.name          AS room,
+      i.floor_id      AS floor_id,
+      i.room_id       AS room_id
     FROM interventions i
     JOIN floors f     ON f.id = i.floor_id
     LEFT JOIN rooms r ON r.id = i.room_id
     LEFT JOIN users u1 ON u1.id::text = i.user_id
     LEFT JOIN users u2 ON u2.id::text = i.person
-    WHERE ($1 = '' OR f.name      = $1)
+    WHERE ($1 = '' OR f.id::text  = $1)
       AND ($2 = '' OR i.room_id::text = $2)
       AND ($3 = '' OR i.lot       = $3)
       AND ($4 = '' OR i.status    = $4)
