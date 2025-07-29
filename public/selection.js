@@ -174,9 +174,24 @@ function setupExportModal() {
     container.id = 'export-cols';
     dlg.insertBefore(container, dlg.querySelector('hr'));
   }
+  // colonnes à cocher par défaut
+  const defaultChecked = new Set([
+    'created_by',
+    'action',
+    'lot',
+    'floor',
+    'room',
+    'task',
+    'status',
+    'last_modified_by'
+  ]);
   container.innerHTML = allCols.map((c,i) => `
     <label>
-      <input type="checkbox" value="${c}">
+      <input
+        type="checkbox"
+        value="${c}"
+        ${defaultChecked.has(c) ? 'checked' : ''}
+      >
       ${labels[i]}
     </label>
   `).join('');
