@@ -41,15 +41,23 @@ router.get('/', async (req, res) => {
 
   // Si aucune sélection, valeurs par défaut
   if (cols.length === 0) {
-    cols = ['id','user_id','floor_id','room_id','lot','task','status','created_at'];
+    cols = ['id','created_by','last_modified_by','floor_id','room_id','lot','task','status','created_at'];
   }
 
-  // Construction et exécution de la requête
+  // Reconstruisons la liste de SELECT pour injecter les bonnes expressions SQL
+  const selectList = cols.map(c => {
+    if (c === 'created_by') {
+      return 'u1.email AS created_by';
+    }
+    if (c === 'last_modified_by') {
+      return 'u2.email AS last_modified_by';
+    }
+    // sinon une colonne de la table interventions
+    return `i.${c}`;
+  }).join(', ');
+
   const sql = `
-    SELECT 
-      ${cols.join(', ')},
-      u1.email AS created_by,
-      u2.email AS last_modified_by
+    SELECT ${selectList}
     FROM interventions i
     LEFT JOIN users u1 ON u1.id = i.user_id::int
     LEFT JOIN users u2 ON u2.id = i.person::int
@@ -57,13 +65,6 @@ router.get('/', async (req, res) => {
     ORDER BY i.created_at DESC
   `;
   const { rows } = await pool.query(sql, params);
-
-  // Remplace dans la liste des colonnes
-  cols = cols.map(c => {
-    if (c === 'user_id') return 'created_by';
-    if (c === 'person') return 'last_modified_by';
-    return c;
-  });
 
   if (format === 'csv' || !format) {
     const parser = new Parser({ fields: cols });
