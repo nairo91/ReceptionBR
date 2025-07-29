@@ -59,8 +59,8 @@ router.get('/', async (req, res) => {
   const sql = `
     SELECT ${selectList}
     FROM interventions i
-    LEFT JOIN users u1 ON u1.id = i.user_id::int
-    LEFT JOIN users u2 ON u2.id = i.person::int
+    LEFT JOIN users u1 ON u1.id::text = i.user_id
+    LEFT JOIN users u2 ON u2.id::text = i.person
     ${where}
     ORDER BY i.created_at DESC
   `;
