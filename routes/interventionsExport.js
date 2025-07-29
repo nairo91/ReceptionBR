@@ -37,30 +37,34 @@ router.get('/', async (req, res) => {
   let cols = columns
     .split(',')
     .map(c => c.trim())
-    .filter(c => c);
+    .filter(c => c)
+    .map(c => c === 'floor_id' ? 'floor'
+             : c === 'room_id'  ? 'room'
+             : c);
 
   // Si aucune sélection, valeurs par défaut
   if (cols.length === 0) {
-    cols = ['id','created_by','last_modified_by','floor_id','room_id','lot','task','status','created_at'];
+    cols = ['id','created_by','last_modified_by','floor','room','lot','task','status','created_at'];
   }
 
   // Reconstruisons la liste de SELECT pour injecter les bonnes expressions SQL
   const selectList = cols.map(c => {
-    if (c === 'created_by') {
-      return 'u1.email AS created_by';
-    }
-    if (c === 'last_modified_by') {
-      return 'u2.email AS last_modified_by';
-    }
-    // sinon une colonne de la table interventions
+    if (c === 'created_by')      return 'u1.email        AS created_by';
+    if (c === 'last_modified_by')return 'u2.email        AS last_modified_by';
+    // sinon : on gère room et floor en priorité
+    if (c === 'floor')           return 'f.name          AS floor';
+    if (c === 'room')            return 'r.name          AS room';
+    // sinon une colonne brute de interventions
     return `i.${c}`;
   }).join(', ');
 
   const sql = `
     SELECT ${selectList}
     FROM interventions i
-    LEFT JOIN users u1 ON u1.id::text = i.user_id
-    LEFT JOIN users u2 ON u2.id::text = i.person
+    JOIN floors f        ON f.id = i.floor_id
+    LEFT JOIN rooms r    ON r.id = i.room_id
+    LEFT JOIN users u1   ON u1.id::text = i.user_id
+    LEFT JOIN users u2   ON u2.id::text = i.person
     ${where}
     ORDER BY i.created_at DESC
   `;
