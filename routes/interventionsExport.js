@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     floor_id   = '',
     room_id    = '',
     lot        = '',
-    state      = '',
+    status     = '',
     start      = '',
     end        = '',
     columns    = '',
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
   if (floor_id) { params.push(floor_id);  conds.push(`i.floor_id = $${params.length}`); }
   if (room_id)  { params.push(room_id);   conds.push(`i.room_id  = $${params.length}`); }
   if (lot)      { params.push(lot);       conds.push(`i.lot      = $${params.length}`); }
-  if (state)    { params.push(state);     conds.push(`i.status   = $${params.length}`); }
+  if (status)   { params.push(status);    conds.push(`i.status   = $${params.length}`); }
   if (start)    { params.push(start);     conds.push(`i.created_at >= $${params.length}`); }
   if (end)      { params.push(end);       conds.push(`i.created_at <= $${params.length}`); }
 
