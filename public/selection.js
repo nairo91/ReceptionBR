@@ -148,6 +148,46 @@ async function loadCommentUsers() {
     users.map(u => `<option value="${u.id}">${u.username}</option>`).join('');
 }
 
+function setupExportModal() {
+  const allCols = [
+    'id',
+    'created_by',
+    'action',
+    'lot',
+    'floor_id',
+    'room_id',
+    'task',
+    'state',
+    'last_modified_by',
+    'created_at'
+  ];
+  const labels = [
+    'ID',
+    'Créé par',
+    'Action',
+    'Lot',
+    'Étage',
+    'Chambre',
+    'Tâche',
+    'État',
+    'Dernière Modif',
+    'Date/Heure'
+  ];
+  let container = document.getElementById('export-cols');
+  if (!container) {
+    const dlg = document.querySelector('#export-modal .modal-dialog');
+    container = document.createElement('div');
+    container.id = 'export-cols';
+    dlg.insertBefore(container, dlg.querySelector('hr'));
+  }
+  container.innerHTML = allCols.map((c,i) => `
+    <label>
+      <input type="checkbox" value="${c}">
+      ${labels[i]}
+    </label>
+  `).join('');
+}
+
 async function loadFloors(selector, chantierId = '') {
   const url = new URL('/api/floors', location.origin);
   if (chantierId) url.searchParams.set('chantier_id', chantierId);
@@ -552,6 +592,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     .join('');
   document.getElementById('edit-lot').innerHTML =
     '<option value="">-- Tous les lots --</option>' + lotOptions;
+  setupExportModal();
   document.getElementById('edit-lot').addEventListener('change', () => {
     document.querySelector('#edit-table tbody').innerHTML = '';
     addEditRow();
@@ -593,8 +634,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // lancement export
   document.getElementById('export-go').onclick = async () => {
     const cols = Array.from(
-      document.querySelectorAll('#export-modal input[type=checkbox]:checked')
-    ).map(i => i.value).join(',');
+      document.querySelectorAll('#export-cols input:checked')
+    ).map(el => el.value).join(',');
     const format = document.querySelector('#export-modal input[name="format"]:checked').value;
     const exportParams = new URLSearchParams({
       floor_id: document.getElementById('hist-floor').value || '',
