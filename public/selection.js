@@ -487,7 +487,7 @@ document.getElementById('comment-send').addEventListener('click', async () => {
   if (!currentId) return;
   const text = document.getElementById('comment-text').value;
   const userId = document.getElementById('comment-user').value;
-  await fetch('/api/comments', {
+  await fetch(`/api/interventions/${currentId}/comment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -500,7 +500,7 @@ document.getElementById('comment-send').addEventListener('click', async () => {
 async function loadComments() {
   if (!currentId) return;
   const res = await fetch(
-    `/api/comments?intervention_id=${currentId}`,
+    `/api/interventions/${currentId}/comments`,
     { credentials: 'include' }
   );
   const comments = await res.json();

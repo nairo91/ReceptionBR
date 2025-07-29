@@ -219,9 +219,12 @@ router.get('/history', async (req, res) => {
       i.lot,
       i.task,
       i.status        AS state,
-      i.created_at    AS date
+      i.created_at    AS date,
+      f.name          AS floor,
+      r.name          AS room
     FROM interventions i
     JOIN floors f     ON f.id = i.floor_id
+    LEFT JOIN rooms r ON r.id = i.room_id
     LEFT JOIN users u1 ON u1.id::text = i.user_id
     LEFT JOIN users u2 ON u2.id::text = i.person
     WHERE ($1 = '' OR f.name      = $1)
