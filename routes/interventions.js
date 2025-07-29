@@ -372,15 +372,38 @@ router.post('/bulk', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    // 🔎 Récupère les noms pour old_floor_name / old_room_name
+    const { rows: floorRows } = await client.query(
+      'SELECT name FROM floors WHERE id = $1', [floor]
+    );
+    const { rows: roomRows } = await client.query(
+      'SELECT name FROM rooms  WHERE id = $1', [room]
+    );
+    const old_floor_name = floorRows[0]?.name || '';
+    const old_room_name  = roomRows[0]?.name  || '';
+
     const text = `
       INSERT INTO interventions
-        (floor_id, room_id, user_id, lot, task, status, person, action)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        (floor_id, room_id, old_floor_name, old_room_name,
+         user_id, lot, task, status, person, action)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     `;
     for (const { person: user_id, task, state } of rows) {
       if (!user_id || !task) continue;
       const insertedStatus = state || 'ouvert';
-      await client.query(text, [floor, room, user_id, lot, task, insertedStatus, user_id, 'Création']);
+      await client.query(text, [
+        floor,
+        room,
+        old_floor_name,
+        old_room_name,
+        user_id,
+        lot,
+        task,
+        insertedStatus,
+        user_id,
+        'Création'
+      ]);
 
       // 1️⃣ On historise la création de chaque ligne
       await client.query(
