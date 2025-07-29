@@ -216,6 +216,7 @@ router.get('/history', async (req, res) => {
       i.id,
       u1.email        AS created_by,
       u2.email        AS last_modified_by,
+      i.action        AS action,
       i.lot,
       i.task,
       i.status        AS state,
