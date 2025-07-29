@@ -150,16 +150,10 @@ async function loadCommentUsers() {
 
 function setupExportModal() {
   const allCols = [
-    'id',
-    'created_by',
-    'action',
-    'lot',
-    'floor_id',
-    'room_id',
-    'task',
-    'status',
-    'last_modified_by',
-    'created_at'
+    'id', 'created_by', 'action',
+    'lot', 'floor', 'room',
+    'task', 'status',
+    'last_modified_by', 'created_at'
   ];
   const labels = [
     'ID',
