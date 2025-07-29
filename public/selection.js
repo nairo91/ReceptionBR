@@ -467,9 +467,9 @@ editSubmitBtn.addEventListener('click', async function () {
 async function openForEdit(row) {
   currentId = row.id;
   editSubmitBtn.dataset.id = row.id;
-  document.getElementById('edit-floor').value = row.floor;
-  await loadRooms(row.floor, '#edit-room');
-  document.getElementById('edit-room').value = row.room;
+  document.getElementById('edit-floor').value = row.floor_id;
+  await loadRooms(row.floor_id, '#edit-room');
+  document.getElementById('edit-room').value = row.room_id;
   document.getElementById('edit-lot').value = row.lot;
   document.getElementById('edit-lot').dispatchEvent(new Event('change'));
   document.querySelector('#edit-table tbody').innerHTML = '';
@@ -550,7 +550,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const lotOptions = Object.keys(lotTasks)
     .map(l => `<option value="${l}">${l}</option>`)
     .join('');
-  document.getElementById('edit-lot').innerHTML = '<option value="">-- Lot --</option>' + lotOptions;
+  document.getElementById('edit-lot').innerHTML =
+    '<option value="">-- Tous les lots --</option>' + lotOptions;
   document.getElementById('edit-lot').addEventListener('change', () => {
     document.querySelector('#edit-table tbody').innerHTML = '';
     addEditRow();
@@ -569,12 +570,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Afficher d'emblée l'Historique
   showTab('historyTab');
   await loadHistory();
-  document.getElementById('edit-floor').addEventListener('change', loadPreview);
+  // Quand l'étage change, on recharge la liste des chambres puis la préview
+  document.getElementById('edit-floor').addEventListener('change', () => {
+    loadRooms(document.getElementById('edit-floor').value, '#edit-room')
+      .then(() => {
+        loadPreview();
+      });
+  });
   document.getElementById('edit-room').addEventListener('change', loadPreview);
   document.getElementById('edit-lot').addEventListener('change', loadPreview);
   document.getElementById('hist-floor').addEventListener('change', e => loadRooms(e.target.value, '#hist-room'));
   document.getElementById('hist-state').addEventListener('change', loadHistory);
-  document.getElementById('edit-floor').addEventListener('change', e => loadRooms(e.target.value, '#edit-room'));
   document.getElementById('hist-refresh').addEventListener('click', loadHistory);
   // ouverture du modal d’export
   document.getElementById('export-config').onclick = () => {
