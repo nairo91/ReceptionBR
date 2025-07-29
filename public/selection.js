@@ -157,7 +157,7 @@ function setupExportModal() {
     'floor_id',
     'room_id',
     'task',
-    'state',
+    'status',
     'last_modified_by',
     'created_at'
   ];
@@ -641,7 +641,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       floor_id: document.getElementById('hist-floor').value || '',
       room_id:  document.getElementById('hist-room').value || '',
       lot:      document.getElementById('hist-lot').value || '',
-      state:    document.getElementById('hist-state').value || '',
+      status:   document.getElementById('hist-state').value || '',
       start:    document.getElementById('date-start').value || '',
       end:      document.getElementById('date-end').value || '',
       columns:  cols,
