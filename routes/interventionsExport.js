@@ -45,8 +45,17 @@ router.get('/', async (req, res) => {
   }
 
   // Construction et exécution de la requête
-  const sql = `SELECT ${cols.join(', ')} FROM interventions i ${where} ORDER BY i.created_at DESC`;
+  const sql = `
+    SELECT ${cols.join(', ')}, u.email AS user_email
+    FROM interventions i
+    LEFT JOIN users u ON u.id = i.user_id::int
+    ${where}
+    ORDER BY i.created_at DESC
+  `;
   const { rows } = await pool.query(sql, params);
+
+  // Pour l'export, on remplace la colonne user_id par user_email
+  cols = cols.map(c => c === 'user_id' ? 'user_email' : c);
 
   if (format === 'csv' || !format) {
     const parser = new Parser({ fields: cols });
