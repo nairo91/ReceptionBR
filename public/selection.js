@@ -665,6 +665,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (e.target.dataset.tab === 'editTab') loadPreview();
     }
   });
+  // bouton Retour vers l'accueil
+  document.getElementById('backBtn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
   document.getElementById('comment-back')
     .addEventListener('click', () => showTab('historyTab'));
   document.getElementById('photo-back')
