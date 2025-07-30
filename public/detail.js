@@ -20,10 +20,23 @@ function loadDetail(id) {
     .then(bulle => {
       document.getElementById('description').textContent = bulle.description || '';
       document.getElementById('intitule').textContent = bulle.intitule || '';
-      const img = document.getElementById('photo');
-      if (bulle.photo) {
-        img.src = bulle.photo;
-        img.style.display = 'block';
+      const mediaContainer = document.getElementById('mediaContainer');
+      mediaContainer.innerHTML = '';
+      if (Array.isArray(bulle.media)) {
+        bulle.media.forEach(m => {
+          if (m.type === 'photo') {
+            const img = document.createElement('img');
+            img.src = m.path;
+            img.style.maxWidth = '100%';
+            mediaContainer.appendChild(img);
+          } else {
+            const video = document.createElement('video');
+            video.src = m.path;
+            video.controls = true;
+            video.style.maxWidth = '100%';
+            mediaContainer.appendChild(video);
+          }
+        });
       }
       document.getElementById('dateButoir').textContent = bulle.date_butoir ? bulle.date_butoir.substring(0,10) : '';
       document.getElementById('etat').textContent = bulle.etat || '';

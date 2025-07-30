@@ -35,12 +35,24 @@ router.get('/', async (req, res) => {
       b.*, f.name AS etage,
       e.nom AS entreprise,
       u1.email AS created_by_email,
-      u2.email AS modified_by
+      u2.email AS modified_by,
+      pm.photos,
+      vm.videos
     FROM bulles b
     LEFT JOIN floors f ON b.etage_id = f.id
     LEFT JOIN entreprises e ON b.entreprise_id = e.id
     LEFT JOIN users u1 ON b.created_by = u1.id
     LEFT JOIN users u2 ON b.modified_by = u2.id
+    LEFT JOIN (
+      SELECT bulle_id, json_agg(path) AS photos
+      FROM bulle_media WHERE type='photo'
+      GROUP BY bulle_id
+    ) pm ON pm.bulle_id = b.id
+    LEFT JOIN (
+      SELECT bulle_id, json_agg(path) AS videos
+      FROM bulle_media WHERE type='video'
+      GROUP BY bulle_id
+    ) vm ON vm.bulle_id = b.id
     ${where}
     ORDER BY b.id
   `;
@@ -50,6 +62,12 @@ router.get('/', async (req, res) => {
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
   // On retire les identifiants numériques inutiles
   cols = cols.filter(c => c !== 'created_by');
+  if (rows[0] && rows[0].photos !== undefined && !cols.includes('photos')) {
+    cols.push('photos');
+  }
+  if (rows[0] && rows[0].videos !== undefined && !cols.includes('videos')) {
+    cols.push('videos');
+  }
 
   // --- BEGIN : Réordonnage fixe des colonnes ---
   // On veut d'abord ces colonnes dans cet ordre :
@@ -58,6 +76,8 @@ router.get('/', async (req, res) => {
     'chambre',
     'numero',
     'intitule',
+    'photos',
+    'videos',
     'photo',
     'etat',
     'lot',

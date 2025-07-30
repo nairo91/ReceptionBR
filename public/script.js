@@ -258,8 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
           <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
-          <input type="file" name="photo" accept="image/*" /><br>
-          ${bulle.photo ? `<img src="${bulle.photo}" class="preview" onclick="zoomImage('${bulle.photo}')" /><br>` : ''}
+          <input type="file" name="photos" multiple accept="image/*" /><br>
+          <input type="file" name="videos" multiple accept="video/*" /><br>
+          ${Array.isArray(bulle.media) ? bulle.media.map(m =>
+            m.type === 'photo'
+              ? `<img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" /><br>`
+              : `<video src="${m.path}" controls class="preview"></video>`
+          ).join('') : ''}
           <button type="submit">💾 Enregistrer</button>
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
@@ -296,6 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const formData = new FormData(form);
           formData.append('chantier_id', chantierSelect.value);
           formData.append('etage_id', etageSelect.value);
+          Array.from(form.querySelector('input[name="photos"]').files)
+            .forEach(f => formData.append('photos', f));
+          Array.from(form.querySelector('input[name="videos"]').files)
+            .forEach(f => formData.append('videos', f));
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
@@ -599,7 +608,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="text" name="localisation" placeholder="Localisation" /><br>
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
-        <input type="file" name="photo" accept="image/*" /><br>
+        <input type="file" name="photos" multiple accept="image/*" /><br>
+        <input type="file" name="videos" multiple accept="video/*" /><br>
         <button type="submit">✅ Ajouter</button>
         <button type="button" onclick="closePopups()">Annuler</button>
       `;
@@ -633,6 +643,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('chantier_id', chantierSelect.value);
         formData.append('etage_id', etageSelect.value);
         formData.append('chambre', chambreSelect.value);
+        Array.from(form.querySelector('input[name="photos"]').files)
+          .forEach(f => formData.append('photos', f));
+        Array.from(form.querySelector('input[name="videos"]').files)
+          .forEach(f => formData.append('videos', f));
         const rect = plan.getBoundingClientRect();
         const xRatio = x / rect.width;
         const yRatio = y / rect.height;

@@ -34,3 +34,12 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'user'
 );
+
+CREATE TABLE bulle_media (
+  id SERIAL PRIMARY KEY,
+  bulle_id INTEGER NOT NULL REFERENCES bulles(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('photo','video')),
+  path TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
