@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
       b.*, f.name AS etage,
       e.nom AS entreprise,
       u1.email AS created_by_email,
-      u2.email AS modified_by_email
+      u2.email AS modified_by
     FROM bulles b
     LEFT JOIN floors f ON b.etage_id = f.id
     LEFT JOIN entreprises e ON b.entreprise_id = e.id
@@ -48,8 +48,8 @@ router.get('/', async (req, res) => {
 
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
-  // On retire les champs numériques qui ne nous intéressent plus
-  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
+  // On retire les identifiants numériques inutiles
+  cols = cols.filter(c => c !== 'created_by');
 
   // --- BEGIN : Réordonnage fixe des colonnes ---
   // On veut d'abord ces colonnes dans cet ordre :
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
     'entreprise',
     'localisation',
     'created_by_email',
-    'modified_by_email'
+    'modified_by'
   ];
   // On filtre pour ne garder que celles qui existent encore dans cols
   const head = desiredOrder.filter(c => cols.includes(c));
