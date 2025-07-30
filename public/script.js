@@ -81,7 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const roomBtn = document.createElement('button');
       roomBtn.id = 'addRoomBtn';
       roomBtn.textContent = '+ Nouvelle chambre';
-      chambreSelect.parentNode.appendChild(roomBtn);
+      roomBtn.className = 'btn';
+      chambreSelect.parentNode.insertBefore(roomBtn, chambreSelect.nextSibling);
       roomBtn.onclick = async () => {
         const nom = prompt('Numéro ou nom de la chambre');
         if (!nom) return;
