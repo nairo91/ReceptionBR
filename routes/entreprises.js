@@ -16,7 +16,9 @@ router.get('/', async (req, res) => {
 // POST /api/entreprises -> ajout d'une entreprise
 router.post('/', async (req, res) => {
   try {
-    if (!req.session.user || req.session.user.email !== 'launay.jeremy@batirenov.info') {
+    if (!req.session.user ||
+        !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info']
+          .includes(req.session.user.email)) {
       return res.status(403).json({ error: 'Interdit' });
     }
     const { nom } = req.body;
