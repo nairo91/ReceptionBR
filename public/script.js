@@ -75,6 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
         await updateFloorOptions(chantierSelect.value);
       };
 
+      // +-------------------------------------------------------------+
+      // | Bouton “+ Nouvelle chambre”                                |
+      // +-------------------------------------------------------------+
+      const roomBtn = document.createElement('button');
+      roomBtn.id = 'addRoomBtn';
+      roomBtn.textContent = '+ Nouvelle chambre';
+      chambreSelect.parentNode.appendChild(roomBtn);
+      roomBtn.onclick = async () => {
+        const nom = prompt('Numéro ou nom de la chambre');
+        if (!nom) return;
+        await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            floor_id: parseInt(etageSelect.value, 10),
+            name: nom
+          })
+        });
+        await updateRoomOptions(etageSelect.value);
+      };
+
       const uploadInput = document.createElement('input');
       uploadInput.type = 'file';
       uploadInput.accept = '.pdf,.png';

@@ -20,4 +20,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST /api/rooms — créer une nouvelle chambre
+router.post('/', async (req, res) => {
+  if (!req.session.user || req.session.user.email !== 'launay.jeremy@batirenov.info') {
+    return res.status(403).json({ error: 'Interdit' });
+  }
+  const { floor_id, name } = req.body;
+  if (!floor_id || !name) {
+    return res.status(400).json({ error: 'floor_id et name sont requis' });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO rooms (floor_id, name, created_by, created_at)
+       VALUES ($1, $2, $3, now())
+       RETURNING id, name`,
+      [floor_id, name, req.session.user.id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Impossible de créer la chambre' });
+  }
+});
+
 module.exports = router;
