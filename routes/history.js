@@ -14,6 +14,10 @@ router.get('/', async (req, res) => {
     where += ` AND b.etage_id = $${idx++}`;
     params.push(etage_id);
   }
+  if (req.query.chambre && req.query.chambre !== 'total') {
+    where += ` AND b.chambre = $${idx++}`;
+    params.push(req.query.chambre);
+  }
   if (lot) {
     where += ` AND b.lot = $${idx++}`;
     params.push(lot);

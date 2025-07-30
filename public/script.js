@@ -708,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams();
       params.set('chantier_id', chantierSelect.value);
       params.set('etage_id',    etageSelect.value);
-      params.set('room_id',     chambreSelect.value);
+      params.set('chambre',      chambreSelect.value);
       params.set('format',      formatSelect.value);
 
       document.querySelectorAll('#export-columns input[name="col"]:checked')

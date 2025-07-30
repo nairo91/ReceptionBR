@@ -11,6 +11,17 @@
     <h1>Historique des actions</h1>
     <button id="backBtn">Retour</button>
   </header>
+  <form id="history-filters">
+    Chantier :
+    <select id="filter-chantier"><option value="">Tous</option></select>
+    Étage :
+    <select id="filter-etage"><option value="">Tous</option></select>
+    Chambre :
+    <select id="filter-chambre"><option value="">Toutes</option></select>
+    Lot :
+    <input type="text" id="filter-lot" placeholder="Lot" />
+    <button type="submit">Filtrer</button>
+  </form>
   <main id="tableWrapper">
     <table id="historyTable">
       <thead>
