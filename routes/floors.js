@@ -21,7 +21,9 @@ router.get('/', async (req, res) => {
 
 // POST /api/floors - créer un étage
 router.post('/', async (req, res) => {
-  if (!req.session.user || req.session.user.email !== 'launay.jeremy@batirenov.info') {
+  if (!req.session.user ||
+      !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info']
+        .includes(req.session.user.email)) {
     return res.status(403).json({ error: 'Interdit' });
   }
   const { chantier_id, name } = req.body;
@@ -39,7 +41,9 @@ router.post('/', async (req, res) => {
 
 // Upload d'un plan pour un étage
 router.post('/:id/plan', upload.single('plan'), async (req, res) => {
-  if (!req.session.user || req.session.user.email !== 'launay.jeremy@batirenov.info') {
+  if (!req.session.user ||
+      !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info']
+        .includes(req.session.user.email)) {
     return res.status(403).json({ error: 'Interdit' });
   }
   const { id } = req.params;

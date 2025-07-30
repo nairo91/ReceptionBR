@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const plan            = document.getElementById("plan");
     const bullesContainer = document.getElementById("bulles-container");
 
-    // Boutons d'ajout visibles uniquement pour Jeremy Launay
-    if (user && user.email === 'launay.jeremy@batirenov.info') {
+    // Boutons d'ajout visibles pour Jeremy Launay et Valentin Blot
+    if (user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info'].includes(user.email)) {
       const chBtn = document.createElement('button');
       chBtn.id = 'addChantierBtn';
       chBtn.textContent = '+ Nouveau chantier';
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </label><br>
           <label>Entreprise :
             <select name="entreprise_id"></select>
-            ${user && user.email === 'launay.jeremy@batirenov.info' ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
+            ${user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info'].includes(user.email) ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
           </label><br>
           <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
@@ -594,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </label><br>
         <label>Entreprise :
           <select name="entreprise_id"></select>
-          ${user && user.email === 'launay.jeremy@batirenov.info' ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
+          ${user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info'].includes(user.email) ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
         </label><br>
         <input type="text" name="localisation" placeholder="Localisation" /><br>
         <input type="text" name="observation" placeholder="Observation" /><br>
