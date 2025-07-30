@@ -6,7 +6,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (rows.length === 0) {
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 6;
+        cell.colSpan = 14;
         cell.textContent = 'Aucune action enregistrée.';
         row.appendChild(cell);
         tbody.appendChild(row);
@@ -15,6 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
           <tr>
             <td>${data.username}</td>
             <td>${data.action_type}</td>
+            <td>${data.chantier}</td>
             <td>${data.intitule || ''}</td>
             <td>${data.etat || ''}</td>
             <td>${data.etage}</td>
@@ -34,7 +35,7 @@ window.addEventListener('DOMContentLoaded', () => {
       console.error(err);
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 6;
+      cell.colSpan = 14;
       cell.textContent = 'Erreur chargement historique';
       row.appendChild(cell);
       tbody.appendChild(row);
