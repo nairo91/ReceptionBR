@@ -58,14 +58,15 @@ router.get('/', async (req, res) => {
   `;
   let { rows } = await pool.query(sql, params);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const fullUrl = p => p && /^https?:\/\//.test(p) ? p : `${baseUrl}${p}`;
   rows = rows.map(r => ({
     ...r,
-    photo: r.photo ? baseUrl + r.photo : '',
+    photo: fullUrl(r.photo),
     photos: Array.isArray(r.photos)
-      ? r.photos.map(p => baseUrl + p).join(', ')
+      ? r.photos.map(fullUrl).join(', ')
       : '',
     videos: Array.isArray(r.videos)
-      ? r.videos.map(v => baseUrl + v).join(', ')
+      ? r.videos.map(fullUrl).join(', ')
       : ''
   }));
 

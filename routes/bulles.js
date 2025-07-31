@@ -24,7 +24,7 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
-    console.log(req.files);
+    // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
     const uniqueFiles = Array.from(
       new Map(files.map(f => [f.path, f])).values()
     );
@@ -113,7 +113,7 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
-    console.log(req.files);
+    // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
     const uniqueFiles = Array.from(
       new Map(files.map(f => [f.path, f])).values()
     );
