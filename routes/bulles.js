@@ -25,7 +25,10 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
     console.log(req.files);
-    const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
+    const uniqueFiles = Array.from(
+      new Map(files.map(f => [f.path, f])).values()
+    );
+    const firstPhoto = uniqueFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
     const insertRes = await pool.query(
@@ -36,7 +39,7 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
     );
 
     const newBulle = insertRes.rows[0];
-    for (const file of files) {
+    for (const file of uniqueFiles) {
       await pool.query(
         'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
         [
@@ -111,7 +114,10 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
     console.log(req.files);
-    const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
+    const uniqueFiles = Array.from(
+      new Map(files.map(f => [f.path, f])).values()
+    );
+    const firstPhoto = uniqueFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
     // Récupérer l'état actuel complet pour l'historique
@@ -143,7 +149,7 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
       'SELECT path FROM bulle_media WHERE bulle_id = $1', [id]
     );
     const existingPaths = new Set(existing.map(r => r.path));
-    for (const file of files) {
+    for (const file of uniqueFiles) {
       if (!existingPaths.has(file.path)) {
         const type = file.mimetype.startsWith('video/') ? 'video' : 'photo';
         await pool.query(
