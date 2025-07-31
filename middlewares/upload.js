@@ -6,7 +6,10 @@ cloudinary.config(process.env.CLOUDINARY_URL);
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: { folder: 'receptionbr' }
+  params: async (req, file) => ({
+    folder: 'receptionbr',
+    resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+  })
 });
 
 module.exports = multer({ storage });
