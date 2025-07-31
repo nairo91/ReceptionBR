@@ -110,6 +110,18 @@ router.get('/', async (req, res) => {
       ? req.query.columns
       : [req.query.columns];
     cols = sel.filter(c => cols.includes(c));
+
+    // repositionner photos & videos juste avant 'etat'
+    if (cols.includes('photos') && cols.includes('etat')) {
+      cols = cols.filter(c => c !== 'photos');
+      const idx = cols.indexOf('etat');
+      cols.splice(idx, 0, 'photos');
+    }
+    if (cols.includes('videos') && cols.includes('etat')) {
+      cols = cols.filter(c => c !== 'videos');
+      const idx = cols.indexOf('etat');
+      cols.splice(idx, 0, 'videos');
+    }
   }
 
   const format = (req.query.format || 'csv').toLowerCase();
