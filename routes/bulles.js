@@ -24,6 +24,7 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
+    console.log(req.files);
     const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
@@ -109,6 +110,7 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
+    console.log(req.files);
     const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
@@ -143,13 +145,10 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
     const existingPaths = new Set(existing.map(r => r.path));
     for (const file of files) {
       if (!existingPaths.has(file.path)) {
+        const type = file.mimetype.startsWith('video/') ? 'video' : 'photo';
         await pool.query(
           'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-          [
-            id,
-            file.mimetype.startsWith('video/') ? 'video' : 'photo',
-            file.path
-          ]
+          [id, type, file.path]
         );
       }
     }
@@ -218,7 +217,7 @@ router.get("/export/csv/all", async (req, res) => {
     const fields = [
       "id", "numero", "intitule", "photos", "videos", "description", "etat",
       "lot", "entreprise", "localisation", "observation",
-      "date_butoir", "photo", "x", "y", "etage", "chambre",
+      "date_butoir", "x", "y", "etage", "chambre",
       "created_by", "modified_by", "levee_par"
     ];
 
@@ -230,22 +229,20 @@ router.get("/export/csv/all", async (req, res) => {
       eol: "\r\n"
     };
 
-    const baseUrl = req.protocol + "://" + req.get("host");
-    const rowsWithFullPhoto = result.rows.map(row => {
-      return {
-        ...row,
-        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : "",
-        photos: Array.isArray(row.photos)
-          ? `=IMAGE("${baseUrl}${row.photos[0]}")`
-          : '',
-        videos: Array.isArray(row.videos)
-          ? row.videos.map(v => `"${baseUrl}${v}"`).join(',')
-          : ''
-      };
-    });
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const rowsWithFullMedia = result.rows.map(row => ({
+      ...row,
+      photo: row.photo ? baseUrl + row.photo : '',
+      photos: Array.isArray(row.photos)
+        ? row.photos.map(p => baseUrl + p).join(', ')
+        : '',
+      videos: Array.isArray(row.videos)
+        ? row.videos.map(v => baseUrl + v).join(', ')
+        : ''
+    }));
 
     const json2csvParser = new Parser(opts);
-    let csv = json2csvParser.parse(rowsWithFullPhoto);
+    let csv = json2csvParser.parse(rowsWithFullMedia);
 
     const BOM = '\uFEFF';
     csv = BOM + csv;
@@ -351,15 +348,15 @@ router.get("/export/csv", async (req, res) => {
       );
     }
 
-    const base = req.protocol + '://' + req.get('host');
-    const rowsWithFullPhoto = result.rows.map(r => ({
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const rowsWithFullMedia = result.rows.map(r => ({
       ...r,
-      photo: r.photo ? `=IMAGE("${base + r.photo}")` : '',
+      photo: r.photo ? baseUrl + r.photo : '',
       photos: Array.isArray(r.photos)
-        ? `=IMAGE("${base + r.photos[0]}")`
+        ? r.photos.map(p => baseUrl + p).join(', ')
         : '',
       videos: Array.isArray(r.videos)
-        ? r.videos.map(v => `"${base + v}"`).join(',')
+        ? r.videos.map(v => baseUrl + v).join(', ')
         : ''
     }));
 
@@ -373,7 +370,6 @@ router.get("/export/csv", async (req, res) => {
       "description",
       "etat",
       "lot",
-      "photo",
       "levee_par",
       "created_by",
       "modified_by"
@@ -388,7 +384,7 @@ router.get("/export/csv", async (req, res) => {
     };
 
     const json2csvParser = new Parser(opts);
-    let csv = json2csvParser.parse(rowsWithFullPhoto);
+    let csv = json2csvParser.parse(rowsWithFullMedia);
 
     const BOM = '\uFEFF';
     csv = BOM + csv;
@@ -452,6 +448,7 @@ router.get('/:id', async (req, res) => {
     [id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Bulle non trouvée' });
+  console.log(result.rows[0].media);
   res.json(result.rows[0]);
 });
 
