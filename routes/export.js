@@ -63,10 +63,10 @@ router.get('/', async (req, res) => {
     ...r,
     photo: fullUrl(r.photo),
     photos: Array.isArray(r.photos)
-      ? r.photos.map(fullUrl).join(', ')
+      ? Array.from(new Set(r.photos)).map(fullUrl).join(', ')
       : '',
     videos: Array.isArray(r.videos)
-      ? r.videos.map(fullUrl).join(', ')
+      ? Array.from(new Set(r.videos)).map(fullUrl).join(', ')
       : ''
   }));
 
