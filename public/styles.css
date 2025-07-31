@@ -173,6 +173,11 @@ button:hover {
   transform: scale(1.05);
 }
 
+.popup .preview-video {
+  display: block;
+  cursor: pointer;
+}
+
 .popup button {
   background-color: #e67e22;
 }

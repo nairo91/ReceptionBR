@@ -90,7 +90,14 @@ router.get("/", async (req, res) => {
      ORDER BY b.id`,
     params
   );
-  res.json(result.rows);
+  // pour chaque bulle, on dé-dup les médias par URL
+  const deduped = result.rows.map(b => ({
+    ...b,
+    media: Array.from(
+      new Map((b.media || []).map(m => [m.path, m])).values()
+    )
+  }));
+  res.json(deduped);
 });
 
 // DELETE bulle (sans authentification)
@@ -454,8 +461,11 @@ router.get('/:id', async (req, res) => {
     [id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Bulle non trouvée' });
-  console.log(result.rows[0].media);
-  res.json(result.rows[0]);
+  const row = result.rows[0];
+  const dedupedMedia = Array.from(
+    new Map((row.media || []).map(m => [m.path, m])).values()
+  );
+  res.json({ ...row, media: dedupedMedia });
 });
 
 // GET /api/bulles/:id/history
