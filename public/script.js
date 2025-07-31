@@ -205,6 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createBulle(bulle) {
+      // Deduplicate media entries by path to avoid duplicates in UI
+      bulle.media = Array.from(
+        new Map((bulle.media || []).map(m => [m.path, m])).values()
+      );
       const div = document.createElement('div');
       div.className = 'bulle';
       const rect = plan.getBoundingClientRect();
