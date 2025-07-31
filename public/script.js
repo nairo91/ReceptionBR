@@ -259,11 +259,20 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
           <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
           <input type="file" name="media" multiple accept="image/*,video/*" /><br>
-          ${Array.isArray(bulle.media) ? bulle.media.map(m =>
-            m.type === 'photo'
-              ? `<img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" /><br>`
-              : `<video src="${m.path}" controls class="preview"></video>`
-          ).join('') : ''}
+          ${Array.isArray(bulle.media) ? bulle.media.map(m => {
+            if (m.type === 'photo') {
+              return `<img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" /><br>`;
+            } else {
+              return `
+      <video 
+        src="${m.path}" 
+        controls 
+        class="preview-video" 
+        style="max-width:200px; margin-bottom:5px;"
+      ></video><br>
+    `;
+            }
+          }).join('') : ''}
           <button type="submit">💾 Enregistrer</button>
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
