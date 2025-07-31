@@ -56,7 +56,18 @@ router.get('/', async (req, res) => {
     ${where}
     ORDER BY b.id
   `;
-  const { rows } = await pool.query(sql, params);
+  let { rows } = await pool.query(sql, params);
+  const base = req.protocol + '://' + req.get('host');
+  rows = rows.map(r => ({
+    ...r,
+    photo: r.photo ? `=IMAGE("${base + r.photo}")` : '',
+    photos: Array.isArray(r.photos)
+      ? `=IMAGE("${base + r.photos[0]}")`
+      : '',
+    videos: Array.isArray(r.videos)
+      ? r.videos.map(v => `"${base + v}"`).join(',')
+      : ''
+  }));
 
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];

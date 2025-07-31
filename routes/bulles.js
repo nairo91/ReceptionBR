@@ -11,10 +11,7 @@ function isAuthenticated(req, res, next) {
 }
 
 // POST : création bulle avec created_by = l'utilisateur en session
-router.post("/", /* isAuthenticated, */ upload.fields([
-  { name: 'photos', maxCount: 10 },
-  { name: 'videos', maxCount: 5 }
-]), async (req, res) => {
+router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, res) => {
   try {
     const {
       chantier_id, etage_id,
@@ -26,9 +23,9 @@ router.post("/", /* isAuthenticated, */ upload.fields([
     const userId = req.session.user.id;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
-    const photos = (req.files && req.files.photos) || [];
-    const videos = (req.files && req.files.videos) || [];
-    const photo = photos[0] ? photos[0].path : null;
+    const files = req.files || [];
+    const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
+    const photo = firstPhoto ? firstPhoto.path : null;
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
@@ -38,16 +35,14 @@ router.post("/", /* isAuthenticated, */ upload.fields([
     );
 
     const newBulle = insertRes.rows[0];
-    for (const file of photos) {
+    for (const file of files) {
       await pool.query(
         'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-        [newBulle.id, 'photo', file.path]
-      );
-    }
-    for (const file of videos) {
-      await pool.query(
-        'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-        [newBulle.id, 'video', file.path]
+        [
+          newBulle.id,
+          file.mimetype.startsWith('video/') ? 'video' : 'photo',
+          file.path
+        ]
       );
     }
     await pool.query(
@@ -102,10 +97,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // PUT : modification bulle sans authentification, modified_by et levee_par à null
-router.put("/:id", /* isAuthenticated, */ upload.fields([
-  { name: 'photos', maxCount: 10 },
-  { name: 'videos', maxCount: 5 }
-]), async (req, res) => {
+router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -116,9 +108,9 @@ router.put("/:id", /* isAuthenticated, */ upload.fields([
     const userId = req.session.user.id;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
-    const photos = (req.files && req.files.photos) || [];
-    const videos = (req.files && req.files.videos) || [];
-    const photo = photos[0] ? photos[0].path : null;
+    const files = req.files || [];
+    const firstPhoto = files.find(f => f.mimetype.startsWith('image/'));
+    const photo = firstPhoto ? firstPhoto.path : null;
 
     // Récupérer l'état actuel complet pour l'historique
     const oldRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
@@ -145,17 +137,21 @@ router.put("/:id", /* isAuthenticated, */ upload.fields([
       );
     }
 
-    for (const file of photos) {
-      await pool.query(
-        'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-        [id, 'photo', file.path]
-      );
-    }
-    for (const file of videos) {
-      await pool.query(
-        'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-        [id, 'video', file.path]
-      );
+    const { rows: existing } = await pool.query(
+      'SELECT path FROM bulle_media WHERE bulle_id = $1', [id]
+    );
+    const existingPaths = new Set(existing.map(r => r.path));
+    for (const file of files) {
+      if (!existingPaths.has(file.path)) {
+        await pool.query(
+          'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
+          [
+            id,
+            file.mimetype.startsWith('video/') ? 'video' : 'photo',
+            file.path
+          ]
+        );
+      }
     }
 
     const newRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
@@ -238,7 +234,13 @@ router.get("/export/csv/all", async (req, res) => {
     const rowsWithFullPhoto = result.rows.map(row => {
       return {
         ...row,
-        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : ""
+        photo: row.photo ? `=IMAGE("${baseUrl}${row.photo}")` : "",
+        photos: Array.isArray(row.photos)
+          ? `=IMAGE("${baseUrl}${row.photos[0]}")`
+          : '',
+        videos: Array.isArray(row.videos)
+          ? row.videos.map(v => `"${baseUrl}${v}"`).join(',')
+          : ''
       };
     });
 
@@ -349,8 +351,17 @@ router.get("/export/csv", async (req, res) => {
       );
     }
 
-    // Les URLs Cloudinary sont déjà complètes
-    const rowsWithFullPhoto = result.rows;
+    const base = req.protocol + '://' + req.get('host');
+    const rowsWithFullPhoto = result.rows.map(r => ({
+      ...r,
+      photo: r.photo ? `=IMAGE("${base + r.photo}")` : '',
+      photos: Array.isArray(r.photos)
+        ? `=IMAGE("${base + r.photos[0]}")`
+        : '',
+      videos: Array.isArray(r.videos)
+        ? r.videos.map(v => `"${base + v}"`).join(',')
+        : ''
+    }));
 
     const fields = [
       "etage",
