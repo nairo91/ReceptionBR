@@ -57,15 +57,15 @@ router.get('/', async (req, res) => {
     ORDER BY b.id
   `;
   let { rows } = await pool.query(sql, params);
-  const base = req.protocol + '://' + req.get('host');
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
   rows = rows.map(r => ({
     ...r,
-    photo: r.photo ? `=IMAGE("${base + r.photo}")` : '',
+    photo: r.photo ? baseUrl + r.photo : '',
     photos: Array.isArray(r.photos)
-      ? `=IMAGE("${base + r.photos[0]}")`
+      ? r.photos.map(p => baseUrl + p).join(', ')
       : '',
     videos: Array.isArray(r.videos)
-      ? r.videos.map(v => `"${base + v}"`).join(',')
+      ? r.videos.map(v => baseUrl + v).join(', ')
       : ''
   }));
 
