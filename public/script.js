@@ -310,11 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Vous devez être connecté pour modifier.');
             return;
           }
+          // new FormData(form) already includes the <input name="media"> files
           const formData = new FormData(form);
           formData.append('chantier_id', chantierSelect.value);
           formData.append('etage_id', etageSelect.value);
-          Array.from(form.querySelector('input[name="media"]').files)
-            .forEach(file => formData.append('media', file));
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
@@ -650,12 +649,11 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('Vous devez être connecté pour ajouter une bulle.');
           return;
         }
+        // FormData(form) already contains all file inputs including media
         const formData = new FormData(form);
         formData.append('chantier_id', chantierSelect.value);
         formData.append('etage_id', etageSelect.value);
         formData.append('chambre', chambreSelect.value);
-        Array.from(form.querySelector('input[name="media"]').files)
-          .forEach(file => formData.append('media', file));
         const rect = plan.getBoundingClientRect();
         const xRatio = x / rect.width;
         const yRatio = y / rect.height;
