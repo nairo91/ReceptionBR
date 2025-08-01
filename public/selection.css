@@ -8,6 +8,10 @@ body {
   color: #333;
 }
 
+.hidden {
+  display: none;
+}
+
 .container {
   max-width: 800px;
   margin: 2rem auto;
