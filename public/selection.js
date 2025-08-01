@@ -596,6 +596,23 @@ document.getElementById('photo-send').addEventListener('click', async () => {
 const CURRENT_CHANTIER_ID = 2;
 
 window.addEventListener('DOMContentLoaded', async () => {
+  const adminBtn = document.getElementById('adminBtn');
+  const adminEmails = ['blot.valentin@batirenov.info', 'launay.jeremy@batirenov.info'];
+  (async () => {
+    try {
+      const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!meRes.ok) return;
+      const { user } = await meRes.json();
+      if (user && adminEmails.includes(user.email)) {
+        adminBtn.classList.remove('hidden');
+        adminBtn.addEventListener('click', () => {
+          window.location.href = '/admin.html';
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  })();
   const lotOptions = Object.keys(lotTasks)
     .map(l => `<option value="${l}">${l}</option>`)
     .join('');
