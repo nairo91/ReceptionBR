@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   // récupère les filtres chantier/étage/room
   const chantierFilter = req.query.chantier_id || '';
   const etageFilter = req.query.etage_id || '';
-  const rawRoom  = req.query.room_id  || '';
+  const rawRoom  = req.query.room_id ?? req.query.chambre ?? '';
   const roomId  = parseInt(rawRoom.replace(/\D/g,''), 10);
 
   // Construire WHERE
@@ -25,14 +25,18 @@ router.get('/', async (req, res) => {
   }
   if (!isNaN(roomId)) {
     params.push(roomId);
-    conds.push(`b.chambre = $${params.length}`);
+    conds.push(`(b.chambre = $${params.length}::text OR
+               (b.chambre ~ '^[0-9]+$' AND (b.chambre)::int = $${params.length}))`);
   }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
 
   // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
   const sql = `
     SELECT
-      b.*, f.name AS etage,
+      b.*,
+      f.name AS etage,
+      COALESCE(r.name, b.chambre) AS chambre,
+      b.chambre AS chambre_id,
       e.nom AS entreprise,
       u1.email AS created_by_email,
       u2.email AS modified_by,
@@ -40,6 +44,8 @@ router.get('/', async (req, res) => {
       vm.videos
     FROM bulles b
     LEFT JOIN floors f ON b.etage_id = f.id
+    LEFT JOIN rooms r
+      ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
     LEFT JOIN entreprises e ON b.entreprise_id = e.id
     LEFT JOIN users u1 ON b.created_by = u1.id
     LEFT JOIN users u2 ON b.modified_by = u2.id
