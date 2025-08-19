@@ -69,17 +69,25 @@ router.get("/", async (req, res) => {
   const conds = [];
   if (chantier_id) { params.push(chantier_id); conds.push(`b.chantier_id = $${params.length}`); }
   if (etage_id) { params.push(etage_id); conds.push(`b.etage_id = $${params.length}`); }
-  if (chambre && chambre !== 'total') { params.push(chambre); conds.push(`b.chambre = $${params.length}`); }
+  if (chambre && chambre !== 'total') {
+    params.push(chambre);
+    conds.push(`(b.chambre = $${params.length} OR
+               (b.chambre ~ '^[0-9]+$' AND (b.chambre)::int = $${params.length}::int))`);
+  }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
   const result = await pool.query(
-    `SELECT 
-       b.*, 
+    `SELECT
+       b.*,
        e.nom  AS entreprise,
        f.name AS etage,
+       r.name AS chambre,
+       b.chambre AS chambre_id,
        COALESCE(mm.media, '[]') AS media
      FROM bulles b
      LEFT JOIN entreprises e ON b.entreprise_id = e.id
      LEFT JOIN floors f       ON b.etage_id       = f.id
+     LEFT JOIN rooms r
+       ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
      LEFT JOIN (
        SELECT bulle_id,
               json_agg(json_build_object('type', type, 'path', path) ORDER BY created_at) AS media
