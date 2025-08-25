@@ -22,7 +22,6 @@
     "cloudinary": "^1.37.2",
     "multer-storage-cloudinary": "^4.0.0",
     "exceljs": "^4.3.0",
-    "pdfkit": "^0.13.0",
-    "axios": "^1.7.2"
+    "pdfkit": "^0.13.0"
   }
 }
