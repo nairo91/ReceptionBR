@@ -65,16 +65,20 @@ router.get('/', async (req, res) => {
   let { rows } = await pool.query(sql, params);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const fullUrl = p => p && /^https?:\/\//.test(p) ? p : `${baseUrl}${p}`;
-  rows = rows.map(r => ({
-    ...r,
-    photo: fullUrl(r.photo),
-    photos: Array.isArray(r.photos)
-      ? Array.from(new Set(r.photos)).map(fullUrl).join(', ')
-      : '',
-    videos: Array.isArray(r.videos)
-      ? Array.from(new Set(r.videos)).map(fullUrl).join(', ')
-      : ''
-  }));
+  rows = rows.map(r => {
+    const photoArr = Array.isArray(r.photos)
+      ? Array.from(new Set(r.photos)).map(fullUrl)
+      : [];
+    const videoArr = Array.isArray(r.videos)
+      ? Array.from(new Set(r.videos)).map(fullUrl)
+      : [];
+    return {
+      ...r,
+      photo: fullUrl(r.photo),
+      photos: photoArr,
+      videos: videoArr
+    };
+  });
 
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
@@ -132,8 +136,13 @@ router.get('/', async (req, res) => {
 
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
+    const serialize = r => ({
+      ...r,
+      photos: (r.photos || []).join(', '),
+      videos: (r.videos || []).join(', ')
+    });
     const parser = new Parser({ fields: cols });
-    let csv = '\uFEFF' + parser.parse(rows);
+    let csv = '\uFEFF' + parser.parse(rows.map(serialize));
     res.header('Content-Type', 'text/csv; charset=utf-8');
     res.attachment('bulles.csv');
     return res.send(csv);
@@ -143,8 +152,13 @@ router.get('/', async (req, res) => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
 
+    const maxPhotos = Math.max(0, ...rows.map(r => Array.isArray(r.photos) ? r.photos.length : 0));
+    const baseCols = cols.filter(c => c !== 'photos');
+    const photoCols = Array.from({ length: maxPhotos }, (_, i) => `Photo ${i + 1}`);
+    const finalCols = [...baseCols, ...photoCols];
+
     // Header stylé
-    const headerRow = ws.addRow(cols);
+    const headerRow = ws.addRow(finalCols);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = {
       type: 'pattern',
@@ -156,7 +170,16 @@ router.get('/', async (req, res) => {
 
     // Lignes de données avec effet zèbre
     rows.forEach((r, idx) => {
-      const row = ws.addRow(cols.map(c => r[c]));
+      const baseVals = baseCols.map(c => {
+        if (c === 'videos' && Array.isArray(r.videos)) return r.videos.join(', ');
+        return r[c];
+      });
+      const photoVals = [];
+      for (let i = 0; i < maxPhotos; i++) {
+        const url = (r.photos || [])[i] || '';
+        photoVals.push(url ? { text: `Photo ${i + 1}`, hyperlink: url } : '');
+      }
+      const row = ws.addRow([...baseVals, ...photoVals]);
       const isEven = idx % 2 === 0;
       row.fill = {
         type: 'pattern',
@@ -186,8 +209,13 @@ router.get('/', async (req, res) => {
     res.header('Content-Disposition', 'attachment; filename=bulles.pdf');
     doc.pipe(res);
     doc.text('Export des bulles', { align: 'center' }).moveDown();
-    // On utilise pdfkit-table ou un helper similaire
-    const table = { headers: cols, rows: rows.map(r => cols.map(c => r[c])) };
+    const serialize = r => ({
+      ...r,
+      photos: (r.photos || []).join(', '),
+      videos: (r.videos || []).join(', ')
+    });
+    const pdfRows = rows.map(serialize);
+    const table = { headers: cols, rows: pdfRows.map(r => cols.map(c => r[c])) };
     doc.table(table, { width: 500 });
     doc.end();
     return;
