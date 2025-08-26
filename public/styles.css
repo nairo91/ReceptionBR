@@ -1,9 +1,41 @@
+/* === Thème clair/sombre : variables minimales non-intrusives === */
+:root{
+  --bg:#ffffff;
+  --text:#0f172a;        /* ardoise */
+  --panel:#f8fafc;       /* ardoise très clair */
+  --muted:#6b7280;       /* gris pour textes secondaires */
+  --link:#0ea5e9;        /* bleu clair */
+}
+.dark-theme{
+  --bg:#0b1220;
+  --text:#e5e7eb;        /* gris très clair */
+  --panel:#111827;       /* gris/ardoise foncé */
+  --muted:#94a3b8;
+  --link:#38bdf8;
+}
+
+/* Application douce sur la page entière, sans casser les styles existants */
+html, body{
+  background: var(--bg);
+  color: var(--text);
+}
+a{ color: var(--link); }
+small, .muted, .text-muted{ color: var(--muted); }
+
+/* (Optionnel) teinte douce pour les conteneurs courants */
+.panel, .card, .box {
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 12px;
+}
+
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f6f9;
+  background-color: var(--bg);
   margin: 0;
   padding: 20px;
-  color: #333;
+  color: var(--text);
 }
 
 header {
