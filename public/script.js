@@ -312,7 +312,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const etatSelect = form.querySelector('select[name="etat"]');
         if (etatSelect) {
           etatSelect.addEventListener('change', (e) => {
-            div.dataset.etat = e.target.value || '';
+            const v = e.target.value || '';
+            div.dataset.etat = v;
+            div.style.backgroundColor = getColorByEtat(v);
             if (typeof filterBulles === 'function') filterBulles();
           });
         }
