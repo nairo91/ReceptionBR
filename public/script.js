@@ -40,6 +40,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatSelect = document.getElementById("export-format");
     const plan            = document.getElementById("plan");
     const bullesContainer = document.getElementById("bulles-container");
+    const statusFilter = document.getElementById("statusFilter");
+
+    // Fonction de filtrage des bulles selon l'état sélectionné
+    function filterBulles() {
+      const wanted = statusFilter?.value;
+      document.querySelectorAll("#bulles-container .bulle").forEach(div => {
+        if (!wanted || div.dataset.etat === wanted) {
+          div.style.display = "";
+        } else {
+          div.style.display = "none";
+        }
+      });
+    }
+
+    if (statusFilter) {
+      const saved = localStorage.getItem('rb_status_filter') || '';
+      statusFilter.value = saved;
+      statusFilter.addEventListener('change', () => {
+        localStorage.setItem('rb_status_filter', statusFilter.value);
+        filterBulles();
+      });
+    }
 
     // Boutons d'ajout visibles pour Jeremy Launay et Valentin Blot
     if (user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info'].includes(user.email)) {
@@ -201,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ? Math.max(...data.map(b => b.numero || 0)) + 1
             : 1;
           ajusterTailleBulles();
+          // Appliquer le filtre après chargement des bulles
+          if (typeof filterBulles === 'function') filterBulles();
         });
     }
 
@@ -221,6 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
       div.style.top = `${relY * 100}%`;
       div.innerText = bulle.numero;
       div.style.backgroundColor = getColorByEtat(bulle.etat);
+      // Stocker l'état pour faciliter le filtrage
+      div.dataset.etat = bulle.etat || '';
 
       div.onclick = function (event) {
         event.stopPropagation();
@@ -281,6 +307,15 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
         `;
+
+        // Refiltrer en live si l'état est modifié dans le formulaire
+        const etatSelect = form.querySelector('select[name="etat"]');
+        if (etatSelect) {
+          etatSelect.addEventListener('change', (e) => {
+            div.dataset.etat = e.target.value || '';
+            if (typeof filterBulles === 'function') filterBulles();
+          });
+        }
 
         const deleteBtn = form.querySelector('#deleteBtn');
         deleteBtn.onclick = () => confirmDelete(bulle);
