@@ -1,0 +1,9 @@
+.sidebar {
+  position: fixed; left:0; top:0; bottom:0;
+  width: 220px; padding:16px;
+  background:#0f172a; color:#fff;
+}
+.sidebar a { color:#fff; text-decoration:none; display:block; margin:6px 0; }
+.sidebar .brand { font-weight:700; margin-bottom:12px; }
+.sidebar .user { margin-bottom:12px; }
+body.with-sidebar { margin-left:220px; }
