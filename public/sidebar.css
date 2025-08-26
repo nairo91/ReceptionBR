@@ -2,8 +2,21 @@
   position: fixed; left:0; top:0; bottom:0;
   width: 220px; padding:16px;
   background:#0f172a; color:#fff;
+  z-index: 1000;
+  overflow: auto;
 }
 .sidebar a { color:#fff; text-decoration:none; display:block; margin:6px 0; }
 .sidebar .brand { font-weight:700; margin-bottom:12px; }
 .sidebar .user { margin-bottom:12px; }
+/* marge par défaut (écrans larges) */
 body.with-sidebar { margin-left:220px; }
+
+/* écrans moyens : marge un peu réduite */
+@media (max-width: 1280px) {
+  body.with-sidebar { margin-left:200px; }
+}
+
+/* écrans < 992px : pas de marge, contenu en pleine largeur */
+@media (max-width: 992px) {
+  body.with-sidebar { margin-left:0; }
+}
