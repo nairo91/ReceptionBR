@@ -857,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selected = getCheckedColumns();
 
         // Ordre lisible + "photos" toujours en dernier si cochée
-        const ORDER = ['created_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
+        const ORDER = ['created_by_email','modified_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
         let cols = ORDER.filter(c => selected.includes(c));
         if (selected.includes('photos')) {
           cols = cols.filter(c => c !== 'photos');
@@ -877,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const LABELS = {
           created_by_email:'Créé par',
+          modified_by_email:'Modifié par',
           etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
           intitule:'Intitulé', description:'Description', etat:'État',
           entreprise:'Entreprise', localisation:'Localisation',
@@ -887,6 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Largeurs de base (ajustées ensuite pour rentrer dans la page)
         const BASE = {
           created_by_email: 120,
+          modified_by_email: 120,
           etage: 50, chambre: 60, numero: 36, lot: 70,
           intitule: 140, description: 260, etat: 72,
           entreprise: 100, localisation: 120,
