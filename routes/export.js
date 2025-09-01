@@ -1,77 +1,33 @@
 const express = require('express');
 const router  = express.Router();
-const pool    = require('../db');
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const { selectBullesWithEmails } = require('./bullesSelect');
 
 router.get('/', async (req, res) => {
   // récupère les filtres chantier/étage/room
   const chantierFilter = req.query.chantier_id || '';
   const etageFilter = req.query.etage_id || '';
   const rawRoom  = req.query.room_id ?? req.query.chambre ?? '';
-  const roomId  = parseInt(rawRoom.replace(/\D/g,''), 10);
 
-  // Construire WHERE
-  const params = [];
-  const conds  = [];
-  if (chantierFilter) {
-    params.push(chantierFilter);
-    conds.push(`b.chantier_id = $${params.length}`);
-  }
-  if (etageFilter) {
-    params.push(etageFilter);
-    conds.push(`b.etage_id = $${params.length}`);
-  }
-  if (!isNaN(roomId)) {
-    params.push(roomId);
-    conds.push(`(b.chambre = $${params.length}::text OR
-               (b.chambre ~ '^[0-9]+$' AND (b.chambre)::int = $${params.length}))`);
-  }
-  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+  let rows = await selectBullesWithEmails({
+    chantier_id: chantierFilter,
+    etage_id: etageFilter,
+    chambre: rawRoom
+  });
 
-  // Récupérer * toutes * les colonnes et remonter les emails de créateur/modificateur
-  const sql = `
-    SELECT
-      b.*,
-      f.name AS etage,
-      COALESCE(r.name, b.chambre) AS chambre,
-      b.chambre AS chambre_id,
-      e.nom AS entreprise,
-      u1.email AS created_by_email,
-      u2.email AS modified_by,
-      pm.photos,
-      vm.videos
-    FROM bulles b
-    LEFT JOIN floors f ON b.etage_id = f.id
-    LEFT JOIN rooms r
-      ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
-    LEFT JOIN entreprises e ON b.entreprise_id = e.id
-    LEFT JOIN users u1 ON b.created_by = u1.id
-    LEFT JOIN users u2 ON b.modified_by = u2.id
-    LEFT JOIN (
-      SELECT bulle_id, json_agg(path) AS photos
-      FROM bulle_media WHERE type='photo'
-      GROUP BY bulle_id
-    ) pm ON pm.bulle_id = b.id
-    LEFT JOIN (
-      SELECT bulle_id, json_agg(path) AS videos
-      FROM bulle_media WHERE type='video'
-      GROUP BY bulle_id
-    ) vm ON vm.bulle_id = b.id
-    ${where}
-    ORDER BY b.id
-  `;
-  let { rows } = await pool.query(sql, params);
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const fullUrl = p => p && /^https?:\/\//.test(p) ? p : `${baseUrl}${p}`;
   rows = rows.map(r => {
-    const photoArr = Array.isArray(r.photos)
-      ? Array.from(new Set(r.photos)).map(fullUrl)
-      : [];
-    const videoArr = Array.isArray(r.videos)
-      ? Array.from(new Set(r.videos)).map(fullUrl)
-      : [];
+    const photos = [];
+    const videos = [];
+    for (const m of r.media || []) {
+      if (m.type === 'photo') photos.push(m.path);
+      if (m.type === 'video') videos.push(m.path);
+    }
+    const photoArr = Array.from(new Set(photos)).map(fullUrl);
+    const videoArr = Array.from(new Set(videos)).map(fullUrl);
     return {
       ...r,
       photo: fullUrl(r.photo),
@@ -79,11 +35,12 @@ router.get('/', async (req, res) => {
       videos: videoArr
     };
   });
+  rows.forEach(r => delete r.media);
 
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
   // On retire les identifiants numériques inutiles
-  cols = cols.filter(c => c !== 'created_by');
+  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
   if (rows[0] && rows[0].photos !== undefined && !cols.includes('photos')) {
     cols.push('photos');
   }
@@ -106,7 +63,7 @@ router.get('/', async (req, res) => {
     'entreprise',
     'localisation',
     'created_by_email',
-    'modified_by'
+    'modified_by_email'
   ];
   // On filtre pour ne garder que celles qui existent encore dans cols
   const head = desiredOrder.filter(c => cols.includes(c));

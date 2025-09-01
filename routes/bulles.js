@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 const { Parser } = require("json2csv");
 const upload = require('../middlewares/upload');
+const { selectBullesWithEmails } = require("./bullesSelect");
 
 // Middleware d'authentification désactivé (dev)
 function isAuthenticated(req, res, next) {
@@ -64,48 +65,13 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
 
 // GET bulles
 router.get("/", async (req, res) => {
-  const { chantier_id, etage_id, chambre } = req.query;
-  const params = [];
-  const conds = [];
-  if (chantier_id) { params.push(chantier_id); conds.push(`b.chantier_id = $${params.length}`); }
-  if (etage_id) { params.push(etage_id); conds.push(`b.etage_id = $${params.length}`); }
-  if (chambre && chambre !== 'total') {
-    params.push(chambre);
-    conds.push(`(b.chambre = $${params.length} OR
-               (b.chambre ~ '^[0-9]+$' AND (b.chambre)::int = $${params.length}::int))`);
+  try {
+    const rows = await selectBullesWithEmails(req.query);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur récupération bulles" });
   }
-  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
-  const result = await pool.query(
-    `SELECT
-       b.*,
-       e.nom  AS entreprise,
-       f.name AS etage,
-       r.name AS chambre,
-       b.chambre AS chambre_id,
-       COALESCE(mm.media, '[]') AS media
-     FROM bulles b
-     LEFT JOIN entreprises e ON b.entreprise_id = e.id
-     LEFT JOIN floors f       ON b.etage_id       = f.id
-     LEFT JOIN rooms r
-       ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
-     LEFT JOIN (
-       SELECT bulle_id,
-              json_agg(json_build_object('type', type, 'path', path) ORDER BY created_at) AS media
-       FROM bulle_media
-       GROUP BY bulle_id
-     ) mm ON mm.bulle_id = b.id
-     ${where}
-     ORDER BY b.id`,
-    params
-  );
-  // pour chaque bulle, on dé-dup les médias par URL
-  const deduped = result.rows.map(b => ({
-    ...b,
-    media: Array.from(
-      new Map((b.media || []).map(m => [m.path, m])).values()
-    )
-  }));
-  res.json(deduped);
 });
 
 // DELETE bulle (sans authentification)
