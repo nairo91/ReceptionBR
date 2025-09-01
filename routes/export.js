@@ -41,6 +41,13 @@ router.get('/', async (req, res) => {
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
   // On retire les identifiants numériques inutiles
   cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
+
+  // Rétro-compatibilité : si le client envoie "modified_by", on mappe vers "modified_by_email"
+  if (req.query.columns) {
+    let sel = Array.isArray(req.query.columns) ? req.query.columns.slice() : [req.query.columns];
+    sel = sel.map(c => c === 'modified_by' ? 'modified_by_email' : c);
+    cols = sel.filter(c => cols.includes(c)).length ? sel.filter(c => cols.includes(c)) : cols;
+  }
   if (rows[0] && rows[0].photos !== undefined && !cols.includes('photos')) {
     cols.push('photos');
   }
