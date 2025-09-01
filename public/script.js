@@ -64,15 +64,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---------------- PDF EXPORT HELPERS ----------------
-    // Colonnes cochées (comme pour l’export Excel)
+    // Colonnes cochées (retourne les valeurs cochées)
     function getCheckedColumns() {
       return Array.from(
         document.querySelectorAll('#export-columns input[type="checkbox"]:checked')
-      ).map(i => i.value);
+      ).map(cb => cb.value);
     }
 
-    // Image -> DataURL (CORS safe)
-    function imageUrlToDataURL(url, maxWidth = 180) {
+    // Image -> DataURL (CORS safe, https forced)
+    function imageUrlToDataURL(url, maxWidth = 220) {
+      url = (url || '').replace(/^http:\/\//, 'https://');
       return new Promise((resolve) => {
         const img = new Image();
         img.referrerPolicy = 'no-referrer';
@@ -85,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.7)); // qualité 70%
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
         img.onerror = () => resolve(null);
         img.src = url;
@@ -811,120 +812,27 @@ document.addEventListener('DOMContentLoaded', () => {
         let url = `/api/bulles?chantier_id=${chantierSelect.value}&etage_id=${etageSelect.value}`;
         if (chambreSelect.value !== 'total') url += `&chambre=${chambreSelect.value}`;
         const data = await fetch(url, { credentials:'include' }).then(r => r.json());
-        const cols = getCheckedColumns(); // inclut 'photos' et 'videos' si cochés
-
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-          alert('Export PDF indisponible (librairies non chargées)');
-          return;
-        }
+        const selectedCols = getCheckedColumns();
+        const ORDER = ['id','created_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
+        let cols = ORDER.filter(c => selectedCols.includes(c));
+        if (selectedCols.includes('photos')) { cols = cols.filter(c => c !== 'photos'); cols.push('photos'); }
+        if (!window.jspdf || !window.jspdf.jsPDF) { alert('Export PDF indisponible (librairies non chargées)'); return; }
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ unit:'pt', format:'a4' });
+        const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
         const margin = 24;
-
-        // libellés et largeurs fixes
-        const labels = {
-          id:'ID', created_by_email:'Créé par', etage:'Étage', chambre:'Chambre',
-          numero:'N°', lot:'Lot', intitule:'Intitulé', description:'Description',
-          etat:'État', entreprise:'Entreprise', localisation:'Localisation',
-          observation:'Observation', date_butoir:'Date butoir',
-          photos:'Photos', videos:'Vidéos'
-        };
-        const colW = {
-          id:30, created_by_email:120, etage:40, chambre:56, numero:30, lot:46,
-          intitule:120, description:160, etat:54, entreprise:90, localisation:110,
-          observation:140, date_butoir:80, photos:150, videos:60
-        };
-        const columnStyles = {};
-        cols.forEach((c, i) => {
-          columnStyles[i] = { cellWidth: colW[c] || 90, overflow:'linebreak', valign:'top' };
-        });
-
-        // troncature douce
-        const MAX_CELL = 120;
-        const softText = v => {
-          const s = (v ?? '').toString().replace(/\s+/g,' ').trim();
-          return s.length > MAX_CELL ? s.slice(0, MAX_CELL) + '…' : s;
-        };
-
-        // vignettes photos (max 3) & nombre de vidéos
-        const THUMB_W = 42, THUMB_H = 28, THUMB_GAP = 4, MAX_THUMBS = 3;
-        const photoThumbsPerRow = await Promise.all(data.map(async b => {
-          const photos = Array.isArray(b.media) ? b.media.filter(m=>m.type==='photo') : [];
-          const subset = photos.slice(0, MAX_THUMBS);
-          const urls  = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
-          return urls.filter(Boolean);
-        }));
-        const videosCount = data.map(b =>
-          Array.isArray(b.media) ? b.media.filter(m => m.type !== 'photo').length : 0
-        );
-
-        // table : pas d’URL brute, PHOTOS remplies via didDrawCell
-        const head = [cols.map(c => labels[c] || c.toUpperCase())];
-        const body = data.map((b, idx) => cols.map(c => {
-          if (c === 'photos') {
-            const n = photoThumbsPerRow[idx]?.length || 0;
-            return n ? ' ' : '—';
-          }
-          if (c === 'videos') {
-            const n = videosCount[idx] || 0;
-            return n ? `🎬 x${n}` : '—';
-          }
-          return softText(b[c]);
-        }));
-
-        // en-tête
+        const LABELS = { id:'ID', created_by_email:'Créé par', etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot', intitule:'Intitulé', description:'Description', etat:'État', entreprise:'Entreprise', localisation:'Localisation', observation:'Observation', date_butoir:'Date butoir', photos:'Photos' };
+        const WIDTHS = { id:40, created_by_email:120, etage:50, chambre:60, numero:36, lot:70, intitule:140, description:240, etat:64, entreprise:90, localisation:120, observation:140, date_butoir:86, photos:190 };
+        const columnStyles = {}; cols.forEach((c,i)=>{ columnStyles[i]={ cellWidth: WIDTHS[c] }; });
+        function formatValue(row,c){ if(c==='created_by_email'){ return row.created_by_email || (row.created_by && (row.created_by.email || row.created_by)) || ''; } let v=((row[c] ?? '')+'').replace(/\s+/g,' ').trim(); const max=c==='description'?300:120; if(v.length>max) v=v.slice(0,max)+'…'; return v; }
+        const photoThumbsPerRow = await Promise.all(data.map(async b => { const photos = Array.isArray(b.media) ? b.media.filter(m=>m.type==='photo') : []; const subset = photos.slice(0,3); const urls = await Promise.all(subset.map(p=>imageUrlToDataURL(p.path,220))); return urls.filter(Boolean); }));
+        const head = [cols.map(c=>LABELS[c] || c.toUpperCase())];
+        const body = data.map((row,idx)=>cols.map(c=> c==='photos' ? (photoThumbsPerRow[idx].length ? ' ' : '—') : formatValue(row,c)));
         doc.setFontSize(12);
         const chantierNom = chantierSelect.options[chantierSelect.selectedIndex]?.text || chantierSelect.value;
-        doc.text(
-          `Export bulles — Chantier: ${chantierNom} — Étage: ${etageSelect.value} — Chambre: ${chambreSelect.value}`,
-          margin, margin
-        );
-
-        // table
-        doc.autoTable({
-          head, body,
-          startY: margin + 14,
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 9, cellPadding: 4, lineColor: [230,230,230], lineWidth: 0.2 },
-          headStyles: { fillColor: [15,23,42], textColor: 255, halign:'center' },
-          columnStyles,
-          didParseCell: (hook) => {
-            hook.cell.styles.wordBreak = 'break-word';
-            const colName = cols[hook.column.index];
-            if (hook.section === 'body' && colName === 'photos') {
-              hook.cell.height = Math.max(hook.cell.height, THUMB_H + 8); // place pour vignettes
-            }
-          },
-          didDrawCell: (hook) => {
-            if (hook.section !== 'body') return;
-            const colName = cols[hook.column.index];
-            if (colName !== 'photos') return;
-            const rowIndex = hook.row.index;
-            const thumbs = photoThumbsPerRow[rowIndex] || [];
-            if (!thumbs.length) return;
-
-            const { x, y, height } = hook.cell;
-            let cx = x + 4;
-            const cy = y + (height - THUMB_H) / 2;
-            thumbs.slice(0, MAX_THUMBS).forEach(d => {
-              try { doc.addImage(d, 'JPEG', cx, cy, THUMB_W, THUMB_H); } catch(_) {}
-              cx += THUMB_W + THUMB_GAP;
-            });
-            hook.cell.text = []; // pas de texte dans la cellule photo
-          }
-        });
-
-        // pied de page
+        doc.text(`Export bulles — Chantier: ${chantierNom} — Étage: ${etageSelect.value} — Chambre: ${chambreSelect.value}`, margin, margin);
+        doc.autoTable({ head, body, startY: margin + 14, margin:{ left:margin, right:margin }, styles:{ fontSize:9, cellPadding:4, overflow:'linebreak', lineColor:[230,230,230], lineWidth:0.2 }, headStyles:{ fillColor:[15,23,42], textColor:255, halign:'center' }, columnStyles, didParseCell:(h)=>{ const colName=cols[h.column.index]; if(h.section==='body' && colName==='photos'){ h.cell.height=Math.max(h.cell.height,36+8); } }, didDrawCell:(h)=>{ if(h.section!=='body') return; const colName=cols[h.column.index]; if(colName!=='photos') return; const thumbs=photoThumbsPerRow[h.row.index]||[]; if(!thumbs.length) return; const {x,y,height}=h.cell; thumbs.forEach((d,i)=>{ const dx=x+4+i*(36+6); const dy=y+(height-24)/2; try{ doc.addImage(d,'JPEG',dx,dy,36,24);}catch(_){}}); h.cell.text=[]; } });
         const pageCount = doc.getNumberOfPages();
-        for (let i=1; i<=pageCount; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, doc.internal.pageSize.getHeight() - 10, { align:'right' });
-        }
-
-        // IMPORTANT : Supprimer toute ancienne "galerie de photos en bas" (drawPhotoGrid etc.)
-        // => retire le code qui dessinait des images après la table PDF.
-
+        for (let i=1; i<=pageCount; i++) { doc.setPage(i); doc.setFontSize(8); doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, doc.internal.pageSize.getHeight() - 10, { align:'right' }); }
         doc.save('export_bulles_' + new Date().toISOString().slice(0,10) + '.pdf');
       };
 
