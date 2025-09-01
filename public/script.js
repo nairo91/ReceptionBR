@@ -64,17 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---------------- PDF EXPORT HELPERS ----------------
-    // Colonnes cochées (retourne les valeurs cochées)
+    // Colonnes cochées
     function getCheckedColumns() {
-      return Array.from(
-        document.querySelectorAll('#export-columns input[type="checkbox"]:checked')
-      ).map(cb => cb.value);
+      return Array.from(document.querySelectorAll('#export-columns input[type="checkbox"]:checked')).map(cb => cb.value);
     }
 
-    // Image -> DataURL (CORS safe, https forced)
-    function imageUrlToDataURL(url, maxWidth = 220) {
+    // Image -> DataURL (CORS safe, force https)
+    async function imageUrlToDataURL(url, maxWidth = 220) {
       url = (url || '').replace(/^http:\/\//, 'https://');
-      return new Promise((resolve) => {
+      return await new Promise(resolve => {
         const img = new Image();
         img.referrerPolicy = 'no-referrer';
         img.crossOrigin = 'anonymous';
@@ -91,6 +89,47 @@ document.addEventListener('DOMContentLoaded', () => {
         img.onerror = () => resolve(null);
         img.src = url;
       });
+    }
+
+    // Calcule des largeurs de colonnes adaptées à la page
+    function computeColumnStyles(cols, baseWidths, pageWidth, marginLeft, marginRight, minW = 36) {
+      const available = pageWidth - marginLeft - marginRight;
+      const base = cols.map(c => baseWidths[c] ?? 90);
+      let sum = base.reduce((a,b)=>a+b,0);
+
+      // Toujours garder "Photos" en dernier (si présente)
+      // (c’est géré dans la construction de "cols" plus bas)
+
+      // Si ça dépasse, on scale uniformément mais en respectant un minimum
+      if (sum > available) {
+        const scale = available / sum;
+        for (let i=0;i<base.length;i++) base[i] = Math.max(minW, Math.floor(base[i]*scale));
+        sum = base.reduce((a,b)=>a+b,0);
+        // Si malgré tout ça dépasse encore (beaucoup de colonnes), on réitère en forçant le min
+        if (sum > available) {
+          const overflow = sum - available;
+          // Retire quelques pixels proportionnellement
+          const k = overflow / base.length;
+          for (let i=0;i<base.length;i++) base[i] = Math.max(minW, base[i] - Math.ceil(k));
+        }
+      }
+
+      const columnStyles = {};
+      cols.forEach((c, i) => { columnStyles[i] = { cellWidth: base[i] }; });
+      return columnStyles;
+    }
+
+    // Normalise "Créé par" en email
+    function resolveCreatedBy(row) {
+      return row.created_by_email
+          || (row.created_by && (row.created_by.email || (''+row.created_by)))
+          || '—';
+    }
+
+    // Texte adouci avec wrap
+    function softText(v, max = 300) {
+      const s = (v ?? '').toString().replace(/\s+/g, ' ').trim();
+      return s.length > max ? s.slice(0, max) + '…' : s;
     }
 
     // Boutons d'ajout visibles pour Jeremy Launay et Valentin Blot
@@ -800,7 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const params = new URLSearchParams();
           params.set('chantier_id', chantierSelect.value);
           params.set('etage_id',    etageSelect.value);
-          params.set('chambre',      chambreSelect.value);
+          params.set('chambre',     chambreSelect.value);
           params.set('format',      fmt);
           document.querySelectorAll('#export-columns input[name="col"]:checked')
             .forEach(cb => params.append('columns', cb.value));
@@ -808,31 +847,133 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        // --- PDF ---
-        let url = `/api/bulles?chantier_id=${chantierSelect.value}&etage_id=${etageSelect.value}`;
+        // ---- PDF ----
+        const chantierId = chantierSelect.value;
+        const etageId    = etageSelect.value;
+        let url = `/api/bulles?chantier_id=${chantierId}&etage_id=${etageId}`;
         if (chambreSelect.value !== 'total') url += `&chambre=${chambreSelect.value}`;
         const data = await fetch(url, { credentials:'include' }).then(r => r.json());
-        const selectedCols = getCheckedColumns();
-        const ORDER = ['id','created_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
-        let cols = ORDER.filter(c => selectedCols.includes(c));
-        if (selectedCols.includes('photos')) { cols = cols.filter(c => c !== 'photos'); cols.push('photos'); }
-        if (!window.jspdf || !window.jspdf.jsPDF) { alert('Export PDF indisponible (librairies non chargées)'); return; }
+
+        const selected = getCheckedColumns();
+
+        // Ordre lisible + "photos" toujours en dernier si cochée
+        const ORDER = ['created_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
+        let cols = ORDER.filter(c => selected.includes(c));
+        if (selected.includes('photos')) {
+          cols = cols.filter(c => c !== 'photos');
+          cols.push('photos');
+        }
+
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+          alert('Export PDF indisponible (librairies non chargées)');
+          return;
+        }
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
         const margin = 24;
-        const LABELS = { id:'ID', created_by_email:'Créé par', etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot', intitule:'Intitulé', description:'Description', etat:'État', entreprise:'Entreprise', localisation:'Localisation', observation:'Observation', date_butoir:'Date butoir', photos:'Photos' };
-        const WIDTHS = { id:40, created_by_email:120, etage:50, chambre:60, numero:36, lot:70, intitule:140, description:240, etat:64, entreprise:90, localisation:120, observation:140, date_butoir:86, photos:190 };
-        const columnStyles = {}; cols.forEach((c,i)=>{ columnStyles[i]={ cellWidth: WIDTHS[c] }; });
-        function formatValue(row,c){ if(c==='created_by_email'){ return row.created_by_email || (row.created_by && (row.created_by.email || row.created_by)) || ''; } let v=((row[c] ?? '')+'').replace(/\s+/g,' ').trim(); const max=c==='description'?300:120; if(v.length>max) v=v.slice(0,max)+'…'; return v; }
-        const photoThumbsPerRow = await Promise.all(data.map(async b => { const photos = Array.isArray(b.media) ? b.media.filter(m=>m.type==='photo') : []; const subset = photos.slice(0,3); const urls = await Promise.all(subset.map(p=>imageUrlToDataURL(p.path,220))); return urls.filter(Boolean); }));
-        const head = [cols.map(c=>LABELS[c] || c.toUpperCase())];
-        const body = data.map((row,idx)=>cols.map(c=> c==='photos' ? (photoThumbsPerRow[idx].length ? ' ' : '—') : formatValue(row,c)));
+
+        const LABELS = {
+          created_by_email:'Créé par',
+          etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
+          intitule:'Intitulé', description:'Description', etat:'État',
+          entreprise:'Entreprise', localisation:'Localisation',
+          observation:'Observation', date_butoir:'Date butoir',
+          photos:'Photos'
+        };
+
+        // Largeurs de base (ajustées ensuite pour rentrer dans la page)
+        const BASE = {
+          created_by_email: 120,
+          etage: 50, chambre: 60, numero: 36, lot: 70,
+          intitule: 140, description: 260, etat: 72,
+          entreprise: 100, localisation: 120,
+          observation: 160, date_butoir: 86,
+          photos: 200
+        };
+
+        // Prépare les vignettes photos (max 3)
+        const photoThumbsPerRow = await Promise.all(
+          data.map(async b => {
+            const photos = Array.isArray(b.media) ? b.media.filter(m => m.type === 'photo') : [];
+            const subset = photos.slice(0, 3);
+            const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
+            return urls.filter(Boolean);
+          })
+        );
+
+        // Datasource table
+        const head = [cols.map(c => LABELS[c] || c.toUpperCase())];
+        const body = data.map((row, idx) => cols.map(c => {
+          if (c === 'photos') {
+            return (photoThumbsPerRow[idx].length ? ' ' : '—');
+          }
+          if (c === 'created_by_email') {
+            return resolveCreatedBy(row);
+          }
+          return softText(row[c], c === 'description' ? 500 : 220);
+        }));
+
+        // Styles & largeurs ajustées pour tenir dans la page
+        const columnStyles = computeColumnStyles(cols, BASE, pageW, margin, margin, 36);
+
+        // Titre
         doc.setFontSize(12);
         const chantierNom = chantierSelect.options[chantierSelect.selectedIndex]?.text || chantierSelect.value;
         doc.text(`Export bulles — Chantier: ${chantierNom} — Étage: ${etageSelect.value} — Chambre: ${chambreSelect.value}`, margin, margin);
-        doc.autoTable({ head, body, startY: margin + 14, margin:{ left:margin, right:margin }, styles:{ fontSize:9, cellPadding:4, overflow:'linebreak', lineColor:[230,230,230], lineWidth:0.2 }, headStyles:{ fillColor:[15,23,42], textColor:255, halign:'center' }, columnStyles, didParseCell:(h)=>{ const colName=cols[h.column.index]; if(h.section==='body' && colName==='photos'){ h.cell.height=Math.max(h.cell.height,36+8); } }, didDrawCell:(h)=>{ if(h.section!=='body') return; const colName=cols[h.column.index]; if(colName!=='photos') return; const thumbs=photoThumbsPerRow[h.row.index]||[]; if(!thumbs.length) return; const {x,y,height}=h.cell; thumbs.forEach((d,i)=>{ const dx=x+4+i*(36+6); const dy=y+(height-24)/2; try{ doc.addImage(d,'JPEG',dx,dy,36,24);}catch(_){}}); h.cell.text=[]; } });
+
+        // Table
+        doc.autoTable({
+          head, body,
+          startY: margin + 14,
+          margin: { left: margin, right: margin },
+          tableWidth: 'wrap',
+          styles: {
+            fontSize: 9,
+            cellPadding: 4,
+            overflow: 'linebreak',
+            lineColor: [230,230,230],
+            lineWidth: 0.2,
+            valign: 'top'
+          },
+          headStyles: { fillColor: [15,23,42], textColor: 255, halign: 'center' },
+          columnStyles,
+          rowPageBreak: 'avoid',
+          didParseCell: (h) => {
+            const colName = cols[h.column.index];
+            if (h.section === 'body' && colName === 'photos') {
+              // hauteur mini pour cas avec vignettes
+              h.cell.height = Math.max(h.cell.height, 28 + 8);
+            }
+          },
+          didDrawCell: (h) => {
+            if (h.section !== 'body') return;
+            const colName = cols[h.column.index];
+            if (colName !== 'photos') return;
+            const thumbs = photoThumbsPerRow[h.row.index] || [];
+            if (!thumbs.length) return;
+            const { x, y, height } = h.cell;
+            const W = 34, H = 22, GAP = 6;
+            let cx = x + 4;
+            const cy = y + (height - H) / 2;
+            thumbs.forEach((d) => {
+              try { doc.addImage(d, 'JPEG', cx, cy, W, H); } catch(_){ }
+              cx += W + GAP;
+            });
+            h.cell.text = []; // pas de texte dans la cellule
+          }
+        });
+
+        // Pied de page
         const pageCount = doc.getNumberOfPages();
-        for (let i=1; i<=pageCount; i++) { doc.setPage(i); doc.setFontSize(8); doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() - margin, doc.internal.pageSize.getHeight() - 10, { align:'right' }); }
+        for (let i=1; i<=pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.text(`${i} / ${pageCount}`, pageW - margin, pageH - 10, { align: 'right' });
+        }
+
         doc.save('export_bulles_' + new Date().toISOString().slice(0,10) + '.pdf');
       };
 
