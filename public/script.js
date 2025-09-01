@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Normalise "Créé par" vers un email lisible
     function resolveCreatedBy(row){
       return row?.created_by_email
-          || (row?.created_by && (row.created_by.email || (''+row.created_by)))
+          || row?.created_by?.email
           || '—';
     }
 
@@ -908,12 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const head = [cols.map(c => LABELS[c] || c.toUpperCase())];
         const body = data.map((row, idx) => cols.map(c => {
           if (c === 'photos') return (photoThumbsPerRow[idx].length ? ' ' : '—');
-          if (c === 'created_by_email') {
-            // Toujours forcer l'email même si "created_by" est un ID
-            return row.created_by_email
-              || (row.created_by && row.created_by.email)
-              || '—';
-          }
+          if (c === 'created_by_email') return resolveCreatedBy(row);
           return softText(row[c], c === 'description' ? 500 : 220);
         }));
 
