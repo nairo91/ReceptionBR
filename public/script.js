@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatSelect = document.getElementById("export-format");
     const plan            = document.getElementById("plan");
     const bullesContainer = document.getElementById("bulles-container");
-    const statusFilter = document.getElementById("statusFilter");
+    const statusFilter    = document.getElementById("statusFilter");
 
     // Fonction de filtrage des bulles selon l'état sélectionné
     function filterBulles() {
@@ -61,6 +61,66 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('rb_status_filter', statusFilter.value);
         filterBulles();
       });
+    }
+
+    // ---------------- PDF EXPORT HELPERS ----------------
+    // Colonnes cochées (comme pour l’export Excel)
+    function getCheckedColumns() {
+      return Array.from(
+        document.querySelectorAll('#export-columns input[type="checkbox"]:checked')
+      ).map(i => i.value);
+    }
+
+    // Convertir une image Cloudinary en DataURL (pour PDF)
+    function imageUrlToDataURL(url, maxWidth = 180) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.naturalWidth);
+          const w = Math.round(img.naturalWidth * scale);
+          const h = Math.round(img.naturalHeight * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    // Dessiner une grille de photos dans le PDF
+    function drawPhotoGrid(doc, dataUrls, startY = 20) {
+      const pageW   = doc.internal.pageSize.getWidth();
+      const margin  = 14;
+      const colW    = 60;
+      const rowH    = 60;
+      const gap     = 8;
+      const perRow  = Math.max(1, Math.floor((pageW - margin * 2 + gap) / (colW + gap)));
+      let x = margin, y = startY, col = 0;
+      dataUrls.forEach((d) => {
+        if (!d) return;
+        if (y + rowH > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage();
+          x = margin;
+          y = margin;
+          col = 0;
+        }
+        try { doc.addImage(d, 'JPEG', x, y, colW, rowH); } catch(_) {}
+        col++;
+        if (col >= perRow) {
+          col = 0;
+          x = margin;
+          y += rowH + gap;
+        } else {
+          x += colW + gap;
+        }
+      });
+      return y + rowH;
     }
 
     // Boutons d'ajout visibles pour Jeremy Launay et Valentin Blot
@@ -764,17 +824,86 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBulles();
     };
     chambreSelect.onchange = loadBulles;
-    exportBtn.onclick = () => {
-      const params = new URLSearchParams();
-      params.set('chantier_id', chantierSelect.value);
-      params.set('etage_id',    etageSelect.value);
-      params.set('chambre',      chambreSelect.value);
-      params.set('format',      formatSelect.value);
+    exportBtn.onclick = async () => {
+      const fmt = (formatSelect.value || 'csv').toLowerCase();
+      if (fmt !== 'pdf') {
+        const params = new URLSearchParams();
+        params.set('chantier_id', chantierSelect.value);
+        params.set('etage_id',    etageSelect.value);
+        params.set('chambre',      chambreSelect.value);
+        params.set('format',      fmt);
 
-      document.querySelectorAll('#export-columns input[name="col"]:checked')
-        .forEach(cb => params.append('columns', cb.value));
+        document.querySelectorAll('#export-columns input[name="col"]:checked')
+          .forEach(cb => params.append('columns', cb.value));
 
-      window.open(`/api/bulles/export?${params.toString()}`, '_blank');
+        window.open(`/api/bulles/export?${params.toString()}`, '_blank');
+        return;
+      }
+
+      // --- Récupérer les données et colonnes sélectionnées ---
+      const chantierId = chantierSelect.value;
+      const etageId    = etageSelect.value;
+      let url = `/api/bulles?chantier_id=${chantierId}&etage_id=${etageId}`;
+      if (chambreSelect.value !== 'total') {
+        url += `&chambre=${chambreSelect.value}`;
+      }
+      const data = await fetch(url, { credentials: 'include' }).then(r => r.json());
+      const cols = getCheckedColumns();
+
+      // --- Générer le PDF ---
+      const { jsPDF } = window.jspdf || {};
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      doc.setFontSize(12);
+      doc.text(
+        `Export bulles — Chantier: ${chantierSelect.options[chantierSelect.selectedIndex]?.text || chantierSelect.value} — ` +
+        `Étage: ${etageSelect.value} — Chambre: ${chambreSelect.value}`,
+        14, 16
+      );
+
+      // Table récapitulant les colonnes sélectionnées
+      const head = [cols.map(c => c.toUpperCase())];
+      const rows = data.map(row => cols.map(c => {
+        if (c === 'photos' || c === 'videos') {
+          const arr = Array.isArray(row.media)
+            ? row.media.filter(m => (c === 'photos' ? m.type === 'photo' : m.type !== 'photo'))
+            : [];
+          return arr.map(m => m.path).join('\n');
+        }
+        return (row[c] ?? '').toString();
+      }));
+      if (doc.autoTable) {
+        doc.autoTable({
+          head,
+          body: rows,
+          styles: { fontSize: 8, cellPadding: 3 },
+          headStyles: { fillColor: [15, 23, 42], textColor: 255 },
+          startY: 32,
+          margin: { left: 14, right: 14 }
+        });
+      }
+
+      // Section photos : pour chaque bulle
+      let y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 16 : 40;
+      const margin = 14;
+      for (let i = 0; i < data.length; i++) {
+        const b = data[i];
+        const photos = Array.isArray(b.media) ? b.media.filter(m => m.type === 'photo') : [];
+        if (!photos.length) continue;
+        if (y + 24 > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.setFontSize(11);
+        doc.text(`Bulle ${b.numero || ''} — ${b.intitule || ''}`, margin, y);
+        y += 10;
+        const MAX_PHOTOS = 24; // limite pour éviter un PDF trop lourd
+        const subset = photos.slice(0, MAX_PHOTOS);
+        const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 180)));
+        y = drawPhotoGrid(doc, urls, y + 4);
+      }
+      // Enregistrer
+      const filename = 'export_bulles_' + new Date().toISOString().slice(0, 10) + '.pdf';
+      doc.save(filename);
     };
 
     window.addEventListener('resize', ajusterTailleBulles);
