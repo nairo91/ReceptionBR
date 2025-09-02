@@ -597,7 +597,7 @@ const CURRENT_CHANTIER_ID = 2;
 
 window.addEventListener('DOMContentLoaded', async () => {
   const adminBtn = document.getElementById('adminBtn');
-  const adminEmails = ['blot.valentin@batirenov.info', 'launay.jeremy@batirenov.info'];
+  const adminEmails = ['blot.valentin@batirenov.info', 'launay.jeremy@batirenov.info', 'athari.keivan@batirenov.info'];
   (async () => {
     try {
       const meRes = await fetch('/api/auth/me', { credentials: 'include' });
