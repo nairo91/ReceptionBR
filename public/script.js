@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
             }
           }).join('') : ''}
-          <fieldset class="section-levee" style="margin-top:8px;">
+          <fieldset class="section-levee">
             <legend>Levée</legend>
             <label>Fait par :
               <input type="text" name="levee_fait_par_email" value="${user?.email || bulle.levee_fait_par_email || ''}" readonly>
@@ -752,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
         <input type="file" name="media" multiple accept="image/*,video/*" /><br>
-        <fieldset class="section-levee" style="margin-top:8px;">
+        <fieldset class="section-levee">
           <legend>Levée</legend>
           <label>Fait par :
             <input type="text" name="levee_fait_par_email" value="${user?.email || ''}" readonly>

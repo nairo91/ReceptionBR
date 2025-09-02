@@ -319,3 +319,18 @@ button:hover {
   }
 
 }
+
+:root { --card-bg:#f8fafc; --card-border:#e2e8f0; }
+html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.06); --card-border:#334155; }
+.section-levee{ border:1px solid var(--card-border); border-radius:8px; padding:8px; background:var(--card-bg); margin-top:8px; color:inherit; }
+.section-levee input, .section-levee textarea, .section-levee select{ background:transparent; color:inherit; border:1px solid var(--card-border); }
+
+.section-levee legend { font-weight: 600; margin-bottom: 6px; }
+.section-levee input, .section-levee textarea, .section-levee select { width: 100%; }
+.section-levee input::placeholder, .section-levee textarea::placeholder {
+  color: inherit; opacity: .7;
+}
+.section-levee input:focus, .section-levee textarea:focus, .section-levee select:focus {
+  outline: none; box-shadow: 0 0 0 2px var(--card-border);
+}
+
