@@ -382,8 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }).join('') : ''}
           <fieldset class="section-levee" style="margin-top:8px;">
             <legend>Levée</legend>
-            <div>Fait par : <strong>${user?.email || (bulle.levee_fait_par_email || '—')}</strong></div>
-            <input type="hidden" name="levee_fait_par" value="${user?.id || ''}">
+            <label>Fait par :
+              <input type="text" name="levee_fait_par_email" value="${user?.email || bulle.levee_fait_par_email || ''}" readonly>
+            </label><br>
             <label>Fait le :
               <input type="date" name="levee_fait_le" value="${bulle.levee_fait_le ? bulle.levee_fait_le.substring(0,10) : ''}">
             </label><br>
@@ -751,6 +752,21 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
         <input type="file" name="media" multiple accept="image/*,video/*" /><br>
+        <fieldset class="section-levee" style="margin-top:8px;">
+          <legend>Levée</legend>
+          <label>Fait par :
+            <input type="text" name="levee_fait_par_email" value="${user?.email || ''}" readonly>
+          </label><br>
+          <label>Fait le :
+            <input type="date" name="levee_fait_le">
+          </label><br>
+          <label>Commentaire levée :
+            <textarea name="levee_commentaire" placeholder="Commentaire"></textarea>
+          </label><br>
+          <label>Photo Levée :
+            <input type="file" name="levee_media" multiple accept="image/*">
+          </label>
+        </fieldset>
         <button type="submit">✅ Ajouter</button>
         <button type="button" onclick="closePopups()">Annuler</button>
       `;

@@ -66,6 +66,12 @@ router.get('/', async (req, res) => {
   // --- BEGIN : Réordonnage fixe des colonnes ---
   // On veut d'abord ces colonnes dans cet ordre :
   const desiredOrder = [
+    'created_by_email',
+    'modified_by_email',
+    'levee_fait_par_email',
+    'levee_fait_le',
+    'levee_commentaire',
+    'levee_photos',
     'etage',
     'chambre',
     'numero',
@@ -76,13 +82,7 @@ router.get('/', async (req, res) => {
     'etat',
     'lot',
     'entreprise',
-    'localisation',
-    'created_by_email',
-    'modified_by_email',
-    'levee_fait_par_email',
-    'levee_fait_le',
-    'levee_commentaire',
-    'levee_photos'
+    'localisation'
   ];
   // On filtre pour ne garder que celles qui existent encore dans cols
   const head = desiredOrder.filter(c => cols.includes(c));
