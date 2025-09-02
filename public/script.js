@@ -897,17 +897,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const selected = getCheckedColumns();
 
-        // Ordre lisible + "photos" toujours en dernier si cochée
-        const ORDER = ['created_by_email','modified_by_email','levee_fait_par_email','levee_fait_le','levee_commentaire','levee_photos','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
+        // Ordre: Photos juste avant le bloc Levée ; Levée = Fait par, Commentaire, (puis Photos de levée)
+        const ORDER = [
+          'created_by_email','modified_by_email',
+          'etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir',
+          'photos',
+          'levee_fait_par_email','levee_commentaire','levee_photos','levee_fait_le'
+        ];
         let cols = ORDER.filter(c => selected.includes(c));
-        if (selected.includes('levee_photos')) {
-          cols = cols.filter(c => c !== 'levee_photos');
-          cols.push('levee_photos');
-        }
-        if (selected.includes('photos')) {
-          cols = cols.filter(c => c !== 'photos');
-          cols.push('photos');
-        }
+        // On impose l’ordre exact défini ci-dessus, sans repousser "photos" en dernier
 
         if (!window.jspdf || !window.jspdf.jsPDF) {
           alert('Export PDF indisponible (librairies non chargées)');

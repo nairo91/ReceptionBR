@@ -66,23 +66,11 @@ router.get('/', async (req, res) => {
   // --- BEGIN : Réordonnage fixe des colonnes ---
   // On veut d'abord ces colonnes dans cet ordre :
   const desiredOrder = [
-    'created_by_email',
-    'modified_by_email',
-    'levee_fait_par_email',
-    'levee_fait_le',
-    'levee_commentaire',
-    'levee_photos',
-    'etage',
-    'chambre',
-    'numero',
-    'intitule',
-    'photos',
-    'videos',
-    'photo',
-    'etat',
-    'lot',
-    'entreprise',
-    'localisation'
+    'created_by_email','modified_by_email',
+    'etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir',
+    'photos', // <= juste avant le bloc Levée
+    'levee_fait_par_email','levee_commentaire','levee_photos','levee_fait_le',
+    'videos','photo'
   ];
   // On filtre pour ne garder que celles qui existent encore dans cols
   const head = desiredOrder.filter(c => cols.includes(c));
@@ -90,30 +78,7 @@ router.get('/', async (req, res) => {
   const tail = cols.filter(c => !desiredOrder.includes(c));
   cols = [...head, ...tail];
   // --- END : Réordonnage fixe des colonnes ---
-
-  if (req.query.columns) {
-    const sel = Array.isArray(req.query.columns)
-      ? req.query.columns
-      : [req.query.columns];
-    cols = sel.filter(c => cols.includes(c));
-
-    // repositionner photos & videos juste avant 'etat'
-    if (cols.includes('photos') && cols.includes('etat')) {
-      cols = cols.filter(c => c !== 'photos');
-      const idx = cols.indexOf('etat');
-      cols.splice(idx, 0, 'photos');
-    }
-    if (cols.includes('videos') && cols.includes('etat')) {
-      cols = cols.filter(c => c !== 'videos');
-      const idx = cols.indexOf('etat');
-      cols.splice(idx, 0, 'videos');
-    }
-    if (cols.includes('levee_photos') && cols.includes('etat')) {
-      cols = cols.filter(c => c !== 'levee_photos');
-      const idx = cols.indexOf('etat');
-      cols.splice(idx, 0, 'levee_photos');
-    }
-  }
+  // plus de repositionnement automatique : on respecte desiredOrder
 
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
