@@ -111,29 +111,5 @@
 
   <script src="script.js"></script>
   <script src="selection.js"></script>
-  <script>
-    (function() {
-      const KEY = 'theme';
-      const root = document.documentElement; // <html>
-      const btn = document.getElementById('themeToggle');
-
-      function apply(theme) {
-        root.setAttribute('data-theme', theme);
-        localStorage.setItem(KEY, theme);
-        if (btn) btn.setAttribute('aria-label', theme === 'dark' ? 'Passer en clair' : 'Passer en sombre');
-      }
-
-      const saved = localStorage.getItem(KEY);
-      const initial = saved || root.getAttribute('data-theme') || 'light';
-      apply(initial);
-
-      if (btn) {
-        btn.addEventListener('click', () => {
-          const current = root.getAttribute('data-theme') || 'light';
-          apply(current === 'dark' ? 'light' : 'dark');
-        });
-      }
-    })();
-  </script>
 </body>
 </html>

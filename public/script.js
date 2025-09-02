@@ -975,7 +975,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (c === 'created_by_email') return resolveCreatedBy(row);
           if (c === 'modified_by_email') return resolveModifiedBy(row);
           if (c === 'levee_fait_par_email') return localPart(row.levee_fait_par_email);
-          if (c === 'levee_fait_le') return formatDateShort(row.levee_fait_le);
+          if (c === 'levee_fait_le') return formatDateFR(row.levee_fait_le);
+          if (c === 'date_butoir')  return formatDateFR(row.date_butoir);
           return softText(row[c], (c === 'description' || c === 'levee_commentaire') ? 500 : 220);
         }));
 
@@ -990,11 +991,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Titre
         doc.setFontSize(12);
         // Helpers: format date courte + libellé d'étage affiché
-        function formatDateShort(v){
+        function formatDateFR(v) {
           if (!v) return '—';
-          // v peut être string ISO ou Date -> on force en string puis YYYY-MM-DD
-          const s = typeof v === 'string' ? v : (new Date(v)).toISOString();
-          return s.slice(0,10);
+          const d = new Date(v);
+          if (isNaN(d)) return '—';
+          // ex: "02 sept 2025" (retire le point abréviation éventuel)
+          return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }).replace('.', '');
         }
         const chantierNom = chantierSelect.options[chantierSelect.selectedIndex]?.text || chantierSelect.value;
         const etageLabel  = etageSelect.options[etageSelect.selectedIndex]?.text || etageSelect.value;

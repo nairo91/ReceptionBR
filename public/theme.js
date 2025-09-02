@@ -1,36 +1,30 @@
-/* Thème clair/sombre persistant */
-(function(){
-  const KEY='rb_theme';
-  const root=document.documentElement;
+// Gestion du thème clair/sombre
+(() => {
+  const KEY = 'theme';
 
-  function apply(theme){
-    if(theme==='dark'){ root.classList.add('dark-theme'); }
-    else{ root.classList.remove('dark-theme'); }
-  }
+  const getInitial = () =>
+    localStorage.getItem(KEY)
+    || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
-  // Choix initial : localStorage > prefers-color-scheme > light
-  let initial = localStorage.getItem(KEY);
-  if(!initial){
-    try{
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      initial = prefersDark ? 'dark' : 'light';
-    }catch(_){ initial='light'; }
-  }
-  apply(initial);
-
-  // Expose bascule globale pour la sidebar
-  window.toggleTheme = function(){
-    const now = root.classList.contains('dark-theme') ? 'light' : 'dark';
-    localStorage.setItem(KEY, now);
-    apply(now);
-    // Mettre à jour l'état ARIA du bouton si présent
-    const btn = document.getElementById('theme-toggle');
-    if(btn){ btn.setAttribute('aria-pressed', now==='dark' ? 'true' : 'false'); }
+  const apply = (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem(KEY, theme);
   };
 
-  // (Optionnel) synchroniser l'état ARIA dès le chargement
-  const initBtn = document.getElementById('theme-toggle');
-  if (initBtn) {
-    initBtn.setAttribute('aria-pressed', initial==='dark' ? 'true' : 'false');
-  }
+  // Appliquer au chargement
+  document.addEventListener('DOMContentLoaded', () => {
+    apply(getInitial());
+
+    const btn = document.getElementById('themeToggle');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        apply(next);
+        btn.setAttribute('aria-label', next === 'dark' ? 'Passer en clair' : 'Passer en sombre');
+      });
+    }
+  });
 })();
+
