@@ -23,21 +23,23 @@ async function selectBullesWithEmails({ chantier_id, etage_id, chambre }) {
        f.name AS etage,
        COALESCE(r.name, b.chambre) AS chambre,
        b.chambre AS chambre_id,
-       u.email AS created_by_email,
-       m.email AS modified_by_email,
-       COALESCE(mm.media, '[]'::json) AS media
-     FROM bulles b
-     LEFT JOIN entreprises e ON b.entreprise_id = e.id
-     LEFT JOIN floors f       ON b.etage_id       = f.id
-     LEFT JOIN rooms r
-       ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
-     LEFT JOIN users u ON u.id = b.created_by
-     LEFT JOIN users m ON m.id = b.modified_by
-     LEFT JOIN (
-       SELECT bulle_id,
-              json_agg(json_build_object('type', type, 'path', path) ORDER BY created_at) AS media
-       FROM bulle_media
-       GROUP BY bulle_id
+     u.email AS created_by_email,
+      m.email AS modified_by_email,
+      lu.email AS levee_fait_par_email,
+      COALESCE(mm.media, '[]'::json) AS media
+    FROM bulles b
+    LEFT JOIN entreprises e ON b.entreprise_id = e.id
+    LEFT JOIN floors f       ON b.etage_id       = f.id
+    LEFT JOIN rooms r
+      ON r.id = CASE WHEN b.chambre ~ '^[0-9]+$' THEN (b.chambre)::int END
+    LEFT JOIN users u ON u.id = b.created_by
+    LEFT JOIN users m ON m.id = b.modified_by
+    LEFT JOIN users lu ON lu.id = b.levee_fait_par
+    LEFT JOIN (
+      SELECT bulle_id,
+             json_agg(json_build_object('type', type, 'path', path) ORDER BY created_at) AS media
+      FROM bulle_media
+      GROUP BY bulle_id
      ) mm ON mm.bulle_id = b.id
      ${where}
      ORDER BY b.id`,
