@@ -1,30 +1,51 @@
 // Gestion du thème clair/sombre
 (() => {
   const KEY = 'theme';
+  const root = document.documentElement;
+  const body = document.body;
 
-  const getInitial = () =>
-    localStorage.getItem(KEY)
-    || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-
-  const apply = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.setAttribute('data-theme', theme);
+  function apply(theme) {
+    root.setAttribute('data-theme', theme);
+    body.setAttribute('data-theme', theme);
     localStorage.setItem(KEY, theme);
-  };
-
-  // Appliquer au chargement
-  document.addEventListener('DOMContentLoaded', () => {
-    apply(getInitial());
-
     const btn = document.getElementById('themeToggle');
     if (btn) {
-      btn.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme') || 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
-        apply(next);
-        btn.setAttribute('aria-label', next === 'dark' ? 'Passer en clair' : 'Passer en sombre');
-      });
+      btn.setAttribute(
+        'aria-label',
+        theme === 'dark' ? 'Passer en clair' : 'Passer en sombre'
+      );
+      btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
     }
+  }
+
+  function initialTheme() {
+    return (
+      localStorage.getItem(KEY) ||
+      (window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light')
+    );
+  }
+
+  function bindToggleIfNeeded() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      apply(next);
+    });
+    btn.dataset.bound = '1';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    apply(initialTheme());
+    // Premier essai immédiat
+    bindToggleIfNeeded();
+    // Filet de sécurité si la sidebar est injectée après coup
+    const obs = new MutationObserver(() => bindToggleIfNeeded());
+    obs.observe(document.body, { childList: true, subtree: true });
   });
 })();
 
