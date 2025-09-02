@@ -125,6 +125,14 @@ document.addEventListener('DOMContentLoaded', () => {
           || row?.created_by?.email
           || '—';
     }
+    function localPart(email) {
+      if (!email || typeof email !== 'string') return '—';
+      const at = email.indexOf('@');
+      return at > 0 ? email.slice(0, at) : email;
+    }
+    function resolveModifiedBy(row){
+      return row?.modified_by_email || row?.modified_by?.email || '—';
+    }
 
     // Texte adouci avec wrap
     function softText(v, max = 300) {
@@ -911,6 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const body = data.map((row, idx) => cols.map(c => {
           if (c === 'photos') return (photoThumbsPerRow[idx].length ? ' ' : '—');
           if (c === 'created_by_email') return resolveCreatedBy(row);
+          if (c === 'modified_by_email') return resolveModifiedBy(row);
           return softText(row[c], c === 'description' ? 500 : 220);
         }));
 
@@ -925,10 +934,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Table
         doc.autoTable({
           head, body,
-          startY: margin + 14,
+          startY: margin + 16,
           margin: { left: margin, right: margin },
           tableWidth: 'wrap',
+          showHead: 'everyPage',
+          theme: 'grid',
           styles: {
+            fillColor: undefined,
+            textColor: [0,0,0],
             fontSize: 9,
             cellPadding: 4,
             overflow: 'linebreak',
@@ -936,7 +949,14 @@ document.addEventListener('DOMContentLoaded', () => {
             lineWidth: 0.2,
             valign: 'top'
           },
-          headStyles: { fillColor: [15,23,42], textColor: 255, halign: 'center' },
+          headStyles: {
+            fillColor: [15,23,42],
+            textColor: 255,
+            halign: 'center'
+          },
+          alternateRowStyles: {
+            fillColor: [245, 247, 250]
+          },
           columnStyles,
           rowPageBreak: 'avoid',
           didParseCell: (h) => {
