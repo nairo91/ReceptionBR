@@ -31,7 +31,6 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
     } = req.body;
 
     const userId = req.session.user.id;
-    const leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
     const leveeFaitLe = toNullIfEmpty(req.body.levee_fait_le);
     const leveeCommentaire = toNullIfEmpty(req.body.levee_commentaire);
     const safeDate = toNullIfEmpty(req.body.date_butoir);
@@ -42,6 +41,10 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const mediaFiles = uniqueFiles.filter(f => f.fieldname !== 'levee_media' && f.fieldname !== 'levee_media[]');
     const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
+    let leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
+    if (leveeFaitPar == null && (leveeFaitLe || leveeCommentaire || leveeFiles.length)) {
+      leveeFaitPar = userId;
+    }
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
@@ -108,7 +111,6 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
     } = req.body;
 
     const userId = req.session.user.id;
-    const leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
     const leveeFaitLe = toNullIfEmpty(req.body.levee_fait_le);
     const leveeCommentaire = toNullIfEmpty(req.body.levee_commentaire);
     const safeDate = toNullIfEmpty(req.body.date_butoir);
@@ -124,6 +126,14 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const oldRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
     if (oldRes.rowCount === 0) return res.status(404).json({ error: 'Bulle non trouvée' });
     const oldRow = oldRes.rows[0];
+    let leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
+    if (leveeFaitPar == null) {
+      if (leveeFaitLe || leveeCommentaire || leveeFiles.length) {
+        leveeFaitPar = userId;
+      } else {
+        leveeFaitPar = oldRow.levee_fait_par;
+      }
+    }
 
     if (photo) {
       await pool.query(
