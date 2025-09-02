@@ -5,6 +5,16 @@ const { Parser } = require("json2csv");
 const upload = require('../middlewares/upload');
 const { selectBullesWithEmails } = require("./bullesSelect");
 
+function parseIntOrNull(v) {
+  if (Array.isArray(v)) v = v[0];
+  if (v === '' || v == null) return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
+}
+function toNullIfEmpty(v) {
+  return (v === '' || v == null) ? null : v;
+}
+
 // Middleware d'authentification désactivé (dev)
 function isAuthenticated(req, res, next) {
   // Toujours passer, sans vérifier la session
@@ -17,15 +27,14 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const {
       chantier_id, etage_id,
       chambre, x, y, numero, description,
-      intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
-      levee_fait_le, levee_commentaire
+      intitule, etat, lot, entreprise_id, localisation, observation
     } = req.body;
 
-    // ID de l'utilisateur authentifié
     const userId = req.session.user.id;
-    const leveeFaitPar = req.body.levee_fait_par || (req.session.user && req.session.user.id) || null;
-
-    const safeDate = date_butoir === "" ? null : date_butoir;
+    const leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
+    const leveeFaitLe = toNullIfEmpty(req.body.levee_fait_le);
+    const leveeCommentaire = toNullIfEmpty(req.body.levee_commentaire);
+    const safeDate = toNullIfEmpty(req.body.date_butoir);
     const files = req.files || [];
     // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
     const uniqueFiles = Array.from(new Map(files.map(f => [f.path, f])).values());
@@ -38,7 +47,7 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
       `INSERT INTO bulles
       (chantier_id, etage_id, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by, levee_fait_par, levee_fait_le, levee_commentaire)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
-      [chantier_id || null, etage_id || null, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null]
+      [chantier_id || null, etage_id || null, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire]
     );
 
     const newBulle = insertRes.rows[0];
@@ -95,14 +104,14 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const { id } = req.params;
     const {
       chantier_id, etage_id,
-      description, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
-      levee_fait_le, levee_commentaire
+      description, intitule, etat, lot, entreprise_id, localisation, observation
     } = req.body;
 
     const userId = req.session.user.id;
-    const leveeFaitPar = req.body.levee_fait_par || (req.session.user && req.session.user.id) || null;
-
-    const safeDate = date_butoir === "" ? null : date_butoir;
+    const leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
+    const leveeFaitLe = toNullIfEmpty(req.body.levee_fait_le);
+    const leveeCommentaire = toNullIfEmpty(req.body.levee_commentaire);
+    const safeDate = toNullIfEmpty(req.body.date_butoir);
     const files = req.files || [];
     // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
     const uniqueFiles = Array.from(new Map(files.map(f => [f.path, f])).values());
@@ -121,14 +130,14 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
         `UPDATE bulles
          SET chantier_id=$1, etage_id=$2, description = $3, photo = $4, intitule = $5, etat = $6, lot = $7, entreprise_id = $8, localisation = $9, observation = $10, date_butoir = $11, modified_by = $12, levee_fait_par = $13, levee_fait_le = $14, levee_commentaire = $15
          WHERE id = $16`,
-        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null, id]
+        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
       );
     } else {
       await pool.query(
         `UPDATE bulles
          SET chantier_id=$1, etage_id=$2, description = $3, intitule = $4, etat = $5, lot = $6, entreprise_id = $7, localisation = $8, observation = $9, date_butoir = $10, modified_by = $11, levee_fait_par = $12, levee_fait_le = $13, levee_commentaire = $14
          WHERE id = $15`,
-        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null, id]
+        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
       );
     }
 

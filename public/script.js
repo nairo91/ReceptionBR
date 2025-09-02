@@ -445,7 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const formData = new FormData(form);
           formData.append('chantier_id', chantierSelect.value);
           formData.append('etage_id', etageSelect.value);
-          formData.append('levee_fait_par', user?.id || '');
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
@@ -792,7 +791,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('x', xRatio);
         formData.append('y', yRatio);
         formData.append('numero', nextNumero);
-        formData.append('levee_fait_par', user?.id || '');
         const assignedNumero = nextNumero;
         nextNumero++;
         const nomBulle = formData.get('intitule');
