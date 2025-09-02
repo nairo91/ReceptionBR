@@ -25,7 +25,10 @@ CREATE TABLE IF NOT EXISTS bulles (
   observation TEXT,
   date_butoir DATE,
   created_by INTEGER REFERENCES users(id),
-  modified_by INTEGER REFERENCES users(id)
+  modified_by INTEGER REFERENCES users(id),
+  levee_fait_par INTEGER REFERENCES users(id),
+  levee_fait_le TIMESTAMP,
+  levee_commentaire TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -38,7 +41,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE bulle_media (
   id SERIAL PRIMARY KEY,
   bulle_id INTEGER NOT NULL REFERENCES bulles(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('photo','video')),
+  type TEXT NOT NULL CHECK (type IN ('photo','video','levee_photo')),
   path TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

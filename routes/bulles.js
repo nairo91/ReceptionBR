@@ -12,35 +12,37 @@ function isAuthenticated(req, res, next) {
 }
 
 // POST : création bulle avec created_by = l'utilisateur en session
-router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, res) => {
+router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
   try {
     const {
       chantier_id, etage_id,
       chambre, x, y, numero, description,
       intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
+      levee_fait_le, levee_commentaire
     } = req.body;
 
     // ID de l'utilisateur authentifié
     const userId = req.session.user.id;
+    const leveeFaitPar = req.body.levee_fait_par || (req.session.user && req.session.user.id) || null;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
     // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
-    const uniqueFiles = Array.from(
-      new Map(files.map(f => [f.path, f])).values()
-    );
-    const firstPhoto = uniqueFiles.find(f => f.mimetype.startsWith('image/'));
+    const uniqueFiles = Array.from(new Map(files.map(f => [f.path, f])).values());
+    const leveeFiles = uniqueFiles.filter(f => f.fieldname === 'levee_media' || f.fieldname === 'levee_media[]');
+    const mediaFiles = uniqueFiles.filter(f => f.fieldname !== 'levee_media' && f.fieldname !== 'levee_media[]');
+    const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
-      (chantier_id, etage_id, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-      [chantier_id || null, etage_id || null, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId]
+      (chantier_id, etage_id, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by, levee_fait_par, levee_fait_le, levee_commentaire)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+      [chantier_id || null, etage_id || null, chambre, x, y, numero, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null]
     );
 
     const newBulle = insertRes.rows[0];
-    for (const file of uniqueFiles) {
+    for (const file of mediaFiles) {
       await pool.query(
         'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
         [
@@ -48,6 +50,12 @@ router.post("/", /* isAuthenticated, */ upload.array('media', 15), async (req, r
           file.mimetype.startsWith('video/') ? 'video' : 'photo',
           file.path
         ]
+      );
+    }
+    for (const f of leveeFiles) {
+      await pool.query(
+        'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
+        [newBulle.id, 'levee_photo', f.path]
       );
     }
     await pool.query(
@@ -82,23 +90,25 @@ router.delete("/:id", async (req, res) => {
 });
 
 // PUT : modification bulle sans authentification, modified_by et levee_par à null
-router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req, res) => {
+router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
   try {
     const { id } = req.params;
     const {
       chantier_id, etage_id,
       description, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir,
+      levee_fait_le, levee_commentaire
     } = req.body;
 
     const userId = req.session.user.id;
+    const leveeFaitPar = req.body.levee_fait_par || (req.session.user && req.session.user.id) || null;
 
     const safeDate = date_butoir === "" ? null : date_butoir;
     const files = req.files || [];
     // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
-    const uniqueFiles = Array.from(
-      new Map(files.map(f => [f.path, f])).values()
-    );
-    const firstPhoto = uniqueFiles.find(f => f.mimetype.startsWith('image/'));
+    const uniqueFiles = Array.from(new Map(files.map(f => [f.path, f])).values());
+    const leveeFiles = uniqueFiles.filter(f => f.fieldname === 'levee_media' || f.fieldname === 'levee_media[]');
+    const mediaFiles = uniqueFiles.filter(f => f.fieldname !== 'levee_media' && f.fieldname !== 'levee_media[]');
+    const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
 
     // Récupérer l'état actuel complet pour l'historique
@@ -106,23 +116,19 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
     if (oldRes.rowCount === 0) return res.status(404).json({ error: 'Bulle non trouvée' });
     const oldRow = oldRes.rows[0];
 
-    // Pas de levee_par sans authentification
-    const leveeParClause = "";
-    const leveeParValue = null;
-
     if (photo) {
       await pool.query(
         `UPDATE bulles
-         SET chantier_id=$1, etage_id=$2, description = $3, photo = $4, intitule = $5, etat = $6, lot = $7, entreprise_id = $8, localisation = $9, observation = $10, date_butoir = $11, modified_by = $12${leveeParClause}
-         WHERE id = $13`,
-        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
+         SET chantier_id=$1, etage_id=$2, description = $3, photo = $4, intitule = $5, etat = $6, lot = $7, entreprise_id = $8, localisation = $9, observation = $10, date_butoir = $11, modified_by = $12, levee_fait_par = $13, levee_fait_le = $14, levee_commentaire = $15
+         WHERE id = $16`,
+        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null, id]
       );
     } else {
       await pool.query(
         `UPDATE bulles
-         SET chantier_id=$1, etage_id=$2, description = $3, intitule = $4, etat = $5, lot = $6, entreprise_id = $7, localisation = $8, observation = $9, date_butoir = $10, modified_by = $11${leveeParClause}
-         WHERE id = $12`,
-        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, id]
+         SET chantier_id=$1, etage_id=$2, description = $3, intitule = $4, etat = $5, lot = $6, entreprise_id = $7, localisation = $8, observation = $9, date_butoir = $10, modified_by = $11, levee_fait_par = $12, levee_fait_le = $13, levee_commentaire = $14
+         WHERE id = $15`,
+        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar || null, levee_fait_le || null, levee_commentaire || null, id]
       );
     }
 
@@ -130,12 +136,20 @@ router.put("/:id", /* isAuthenticated, */ upload.array('media', 15), async (req,
       'SELECT path FROM bulle_media WHERE bulle_id = $1', [id]
     );
     const existingPaths = new Set(existing.map(r => r.path));
-    for (const file of uniqueFiles) {
+    for (const file of mediaFiles) {
       if (!existingPaths.has(file.path)) {
         const type = file.mimetype.startsWith('video/') ? 'video' : 'photo';
         await pool.query(
           'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
           [id, type, file.path]
+        );
+      }
+    }
+    for (const f of leveeFiles) {
+      if (!existingPaths.has(f.path)) {
+        await pool.query(
+          'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
+          [id, 'levee_photo', f.path]
         );
       }
     }

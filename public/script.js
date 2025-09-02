@@ -366,20 +366,37 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
           <input type="date" name="date_butoir" value="${bulle.date_butoir ? bulle.date_butoir.substring(0,10) : ''}" /><br>
           <input type="file" name="media" multiple accept="image/*,video/*" /><br>
-          ${Array.isArray(bulle.media) ? bulle.media.map(m => {
+          ${Array.isArray(bulle.media) ? bulle.media.filter(m => m.type === 'photo' || m.type === 'video').map(m => {
             if (m.type === 'photo') {
               return `<img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" /><br>`;
             } else {
               return `
-      <video 
-        src="${m.path}" 
-        controls 
-        class="preview-video" 
+      <video
+        src="${m.path}"
+        controls
+        class="preview-video"
         style="max-width:200px; margin-bottom:5px;"
       ></video><br>
     `;
             }
           }).join('') : ''}
+          <fieldset class="section-levee" style="margin-top:8px;">
+            <legend>Levée</legend>
+            <div>Fait par : <strong>${user?.email || (bulle.levee_fait_par_email || '—')}</strong></div>
+            <input type="hidden" name="levee_fait_par" value="${user?.id || ''}">
+            <label>Fait le :
+              <input type="date" name="levee_fait_le" value="${bulle.levee_fait_le ? bulle.levee_fait_le.substring(0,10) : ''}">
+            </label><br>
+            <label>Commentaire levée :
+              <textarea name="levee_commentaire" placeholder="Commentaire">${bulle.levee_commentaire || ''}</textarea>
+            </label><br>
+            <label>Photo Levée :
+              <input type="file" name="levee_media" multiple accept="image/*">
+            </label>
+            ${Array.isArray(bulle.media) ? bulle.media.filter(m=>m.type==='levee_photo').map(m => `
+              <img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" />
+            `).join('') : ''}
+          </fieldset>
           <button type="submit">💾 Enregistrer</button>
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
@@ -428,6 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const formData = new FormData(form);
           formData.append('chantier_id', chantierSelect.value);
           formData.append('etage_id', etageSelect.value);
+          formData.append('levee_fait_par', user?.id || '');
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
@@ -774,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('x', xRatio);
         formData.append('y', yRatio);
         formData.append('numero', nextNumero);
+        formData.append('levee_fait_par', user?.id || '');
         const assignedNumero = nextNumero;
         nextNumero++;
         const nomBulle = formData.get('intitule');
@@ -865,8 +884,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const selected = getCheckedColumns();
 
         // Ordre lisible + "photos" toujours en dernier si cochée
-        const ORDER = ['created_by_email','modified_by_email','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
+        const ORDER = ['created_by_email','modified_by_email','levee_fait_par_email','levee_fait_le','levee_commentaire','levee_photos','etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir','photos'];
         let cols = ORDER.filter(c => selected.includes(c));
+        if (selected.includes('levee_photos')) {
+          cols = cols.filter(c => c !== 'levee_photos');
+          cols.push('levee_photos');
+        }
         if (selected.includes('photos')) {
           cols = cols.filter(c => c !== 'photos');
           cols.push('photos');
@@ -886,6 +909,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const LABELS = {
           created_by_email:'Créé par',
           modified_by_email:'Modifié par',
+          levee_fait_par_email:'Levée – Fait par',
+          levee_fait_le:'Levée – Fait le',
+          levee_commentaire:'Levée – Commentaire',
+          levee_photos:'Levée – Photos',
           etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
           intitule:'Intitulé', description:'Description', etat:'État',
           entreprise:'Entreprise', localisation:'Localisation',
@@ -897,6 +924,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const BASE = {
           created_by_email: 120,
           modified_by_email: 120,
+          levee_fait_par_email: 120,
+          levee_fait_le: 86,
+          levee_commentaire: 160,
+          levee_photos: 200,
           etage: 50, chambre: 60, numero: 36, lot: 70,
           intitule: 140, description: 260, etat: 72,
           entreprise: 100, localisation: 120,
@@ -913,14 +944,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return urls.filter(Boolean);
           })
         );
+        const leveeThumbsPerRow = await Promise.all(
+          data.map(async b => {
+            const lev = Array.isArray(b.media) ? b.media.filter(m => m.type==='levee_photo') : [];
+            const subset = lev.slice(0,3);
+            const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
+            return urls.filter(Boolean);
+          })
+        );
 
         // Datasource table
         const head = [cols.map(c => LABELS[c] || c.toUpperCase())];
         const body = data.map((row, idx) => cols.map(c => {
           if (c === 'photos') return (photoThumbsPerRow[idx].length ? ' ' : '—');
+          if (c === 'levee_photos') return (leveeThumbsPerRow[idx].length ? ' ' : '—');
           if (c === 'created_by_email') return resolveCreatedBy(row);
           if (c === 'modified_by_email') return resolveModifiedBy(row);
-          return softText(row[c], c === 'description' ? 500 : 220);
+          if (c === 'levee_fait_par_email') return localPart(row.levee_fait_par_email);
+          return softText(row[c], (c === 'description' || c === 'levee_commentaire') ? 500 : 220);
         }));
 
         // Styles & largeurs adaptées pour tenir dans la page
@@ -961,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
           rowPageBreak: 'avoid',
           didParseCell: (h) => {
             const colName = cols[h.column.index];
-            if (h.section === 'body' && colName === 'photos') {
+            if (h.section === 'body' && (colName === 'photos' || colName === 'levee_photos')) {
               // hauteur mini pour cas avec vignettes
               h.cell.height = Math.max(h.cell.height, 28 + 8);
             }
@@ -969,8 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
           didDrawCell: (h) => {
             if (h.section !== 'body') return;
             const colName = cols[h.column.index];
-            if (colName !== 'photos') return;
-            const thumbs = photoThumbsPerRow[h.row.index] || [];
+            if (colName !== 'photos' && colName !== 'levee_photos') return;
+            const thumbs = colName === 'photos' ? photoThumbsPerRow[h.row.index] || [] : leveeThumbsPerRow[h.row.index] || [];
             if (!thumbs.length) return;
             const { x, y, height } = h.cell;
             const W = 34, H = 22, GAP = 6;

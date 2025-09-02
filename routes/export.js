@@ -22,17 +22,21 @@ router.get('/', async (req, res) => {
   rows = rows.map(r => {
     const photos = [];
     const videos = [];
+    const levee = [];
     for (const m of r.media || []) {
       if (m.type === 'photo') photos.push(m.path);
       if (m.type === 'video') videos.push(m.path);
+      if (m.type === 'levee_photo') levee.push(m.path);
     }
     const photoArr = Array.from(new Set(photos)).map(fullUrl);
     const videoArr = Array.from(new Set(videos)).map(fullUrl);
+    const leveeArr = Array.from(new Set(levee)).map(fullUrl);
     return {
       ...r,
       photo: fullUrl(r.photo),
       photos: photoArr,
-      videos: videoArr
+      videos: videoArr,
+      levee_photos: leveeArr
     };
   });
   rows.forEach(r => delete r.media);
@@ -40,12 +44,16 @@ router.get('/', async (req, res) => {
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
   // On retire les identifiants numériques inutiles
-  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by');
+  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by' && c !== 'levee_fait_par');
 
   // Rétro-compatibilité : si le client envoie "modified_by", on mappe vers "modified_by_email"
   if (req.query.columns) {
     let sel = Array.isArray(req.query.columns) ? req.query.columns.slice() : [req.query.columns];
-    sel = sel.map(c => c === 'modified_by' ? 'modified_by_email' : c);
+    sel = sel.map(c => {
+      if (c === 'modified_by') return 'modified_by_email';
+      if (c === 'levee_fait_par') return 'levee_fait_par_email';
+      return c;
+    });
     cols = sel.filter(c => cols.includes(c)).length ? sel.filter(c => cols.includes(c)) : cols;
   }
   if (rows[0] && rows[0].photos !== undefined && !cols.includes('photos')) {
@@ -70,7 +78,11 @@ router.get('/', async (req, res) => {
     'entreprise',
     'localisation',
     'created_by_email',
-    'modified_by_email'
+    'modified_by_email',
+    'levee_fait_par_email',
+    'levee_fait_le',
+    'levee_commentaire',
+    'levee_photos'
   ];
   // On filtre pour ne garder que celles qui existent encore dans cols
   const head = desiredOrder.filter(c => cols.includes(c));
@@ -96,6 +108,11 @@ router.get('/', async (req, res) => {
       const idx = cols.indexOf('etat');
       cols.splice(idx, 0, 'videos');
     }
+    if (cols.includes('levee_photos') && cols.includes('etat')) {
+      cols = cols.filter(c => c !== 'levee_photos');
+      const idx = cols.indexOf('etat');
+      cols.splice(idx, 0, 'levee_photos');
+    }
   }
 
   const format = (req.query.format || 'csv').toLowerCase();
@@ -103,7 +120,8 @@ router.get('/', async (req, res) => {
     const serialize = r => ({
       ...r,
       photos: (r.photos || []).join(', '),
-      videos: (r.videos || []).join(', ')
+      videos: (r.videos || []).join(', '),
+      levee_photos: (r.levee_photos || []).join('\n')
     });
     const parser = new Parser({ fields: cols });
     let csv = '\uFEFF' + parser.parse(rows.map(serialize));
@@ -136,6 +154,7 @@ router.get('/', async (req, res) => {
     rows.forEach((r, idx) => {
       const baseVals = baseCols.map(c => {
         if (c === 'videos' && Array.isArray(r.videos)) return r.videos.join(', ');
+        if (c === 'levee_photos' && Array.isArray(r.levee_photos)) return r.levee_photos.join('\n');
         return r[c];
       });
       const photoVals = [];
@@ -176,7 +195,8 @@ router.get('/', async (req, res) => {
     const serialize = r => ({
       ...r,
       photos: (r.photos || []).join(', '),
-      videos: (r.videos || []).join(', ')
+      videos: (r.videos || []).join(', '),
+      levee_photos: (r.levee_photos || []).join(', ')
     });
     const pdfRows = rows.map(serialize);
     const table = { headers: cols, rows: pdfRows.map(r => cols.map(c => r[c])) };
