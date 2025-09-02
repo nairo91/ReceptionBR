@@ -936,15 +936,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const BASE = {
           created_by_email: 120,
           modified_by_email: 120,
-          levee_fait_par_email: 120,
-          levee_fait_le: 86,
-          levee_commentaire: 160,
-          levee_photos: 200,
           etage: 50, chambre: 60, numero: 36, lot: 70,
           intitule: 140, description: 260, etat: 72,
           entreprise: 100, localisation: 120,
           observation: 160, date_butoir: 86,
-          photos: 200
+          photos: 200,
+          // colonnes "Levée"
+          levee_fait_par_email: 120,
+          levee_commentaire: 160,
+          levee_photos: 200,
+          // on élargit un peu la date pour éviter l'écrasement
+          levee_fait_le: 110
         };
 
         // Prépare les vignettes photos (max 3)
@@ -973,16 +975,30 @@ document.addEventListener('DOMContentLoaded', () => {
           if (c === 'created_by_email') return resolveCreatedBy(row);
           if (c === 'modified_by_email') return resolveModifiedBy(row);
           if (c === 'levee_fait_par_email') return localPart(row.levee_fait_par_email);
+          if (c === 'levee_fait_le') return formatDateShort(row.levee_fait_le);
           return softText(row[c], (c === 'description' || c === 'levee_commentaire') ? 500 : 220);
         }));
 
         // Styles & largeurs adaptées pour tenir dans la page
         const columnStyles = computeColumnStyles(cols, BASE, pageW, margin, margin, 36);
+        // centre la date de levée pour une meilleure lisibilité
+        const idxLevDate = cols.indexOf('levee_fait_le');
+        if (idxLevDate >= 0) {
+          columnStyles[idxLevDate] = { ...(columnStyles[idxLevDate]||{}), halign: 'center' };
+        }
 
         // Titre
         doc.setFontSize(12);
+        // Helpers: format date courte + libellé d'étage affiché
+        function formatDateShort(v){
+          if (!v) return '—';
+          // v peut être string ISO ou Date -> on force en string puis YYYY-MM-DD
+          const s = typeof v === 'string' ? v : (new Date(v)).toISOString();
+          return s.slice(0,10);
+        }
         const chantierNom = chantierSelect.options[chantierSelect.selectedIndex]?.text || chantierSelect.value;
-        doc.text(`Export bulles — Chantier: ${chantierNom} — Étage: ${etageSelect.value} — Chambre: ${chambreSelect.value}`, margin, margin);
+        const etageLabel  = etageSelect.options[etageSelect.selectedIndex]?.text || etageSelect.value;
+        doc.text(`Reception compte rendu — Chantier: ${chantierNom} — Étage: ${etageLabel} — Chambre: ${chambreSelect.value}`, margin, margin);
 
         // Table
         doc.autoTable({
