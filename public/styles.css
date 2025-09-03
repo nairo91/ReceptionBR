@@ -287,18 +287,22 @@ button:hover {
   }
 
   .popup .popup-content {
-    background: var(--card-bg, #ffffff);
-    color: inherit;
     box-sizing: border-box;
+    background: var(--card-bg, #fff) !important;
+    color: inherit;
     width: 100vw;
+    min-height: 100svh;
     height: 100dvh;
-    height: -webkit-fill-available;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px);
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
   }
 
   .popup img.preview,
@@ -311,8 +315,7 @@ button:hover {
     font-size: 16px;
   }
 
-  .popup button,
-  .filter-group .filter-control button {
+  .popup button {
     font-size: 16px;
     padding: 10px;
     width: 100%;
@@ -323,10 +326,6 @@ button:hover {
   .popup .section-levee textarea,
   .popup .section-levee select {
     width: 100%;
-  }
-
-  html, body {
-    overscroll-behavior: contain;
   }
 
   .bulle {
