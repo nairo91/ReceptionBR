@@ -514,7 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof content === 'string') popup.innerHTML = content;
       else popup.appendChild(content);
       document.body.appendChild(popup);
-      document.body.classList.add("modal-open");
 
       function reposition() {
         if (!isMobile || !window.visualViewport) return;
@@ -537,7 +536,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         p.remove();
       });
-      document.body.classList.remove('modal-open');
     }
     // rendre la fonction accessible depuis l’attribut onclick inline
     window.closePopups = closePopups;
