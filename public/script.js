@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
             }
           }).join('') : ''}
-          <button type="button" class="btn-levee" id="leveeBtn">🧰 Levé réserve</button>
+          <button type="button" class="btn-levee" id="leveeBtn">🧰 Lever la réserve</button>
           <button type="submit">💾 Enregistrer</button>
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
