@@ -380,24 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
             }
           }).join('') : ''}
-          <fieldset class="section-levee">
-            <legend>Levée</legend>
-            <label>Fait par :
-              <input type="text" name="levee_fait_par_email" value="${user?.email || bulle.levee_fait_par_email || ''}" readonly>
-            </label><br>
-            <label>Fait le :
-              <input type="date" name="levee_fait_le" value="${bulle.levee_fait_le ? bulle.levee_fait_le.substring(0,10) : ''}">
-            </label><br>
-            <label>Commentaire levée :
-              <textarea name="levee_commentaire" placeholder="Commentaire">${bulle.levee_commentaire || ''}</textarea>
-            </label><br>
-            <label>Photo Levée :
-              <input type="file" name="levee_media" multiple accept="image/*">
-            </label>
-            ${Array.isArray(bulle.media) ? bulle.media.filter(m=>m.type==='levee_photo').map(m => `
-              <img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" />
-            `).join('') : ''}
-          </fieldset>
+          <button type="button" class="btn-levee" id="leveeBtn">🧰 Levé réserve</button>
           <button type="submit">💾 Enregistrer</button>
           <button type="button" id="deleteBtn">🗑️ Supprimer</button>
           <button type="button" onclick="closePopups()">Fermer</button>
@@ -416,6 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const deleteBtn = form.querySelector('#deleteBtn');
         deleteBtn.onclick = () => confirmDelete(bulle);
+
+        const leveeBtn = form.querySelector('#leveeBtn');
+        if (leveeBtn) leveeBtn.onclick = () => openLeveeDialog(bulle);
 
         const entrepriseSelect = form.querySelector('select[name="entreprise_id"]');
         entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}" ${e.id === bulle.entreprise_id ? 'selected' : ''}>${e.nom}</option>`).join('');
@@ -553,6 +539,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // rendre la fonction accessible depuis l’attribut onclick inline
     window.closePopups = closePopups;
+
+    function openLeveeDialog(bulle) {
+      const form = document.createElement('form');
+      form.className = 'popup-content';
+      form.enctype = 'multipart/form-data';
+      form.innerHTML = `
+        <h3>Levée de réserve</h3>
+        <label>Fait par :
+          <input type="text" name="levee_fait_par_email" value="${user?.email || bulle.levee_fait_par_email || ''}" readonly>
+        </label><br>
+        <label>Fait le :
+          <input type="date" name="levee_fait_le" value="${bulle.levee_fait_le ? bulle.levee_fait_le.substring(0,10) : ''}">
+        </label><br>
+        <label>Commentaire levée :
+          <textarea name="levee_commentaire" placeholder="Commentaire">${bulle.levee_commentaire || ''}</textarea>
+        </label><br>
+        <label>Photo Levée :
+          <input type="file" name="levee_media" multiple accept="image/*">
+        </label>
+        ${Array.isArray(bulle.media) ? bulle.media.filter(m=>m.type==='levee_photo').map(m => `
+          <img src="${m.path}" class="preview" onclick="zoomImage('${m.path}')" />
+        `).join('') : ''}
+        <button type="submit">Enregistrer la levée</button>
+        <button type="button" onclick="closePopups()">Fermer</button>
+      `;
+      form.onsubmit = ev => {
+        ev.preventDefault();
+        const fd = new FormData();
+        fd.append('chantier_id', chantierSelect.value);
+        fd.append('etage_id', etageSelect.value);
+        const dateInput = form.querySelector('input[name="levee_fait_le"]');
+        const commentInput = form.querySelector('textarea[name="levee_commentaire"]');
+        fd.append('levee_fait_le', dateInput.value || '');
+        fd.append('levee_commentaire', commentInput.value || '');
+        fd.append('levee_fait_par', user?.id || '');
+        const files = form.querySelector('input[name="levee_media"]').files;
+        for (const file of files) fd.append('levee_media', file);
+        fetch(`/api/bulles/${bulle.id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          body: fd
+        }).then(() => {
+          closePopups();
+          loadBulles();
+        });
+      };
+      showPopup(0, 0, form);
+      const input = form.querySelector('input[name="levee_media"]');
+      if (input) input.value = '';
+    }
 
     function recordAction(type, loc) {
       if (!user) return;
@@ -752,21 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
         <input type="file" name="media" multiple accept="image/*,video/*" /><br>
-        <fieldset class="section-levee">
-          <legend>Levée</legend>
-          <label>Fait par :
-            <input type="text" name="levee_fait_par_email" value="${user?.email || ''}" readonly>
-          </label><br>
-          <label>Fait le :
-            <input type="date" name="levee_fait_le">
-          </label><br>
-          <label>Commentaire levée :
-            <textarea name="levee_commentaire" placeholder="Commentaire"></textarea>
-          </label><br>
-          <label>Photo Levée :
-            <input type="file" name="levee_media" multiple accept="image/*">
-          </label>
-        </fieldset>
         <button type="submit">✅ Ajouter</button>
         <button type="button" onclick="closePopups()">Annuler</button>
       `;
