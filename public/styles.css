@@ -334,3 +334,55 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   outline: none; box-shadow: 0 0 0 2px var(--card-border);
 }
 
+/* Mise en page des filtres de l'accueil */
+.filter-group label {
+  display: block;
+  font-size: 18px;
+  margin-top: 30px;
+  margin-bottom: 4px;
+}
+
+.filter-group .filter-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+}
+
+.filter-group .filter-control select,
+.filter-group .filter-control input[type="text"],
+.filter-group .filter-control input[type="file"] {
+  margin: 0;
+  min-width: 320px;
+  width: auto;
+}
+
+.filter-group .filter-control button {
+  margin: 0;
+}
+
+.filter-group .filter-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.is-hidden {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .filter-group .filter-control {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-group .filter-actions {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+  .filter-group .filter-control select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
