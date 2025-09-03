@@ -142,83 +142,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Boutons d'ajout visibles pour Jeremy Launay, Valentin Blot et Keivan Athari
     if (user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info'].includes(user.email)) {
-      const chBtn = document.createElement('button');
-      chBtn.id = 'addChantierBtn';
-      chBtn.textContent = '+ Nouveau chantier';
-      chantierSelect.parentNode.appendChild(chBtn);
-      chBtn.onclick = async () => {
-        const nom = prompt('Nom du chantier');
-        if (!nom) return;
-        await fetch('/api/chantiers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ nom })
-        });
-        await loadChantiers();
-      };
+      const chBtn = document.getElementById('addChantierBtn');
+      const etBtn = document.getElementById('addEtageBtn');
+      const roomBtn = document.getElementById('addRoomBtn');
+      const uploadBtn = document.getElementById('uploadPlanBtn');
 
-      const etBtn = document.createElement('button');
-      etBtn.id = 'addEtageBtn';
-      etBtn.textContent = '+ Nouvel étage';
-      etageSelect.parentNode.appendChild(etBtn);
-      etBtn.onclick = async () => {
-        const nom = prompt('Nom de l\'étage');
-        if (!nom) return;
-        await fetch('/api/floors', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ chantier_id: chantierSelect.value, name: nom })
-        });
-        await updateFloorOptions(chantierSelect.value);
-      };
+      if (chBtn) {
+        chBtn.classList.remove('is-hidden');
+        chBtn.onclick = async () => {
+          const nom = prompt('Nom du chantier');
+          if (!nom) return;
+          await fetch('/api/chantiers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ nom })
+          });
+          await loadChantiers();
+        };
+      }
 
-      // +-------------------------------------------------------------+
-      // | Bouton “+ Nouvelle chambre”                                |
-      // +-------------------------------------------------------------+
-      const roomBtn = document.createElement('button');
-      roomBtn.id = 'addRoomBtn';
-      roomBtn.textContent = '+ Nouvelle chambre';
-      roomBtn.className = 'btn';
-      chambreSelect.parentNode.insertBefore(roomBtn, chambreSelect.nextSibling);
-      roomBtn.onclick = async () => {
-        const nom = prompt('Numéro ou nom de la chambre');
-        if (!nom) return;
-        await fetch('/api/rooms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            floor_id: parseInt(etageSelect.value, 10),
-            name: nom
-          })
-        });
-        await updateRoomOptions(etageSelect.value);
-      };
+      if (etBtn) {
+        etBtn.classList.remove('is-hidden');
+        etBtn.onclick = async () => {
+          const nom = prompt('Nom de l\'étage');
+          if (!nom) return;
+          await fetch('/api/floors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ chantier_id: chantierSelect.value, name: nom })
+          });
+          await updateFloorOptions(chantierSelect.value);
+        };
+      }
 
-      const uploadInput = document.createElement('input');
-      uploadInput.type = 'file';
-      uploadInput.accept = '.pdf,.png';
-      uploadInput.style.display = 'none';
-      etageSelect.parentNode.appendChild(uploadInput);
-      const uploadBtn = document.createElement('button');
-      uploadBtn.id = 'uploadPlanBtn';
-      uploadBtn.textContent = '📎 Upload plan';
-      etageSelect.parentNode.appendChild(uploadBtn);
-      uploadBtn.onclick = () => uploadInput.click();
-      uploadInput.onchange = async () => {
-        const file = uploadInput.files[0];
-        if (!file) return;
-        const fd = new FormData();
-        fd.append('plan', file);
-        await fetch(`/api/floors/${etageSelect.value}/plan`, {
-          method: 'POST',
-          credentials: 'include',
-          body: fd
-        });
-        await loadPlan(etageSelect.value);
-      };
+      if (roomBtn) {
+        roomBtn.classList.remove('is-hidden');
+        roomBtn.onclick = async () => {
+          const nom = prompt('Numéro ou nom de la chambre');
+          if (!nom) return;
+          await fetch('/api/rooms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              floor_id: parseInt(etageSelect.value, 10),
+              name: nom
+            })
+          });
+          await updateRoomOptions(etageSelect.value);
+        };
+      }
+
+      if (uploadBtn) {
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = '.pdf,.png';
+        uploadInput.id = 'uploadPlanInput';
+        uploadInput.className = 'is-hidden';
+        const etageControl = etageSelect?.parentNode;
+        const etActions = etageControl?.querySelector('.filter-actions');
+        if (etActions) etActions.parentNode.insertBefore(uploadInput, etActions);
+        uploadBtn.classList.remove('is-hidden');
+        uploadBtn.onclick = () => uploadInput.click();
+        uploadInput.onchange = async () => {
+          const file = uploadInput.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append('plan', file);
+          await fetch(`/api/floors/${etageSelect.value}/plan`, {
+            method: 'POST',
+            credentials: 'include',
+            body: fd
+          });
+          await loadPlan(etageSelect.value);
+        };
+      }
     }
 
     async function loadChantiers() {

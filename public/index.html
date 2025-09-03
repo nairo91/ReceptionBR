@@ -36,39 +36,61 @@
         Historique des bulles
       </button>
     </nav>
-    <label>Chantier :
-      <select id="chantierSelect"></select>
-    </label>
+    <div class="filter-group">
+      <label for="chantierSelect">Chantier</label>
+      <div class="filter-control">
+        <select id="chantierSelect"></select>
+        <div class="filter-actions">
+          <button id="addChantierBtn" class="btn btn-secondary is-hidden" aria-controls="chantierSelect">+ Nouveau chantier</button>
+        </div>
+      </div>
+    </div>
 
-    <label>Étage :
-      <select id="etageSelect">
-        <!-- valeur lisible R+X mais l'identifiant numérique est dans data-floor-id -->
-        <option value="R+0" data-floor-id="0">R+0</option>
-        <option value="R+1" data-floor-id="1">R+1</option>
-        <option value="R+2" data-floor-id="2">R+2</option>
-        <option value="R+3" data-floor-id="3">R+3</option>
-        <option value="R+4" data-floor-id="4">R+4</option>
-        <option value="R+5" data-floor-id="5">R+5</option>
-      </select>
-    </label>
+    <div class="filter-group">
+      <label for="etageSelect">Étage</label>
+      <div class="filter-control">
+        <select id="etageSelect">
+          <!-- valeur lisible R+X mais l'identifiant numérique est dans data-floor-id -->
+          <option value="R+0" data-floor-id="0">R+0</option>
+          <option value="R+1" data-floor-id="1">R+1</option>
+          <option value="R+2" data-floor-id="2">R+2</option>
+          <option value="R+3" data-floor-id="3">R+3</option>
+          <option value="R+4" data-floor-id="4">R+4</option>
+          <option value="R+5" data-floor-id="5">R+5</option>
+        </select>
+        <div class="filter-actions">
+          <button id="addEtageBtn" class="btn btn-secondary is-hidden" aria-controls="etageSelect">+ Nouvel étage</button>
+          <button id="uploadPlanBtn" class="btn btn-secondary is-hidden" aria-controls="uploadPlanInput">📎 Upload plan</button>
+        </div>
+      </div>
+    </div>
 
-    <label>Chambre :
-      <select id="chambreSelect" data-etage="R+5">
-        <option value="total">-- Toutes les chambres --</option>
-        <!-- etc. -->
-      </select>
-    </label>
+    <div class="filter-group">
+      <label for="chambreSelect">Chambre</label>
+      <div class="filter-control">
+        <select id="chambreSelect" data-etage="R+5">
+          <option value="total">-- Toutes les chambres --</option>
+          <!-- etc. -->
+        </select>
+        <div class="filter-actions">
+          <button id="addRoomBtn" class="btn btn-secondary is-hidden" aria-controls="chambreSelect">+ Nouvelle chambre</button>
+        </div>
+      </div>
+    </div>
 
-    <label>Statut :
-      <select id="statusFilter">
-        <option value="">-- Tous les statuts --</option>
-        <option value="attente">En attente</option>
-        <option value="a_corriger">À corriger</option>
-        <option value="corrige">Corrigé</option>
-        <option value="validee">Validé</option>
-        <option value="abandonnee">Abandonné</option>
-      </select>
-    </label>
+    <div class="filter-group">
+      <label for="statusFilter">Statut</label>
+      <div class="filter-control">
+        <select id="statusFilter">
+          <option value="">-- Tous les statuts --</option>
+          <option value="attente">En attente</option>
+          <option value="a_corriger">À corriger</option>
+          <option value="corrige">Corrigé</option>
+          <option value="validee">Validé</option>
+          <option value="abandonnee">Abandonné</option>
+        </select>
+      </div>
+    </div>
 
     <!-- Format d’export -->
     <label for="export-format">Format :</label>
