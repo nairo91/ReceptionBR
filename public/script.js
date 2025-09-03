@@ -576,6 +576,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fd.append('levee_fait_par', user?.id || '');
         const files = form.querySelector('input[name="levee_media"]').files;
         for (const file of files) fd.append('levee_media', file);
+        // Preserve existing bubble fields to avoid clearing them during PUT
+        fd.append('description', bulle.description ?? '');
+        fd.append('intitule', bulle.intitule ?? '');
+        fd.append('etat', bulle.etat ?? '');
+        fd.append('lot', bulle.lot ?? '');
+        fd.append('entreprise_id', bulle.entreprise_id ?? '');
+        fd.append('localisation', bulle.localisation ?? '');
+        fd.append('observation', bulle.observation ?? '');
+        fd.append('date_butoir', bulle.date_butoir ? bulle.date_butoir.substring(0,10) : '');
         fetch(`/api/bulles/${bulle.id}`, {
           method: 'PUT',
           credentials: 'include',
