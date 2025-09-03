@@ -497,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         popup.style.top = '0';
         popup.style.width = '100vw';
         popup.style.height = '100dvh';
+        popup.style.zIndex = '9999';
       } else {
         popup.style.left = `${x + 40}px`;
         popup.style.top = `${y}px`;
@@ -848,9 +849,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getZoomFactor() {
-      if (window.visualViewport) {
-        return window.devicePixelRatio * (window.visualViewport.scale || 1);
-      }
       return window.devicePixelRatio || 1;
     }
 
@@ -1071,7 +1069,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('resize', ajusterTailleBulles);
     window.addEventListener('orientationchange', ajusterTailleBulles);
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', ajusterTailleBulles);
   }
 
   loginForm.addEventListener('submit', async (e) => {
