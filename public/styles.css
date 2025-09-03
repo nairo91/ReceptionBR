@@ -287,18 +287,18 @@ button:hover {
   }
 
   .popup .popup-content {
+    background: var(--card-bg, #ffffff);
+    color: inherit;
+    box-sizing: border-box;
     width: 100vw;
     height: 100dvh;
     height: -webkit-fill-available;
-    max-width: none;
-    max-height: none;
-    border-radius: 0;
-    margin: 0;
-    padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px);
     overflow: auto;
-    box-shadow: none;
-    background: var(--card-bg);
-    color: inherit;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px);
   }
 
   .popup img.preview,
@@ -323,6 +323,10 @@ button:hover {
   .popup .section-levee textarea,
   .popup .section-levee select {
     width: 100%;
+  }
+
+  html, body {
+    overscroll-behavior: contain;
   }
 
   .bulle {

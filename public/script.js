@@ -489,23 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
       closePopups();
       const popup = document.createElement('div');
       popup.className = 'popup';
+
       const isMobile = window.innerWidth <= 768;
-      const vp = window.visualViewport;
       if (isMobile) {
         popup.style.position = 'fixed';
-        if (vp) {
-          popup.style.left = vp.offsetLeft + 'px';
-          popup.style.top = vp.offsetTop + 'px';
-          popup.style.width = vp.width + 'px';
-          popup.style.height = vp.height + 'px';
-          popup.style.transformOrigin = 'top left';
-          popup.style.transform = vp.scale !== 1 ? `scale(${1/vp.scale})` : 'none';
-        } else {
-          popup.style.left = '0';
-          popup.style.top = '0';
-          popup.style.width = '100vw';
-          popup.style.height = '100dvh';
-        }
+        popup.style.left = '0';
+        popup.style.top = '0';
+        popup.style.width = '100vw';
+        popup.style.height = '100dvh';
       } else {
         popup.style.left = `${x + 40}px`;
         popup.style.top = `${y}px`;
@@ -514,28 +505,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof content === 'string') popup.innerHTML = content;
       else popup.appendChild(content);
       document.body.appendChild(popup);
-
-      function reposition() {
-        if (!isMobile || !window.visualViewport) return;
-        const v = window.visualViewport;
-        popup.style.left = v.offsetLeft + 'px';
-        popup.style.top = v.offsetTop + 'px';
-        popup.style.width = v.width + 'px';
-        popup.style.height = v.height + 'px';
-        popup.style.transform = v.scale !== 1 ? `scale(${1/v.scale})` : 'none';
-      }
-
-      if (vp) vp.addEventListener('resize', reposition);
-      popup._reposition = reposition;
     }
 
     function closePopups() {
-      document.querySelectorAll('.popup').forEach(p => {
-        if (p._reposition && window.visualViewport) {
-          window.visualViewport.removeEventListener('resize', p._reposition);
-        }
-        p.remove();
-      });
+      document.querySelectorAll('.popup').forEach(p => p.remove());
     }
     // rendre la fonction accessible depuis l’attribut onclick inline
     window.closePopups = closePopups;
