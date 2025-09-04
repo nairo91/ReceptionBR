@@ -44,6 +44,13 @@
       } finally {
         // Clear sidebar and reload to go back to login
         holder.innerHTML = '';
+        document.body.classList.remove('with-sidebar', 'menu-open');
+        document.getElementById('sidebar-toggle')?.remove();
+        document.querySelector('.sidebar-overlay')?.remove();
+        if (keyHandler) {
+          document.removeEventListener('keydown', keyHandler);
+          keyHandler = null;
+        }
         location.reload();
       }
     });

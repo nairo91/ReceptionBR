@@ -5,6 +5,7 @@
   --panel:#f8fafc;       /* ardoise très clair */
   --muted:#6b7280;       /* gris pour textes secondaires */
   --link:#0ea5e9;        /* bleu clair */
+  --sidebar-w: 220px;    /* largeur de la sidebar */
 }
 .dark-theme{
   --bg:#0b1220;
@@ -405,6 +406,18 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   align-items:center;
 }
 
+/* Barre de marque et conteneur : transition fluide */
+.brand-bar,
+#app-container {
+  transition: margin-left 0.3s ease;
+}
+
+/* ⚠️ Décaler seulement quand la sidebar est OUVERTE (menu-open) et en desktop */
+.with-sidebar.menu-open .brand-bar,
+.with-sidebar.menu-open #app-container {
+  margin-left: var(--sidebar-w, 220px);
+}
+
 /* Sidebar */
 .sidebar .brand{
   display:flex;
@@ -421,5 +434,9 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
 @media (max-width:768px){
   .brand-logo{ height:40px; }
   .brand-logo--sidebar{ height:48px; }
+  .with-sidebar.menu-open .brand-bar,
+  .with-sidebar.menu-open #app-container {
+    margin-left: 0;
+  }
 }
 
