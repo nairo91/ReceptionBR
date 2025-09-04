@@ -98,18 +98,6 @@
     };
     document.addEventListener('keydown', keyHandler);
 
-    // Re-wire theme toggle buttons scoped to the sidebar
-    holder.querySelectorAll('[data-theme-toggle]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const root = document.documentElement;
-        const current = root.getAttribute('data-theme') || 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-theme', next);
-        document.body.setAttribute('data-theme', next);
-        try { localStorage.setItem('theme', next); } catch (_){ }
-        btn.setAttribute('aria-label', next === 'dark' ? 'Passer en clair' : 'Passer en sombre');
-      });
-    });
   }
 
   // Expose globally so pages can call it after login
