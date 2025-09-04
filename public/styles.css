@@ -412,5 +412,42 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   transition: margin-left 0.3s ease;
 }
 
-/* (sidebar styles moved to sidebar.css) */
+/* ⚠️ Décaler seulement quand la sidebar est OUVERTE (menu-open) et en desktop */
+.with-sidebar.menu-open .brand-bar,
+.with-sidebar.menu-open #app-container {
+  margin-left: var(--sidebar-w, 220px);
+}
+
+/* Sidebar */
+.sidebar .brand{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+}
+.brand-logo--sidebar{
+  height:56px;
+  width:auto;
+}
+
+/* Petit écran : logo un peu plus petit */
+@media (max-width:768px){
+  .brand-logo{ height:40px; }
+  .brand-logo--sidebar{ height:48px; }
+  .with-sidebar.menu-open .brand-bar,
+  .with-sidebar.menu-open #app-container {
+    margin-left: 0;
+  }
+}
+
+/* Bouton burger légèrement transparent pour ne pas masquer le logo */
+#sidebar-toggle {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+#sidebar-toggle:hover,
+#sidebar-toggle:focus {
+  opacity: 1;
+}
 

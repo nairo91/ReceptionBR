@@ -22,68 +22,41 @@
 
 /* On ne décale plus le contenu global : le menu se superpose */
 body.with-sidebar { margin-left: 0; }
+
+/* Ajout d’un overlay qui assombrit l’écran quand la sidebar est ouverte */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  pointer-events: none;      /* Micro-patch #1 : pas de clics quand caché */
+  z-index: 1000;
+}
+.sidebar-overlay.show {
+  display: block;
+  pointer-events: auto;      /* clics actifs seulement quand visible */
+}
+
+/* Bouton burger pour ouvrir/fermer la sidebar */
+#sidebar-toggle {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #0f172a;
+  color: #fff;
+  font-size: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1002;
+}
+
 /* Micro-patch #3 : empêcher le scroll de fond quand le menu est ouvert */
 body.menu-open {
   overflow: hidden;
-}
-
-/* --- Sidebar cross-page fixes --- */
-.sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: 220px;
-  max-width: 85vw;
-  height: 100vh;
-  background: var(--panel, #fff);
-  border-right: 1px solid var(--card-border, #e2e8f0);
-  transform: translateX(0);        /* desktop par défaut visible */
-  transition: transform .25s ease;
-  z-index: 1000;
-}
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); } /* mobile: masquée par défaut */
-  .sidebar.open { transform: translateX(0); }
-}
-.sidebar .brand { display:flex; align-items:center; justify-content:center; padding:12px; }
-.sidebar .brand img,
-.brand-logo--sidebar {
-  display:block;
-  height:56px;         /* taille maîtrisée partout */
-  width:auto;
-  max-width: 100%;
-}
-@media (max-width:768px){ .brand-logo--sidebar{ height:48px; } }
-
-#sidebar-toggle{
-  position: fixed;
-  top: 10px; left: 10px;
-  z-index: 1100;
-  background: var(--panel, #fff);
-  border: 1px solid var(--card-border, #e2e8f0);
-  border-radius: 8px;
-  padding: 6px 10px;
-  opacity: .65;                  /* plus discret au-dessus du logo */
-  transition: opacity .2s ease, transform .2s ease;
-}
-#sidebar-toggle:hover{ opacity: 1; transform: scale(1.05); }
-
-.sidebar-overlay{
-  position: fixed;
-  inset: 0; background: rgba(0,0,0,.35);
-  opacity: 0; pointer-events: none;
-  transition: opacity .25s ease;
-  z-index: 900;
-}
-.sidebar.open ~ .sidebar-overlay,
-.sidebar-overlay.show { opacity: 1; pointer-events: auto; }
-
- /* Décalage contenu quand sidebar visible (desktop seulement) */
-@media (min-width: 769px) {
-  .with-sidebar main,
-  .with-sidebar header,
-  .with-sidebar .page-content,
-  .with-sidebar .tabs,
-  .with-sidebar #tableWrapper {
-    margin-left: 220px;
-  }
 }
