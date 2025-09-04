@@ -440,3 +440,14 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   }
 }
 
+/* Bouton burger légèrement transparent pour ne pas masquer le logo */
+#sidebar-toggle {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+#sidebar-toggle:hover,
+#sidebar-toggle:focus {
+  opacity: 1;
+}
+
