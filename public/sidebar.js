@@ -1,79 +1,114 @@
-(async function(){
-  const holder = document.getElementById('sidebar-holder');
-  if(!holder) return;
+(function () {
+  let keyHandler = null;
+  /**
+   * (Re)render the sidebar when the user is authenticated.
+   * - If no user session, clears the holder.
+   * - If session exists, injects sidebar.html and wires events.
+   */
+  async function renderSidebar() {
+    const holder = document.getElementById('sidebar-holder');
+    if (!holder) return;
 
-  // Vérifier la session AVANT d'injecter la sidebar
-  let user = null;
-  try {
-    const me = await fetch('/api/auth/me', { credentials:'include' });
-    if (!me.ok) return; // non connecté -> ne rien afficher
-    user = await me.json();
-  } catch (_) {
-    return;
-  }
+    // Check session
+    let me = null;
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (res.ok) me = await res.json();
+    } catch (_) {}
 
-  // Charger la sidebar
-  const res = await fetch('/sidebar.html', { credentials:'include' });
-  holder.innerHTML = await res.text();
-  document.body.classList.add('with-sidebar');
+    if (!me || !me.user) {
+      holder.innerHTML = '';
+      document.body.classList.remove('with-sidebar', 'menu-open');
+      document.getElementById('sidebar-toggle')?.remove();
+      document.querySelector('.sidebar-overlay')?.remove();
+      if (keyHandler) {
+        document.removeEventListener('keydown', keyHandler);
+        keyHandler = null;
+      }
+      return;
+    }
 
-  const span = document.getElementById('sidebar-user');
-  if(span && user && user.user && user.user.email){
-    span.textContent = user.user.email;
-  }
+    // Inject sidebar
+    const html = await fetch('/sidebar.html', { credentials: 'include' }).then(r => r.text());
+    holder.innerHTML = html;
+    document.body.classList.add('with-sidebar');
 
-  const btn = document.getElementById('sidebar-logout');
-  if(btn){
-    btn.addEventListener('click', async ()=>{
-      await fetch('/api/auth/logout', { method:'POST', credentials:'include' });
-      location.href = '/';
+    // Fill user email
+    const span = holder.querySelector('#sidebar-user');
+    if (span) span.textContent = me.user.email || '—';
+
+    // Wire logout button inside the sidebar
+    holder.querySelector('#sidebar-logout')?.addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } finally {
+        // Clear sidebar and reload to go back to login
+        holder.innerHTML = '';
+        location.reload();
+      }
+    });
+
+    // Create overlay and burger toggle for opening/closing sidebar
+    const sidebar = holder.querySelector('.sidebar');
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'sidebar-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    let toggle = document.getElementById('sidebar-toggle');
+    if (!toggle) {
+      toggle = document.createElement('button');
+      toggle.id = 'sidebar-toggle';
+      toggle.textContent = '☰';
+      document.body.appendChild(toggle);
+    }
+    toggle.setAttribute('aria-label', 'Ouvrir le menu');
+    toggle.setAttribute('aria-expanded', 'false');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('show');
+      document.body.classList.add('menu-open');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+      document.body.classList.remove('menu-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    toggle.onclick = () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    overlay.onclick = closeSidebar;
+
+    // Close with Escape
+    keyHandler = (e) => {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+        closeSidebar();
+        if (typeof toggle.focus === 'function') toggle.focus();
+      }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    // Re-wire theme toggle buttons scoped to the sidebar
+    holder.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const root = document.documentElement;
+        const current = root.getAttribute('data-theme') || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        document.body.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (_){ }
+        btn.setAttribute('aria-label', next === 'dark' ? 'Passer en clair' : 'Passer en sombre');
+      });
     });
   }
 
-  // Créer overlay et bouton burger pour ouvrir/fermer la sidebar
-  const sidebar = holder.querySelector('.sidebar');
-  const overlay = document.createElement('div');
-  overlay.className = 'sidebar-overlay';
-  document.body.appendChild(overlay);
-  // Micro-patch #4 : éviter les doublons de bouton si le script est ré-exécuté
-  let toggle = document.getElementById('sidebar-toggle');
-  if (!toggle) {
-    toggle = document.createElement('button');
-    toggle.id = 'sidebar-toggle';
-    document.body.appendChild(toggle);
-  }
-  toggle.textContent = '☰';
-  // Micro-patch #2 : accessibilité
-  toggle.setAttribute('aria-label', 'Ouvrir le menu');
-  toggle.setAttribute('aria-expanded', 'false');
+  // Expose globally so pages can call it after login
+  window.renderSidebar = renderSidebar;
 
-  function openSidebar() {
-    sidebar.classList.add('open');
-    overlay.classList.add('show');
-    document.body.classList.add('menu-open');     // Micro-patch #3
-    toggle.setAttribute('aria-expanded', 'true'); // Micro-patch #2
-  }
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-    document.body.classList.remove('menu-open');  // Micro-patch #3
-    toggle.setAttribute('aria-expanded', 'false');// Micro-patch #2
-  }
-
-  toggle.addEventListener('click', () => {
-    if (sidebar.classList.contains('open')) {
-      closeSidebar();
-    } else {
-      openSidebar();
-    }
-  });
-  overlay.addEventListener('click', closeSidebar);
-
-  // Micro-patch #2 : fermer avec la touche Échap et rendre le focus
-  document.addEventListener('keydown', (e)=>{
-    if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-      closeSidebar();
-      if (typeof toggle.focus === 'function') toggle.focus();
-    }
-  });
+  // First render on load (will show nothing if not logged in)
+  document.addEventListener('DOMContentLoaded', renderSidebar);
 })();
+

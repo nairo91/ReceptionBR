@@ -1117,6 +1117,10 @@ document.addEventListener('DOMContentLoaded', () => {
       loginError.textContent = '';
       loginContainer.style.display = 'none';
       appContainer.style.display   = 'block';
+      // Render the sidebar now that we are authenticated
+      if (window.renderSidebar) {
+        try { await window.renderSidebar(); } catch(_){ }
+      }
       await initApp();
     } else {
       loginError.textContent = 'Échec de la connexion';
