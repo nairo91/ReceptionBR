@@ -91,23 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    async function bakeAlphaToJPEG(imgData, alpha = 0.15) {
-      const srcImg = new Image();
-      return await new Promise((resolve) => {
-        srcImg.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = srcImg.naturalWidth;
-          canvas.height = srcImg.naturalHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.globalAlpha = alpha;
-          ctx.drawImage(srcImg, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        srcImg.src = imgData;
-      });
-    }
-
     async function getImageRatio(dataUrl) {
       return await new Promise((resolve) => {
         const img = new Image();
@@ -1048,12 +1031,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await fetch('/img/brh-logo.png', { credentials: 'include' });
         if (resp.ok) {
           const blob = await resp.blob();
-          const dataURL = await new Promise((resolve) => {
-            const r = new FileReader();
-            r.onload = () => resolve(r.result);
-            r.readAsDataURL(blob);
+          watermark = await new Promise((resolve) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result);
+            fr.readAsDataURL(blob);
           });
-          watermark = await bakeAlphaToJPEG(dataURL, 0.18);
         }
         const ratio   = watermark ? await getImageRatio(watermark) : 1;
         const targetW = pageW * 0.60;
@@ -1126,9 +1108,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             h.cell.text = []; // pas de texte dans la cellule
           },
-          didDrawPage: (data) => {
-            if (watermark) {
-              doc.addImage(watermark, 'JPEG', posX, posY, targetW, targetH);
+          didDrawPage: () => {
+            if (!watermark) return;
+            const hasGState = typeof doc.GState === 'function' && typeof doc.setGState === 'function';
+            if (hasGState) {
+              const gs = new doc.GState({ opacity: 0.15 });
+              doc.setGState(gs);
+            }
+            doc.addImage(watermark, 'PNG', posX, posY, targetW, targetH);
+            if (hasGState) {
+              const gsNorm = new doc.GState({ opacity: 1 });
+              doc.setGState(gsNorm);
             }
           }
         });
