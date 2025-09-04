@@ -91,6 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    async function getImageRatio(dataUrl) {
+      return await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img.naturalHeight / img.naturalWidth || 1);
+        img.src = dataUrl;
+      });
+    }
+
     // Calcule des largeurs de colonnes adaptées à la page
     function computeColumnStyles(cols, baseWidths, pageWidth, marginLeft, marginRight, minW = 36) {
       const available = pageWidth - marginLeft - marginRight;
@@ -1017,6 +1025,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (idxLevDate >= 0) {
           columnStyles[idxLevDate] = { ...(columnStyles[idxLevDate]||{}), halign: 'center' };
         }
+
+        // --- Watermark: logo en filigrane sur chaque page (préserve la transparence PNG) ---
+        try {
+          // Lire l'image en dataURL direct (sans recompression JPEG)
+          const resp = await fetch('/img/brh-logo.png', { credentials: 'include' });
+          if (resp.ok) {
+            const blob = await resp.blob();
+            const logoDataUrl = await new Promise((resolve) => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result);
+              r.readAsDataURL(blob);
+            });
+            const ratio = await getImageRatio(logoDataUrl); // h/w
+            const targetW = pageW * 0.60;
+            const targetH = targetW * ratio;
+            const x = (pageW - targetW) / 2;
+            const y = (pageH - targetH) / 2;
+
+            const hasGState = typeof doc.GState === 'function' && typeof doc.setGState === 'function';
+            const pageCount = doc.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+              doc.setPage(i);
+              if (hasGState) {
+                const gs = new doc.GState({ opacity: 0.10 });
+                doc.setGState(gs);
+              }
+              // Utiliser PNG pour conserver l’alpha
+              doc.addImage(logoDataUrl, 'PNG', x, y, targetW, targetH);
+              if (hasGState) {
+                const gsNorm = new doc.GState({ opacity: 1 });
+                doc.setGState(gsNorm);
+              }
+            }
+          }
+        } catch(_) {}
 
         // Titre
         doc.setFontSize(12);
