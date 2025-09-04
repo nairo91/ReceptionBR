@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Auth Demo</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="/img/brh-logo.png" type="image/png">
 </head>
 <body>
   <div id="sidebar-holder"></div>
@@ -25,9 +26,14 @@
   </div>
 
   <div id="app-container" style="display:none;">
+    <header class="brand-bar">
+      <img src="/img/brh-logo.png" class="brand-logo" alt="Bâti Rénov Hôtellerie">
+      <div class="brand-actions">
+        <button id="logoutBtn">Déconnexion</button>
+        <button id="themeToggle" data-theme-toggle type="button" title="Basculer clair/sombre">🌓</button>
+      </div>
+    </header>
     <h1>Bienvenue</h1>
-    <button id="logoutBtn">Déconnexion</button>
-    <button id="themeToggle" data-theme-toggle type="button" title="Basculer clair/sombre">🌓</button>
     <nav>
       <a href="selection.html" id="nav-selection" class="btn btn-primary">
         Gestion des tâches
