@@ -353,11 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <textarea name="description" placeholder="Description">${bulle.description || ''}</textarea><br>
           <label>État :
             <select name="etat">
-              <option value="attente" ${bulle.etat === 'attente' ? 'selected' : ''}>🟡 En attente</option>
               <option value="a_corriger" ${bulle.etat === 'a_corriger' ? 'selected' : ''}>🔴 À corriger</option>
               <option value="corrige" ${bulle.etat === 'corrige' ? 'selected' : ''}>🔵 Corrigé</option>
-              <option value="validee" ${bulle.etat === 'validee' ? 'selected' : ''}>🟢 Validé</option>
-              <option value="abandonnee" ${bulle.etat === 'abandonnee' ? 'selected' : ''}>⚫ Abandonné</option>
+              <option value="levee" ${bulle.etat === 'levee' ? 'selected' : ''}>🟢 Levée</option>
             </select>
           </label><br>
           <label>Lot :
@@ -484,11 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getColorByEtat(etat) {
       switch (etat) {
-        case 'attente': return '#f1c40f';
         case 'a_corriger': return '#e74c3c';
         case 'corrige': return '#3498db';
-        case 'validee': return '#2ecc71';
-        case 'abandonnee': return '#7f8c8d';
+        case 'levee': return '#2ecc71';
         default: return '#e74c3c';
       }
     }
@@ -784,11 +780,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <textarea name="description" placeholder="Description"></textarea><br>
         <label>État :
           <select name="etat">
-            <option value="attente" selected>🟡 En attente</option>
-            <option value="a_corriger">🔴 À corriger</option>
+            <option value="a_corriger" selected>🔴 À corriger</option>
             <option value="corrige">🔵 Corrigé</option>
-            <option value="validee">🟢 Validé</option>
-            <option value="abandonnee">⚫ Abandonné</option>
+            <option value="levee">🟢 Levée</option>
           </select>
         </label><br>
         <label>Lot :

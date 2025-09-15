@@ -46,7 +46,7 @@ const statusLabels = {
   en_cours: 'En cours',
   attente_validation: 'En attente de validation',
   clos: 'Clos',
-  valide: 'Validé',
+  levee: 'Levée',
   a_definir: 'À définir'
 };
 
@@ -458,7 +458,7 @@ function addEditRow(data = {}) {
     <option value="en_cours">En cours</option>
     <option value="attente_validation">En attente de validation</option>
     <option value="clos">Clos</option>
-    <option value="valide">Validé</option>
+    <option value="levee">Levée</option>
     <option value="a_definir">À définir</option>
   `;
   if (data.state) selState.value = data.state;
