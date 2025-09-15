@@ -42,8 +42,10 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
     const photo = firstPhoto ? firstPhoto.path : null;
     let leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
-    if (leveeFaitPar == null && (leveeFaitLe || leveeCommentaire || leveeFiles.length)) {
-      leveeFaitPar = userId;
+    if (leveeFaitPar == null) {
+      if (etat === 'levee' || leveeFaitLe || leveeCommentaire || leveeFiles.length) {
+        leveeFaitPar = userId;
+      }
     }
 
     const insertRes = await pool.query(
@@ -101,7 +103,7 @@ router.delete("/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-// PUT : modification bulle sans authentification, modified_by et levee_par à null
+// PUT : modification bulle sans authentification, modified_by et levee_fait_par à null
 router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,9 +128,12 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
     const oldRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
     if (oldRes.rowCount === 0) return res.status(404).json({ error: 'Bulle non trouvée' });
     const oldRow = oldRes.rows[0];
+    const newEtat = etat ?? oldRow.etat;
     let leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
     if (leveeFaitPar == null) {
-      if (leveeFaitLe || leveeCommentaire || leveeFiles.length) {
+      if (newEtat === 'levee' && oldRow.etat !== 'levee') {
+        leveeFaitPar = userId;
+      } else if (leveeFaitLe || leveeCommentaire || leveeFiles.length) {
         leveeFaitPar = userId;
       } else {
         leveeFaitPar = oldRow.levee_fait_par;
@@ -195,9 +200,9 @@ router.get("/export/csv/all", async (req, res) => {
       `SELECT b.id, b.numero, b.intitule, b.description, b.etat,
               b.lot, e.nom AS entreprise, b.localisation, b.observation,
               b.date_butoir, b.photo, b.x, b.y, f.name AS etage, b.chambre,
-              u1.username AS created_by,
-              u2.username AS modified_by,
-              b.levee_par,
+              u1.email AS created_by,
+              u2.email AS modified_by,
+              lu.email AS levee_fait_par_email,
               pm.photos,
               vm.videos
        FROM bulles b
@@ -222,6 +227,7 @@ router.get("/export/csv/all", async (req, res) => {
          LIMIT 1
        ) rh_update ON TRUE
        LEFT JOIN users u2 ON rh_update.user_id = u2.id
+       LEFT JOIN users lu ON lu.id = b.levee_fait_par
        LEFT JOIN (
          SELECT bulle_id, json_agg(path) AS photos
          FROM bulle_media WHERE type='photo'
@@ -238,7 +244,7 @@ router.get("/export/csv/all", async (req, res) => {
       "id", "numero", "intitule", "photos", "videos", "description", "etat",
       "lot", "entreprise", "localisation", "observation",
       "date_butoir", "x", "y", "etage", "chambre",
-      "created_by", "modified_by", "levee_par"
+      "created_by", "modified_by", "levee_fait_par_email"
     ];
 
     const opts = {
@@ -285,9 +291,9 @@ router.get("/export/csv", async (req, res) => {
     if (!chambre || chambre === "total") {
       result = await pool.query(
         `SELECT f.name AS etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
-                b.lot, b.photo, b.levee_par,
-                u1.username AS created_by,
-                u2.username AS modified_by,
+                b.lot, b.photo, lu.email AS levee_fait_par_email,
+                u1.email AS created_by,
+                u2.email AS modified_by,
                 pm.photos,
                 vm.videos
          FROM bulles b
@@ -311,6 +317,7 @@ router.get("/export/csv", async (req, res) => {
            LIMIT 1
          ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
+         LEFT JOIN users lu ON b.levee_fait_par = lu.id
          LEFT JOIN (
            SELECT bulle_id, json_agg(path) AS photos
            FROM bulle_media WHERE type='photo'
@@ -327,9 +334,9 @@ router.get("/export/csv", async (req, res) => {
     } else {
       result = await pool.query(
         `SELECT f.name AS etage, b.chambre, b.numero, b.intitule, b.description, b.etat,
-                b.lot, b.photo, b.levee_par,
-                u1.username AS created_by,
-                u2.username AS modified_by,
+                b.lot, b.photo, lu.email AS levee_fait_par_email,
+                u1.email AS created_by,
+                u2.email AS modified_by,
                 pm.photos,
                 vm.videos
          FROM bulles b
@@ -353,6 +360,7 @@ router.get("/export/csv", async (req, res) => {
            LIMIT 1
          ) rh_update ON TRUE
          LEFT JOIN users u2 ON rh_update.user_id = u2.id
+         LEFT JOIN users lu ON b.levee_fait_par = lu.id
          LEFT JOIN (
            SELECT bulle_id, json_agg(path) AS photos
            FROM bulle_media WHERE type='photo'
@@ -390,7 +398,7 @@ router.get("/export/csv", async (req, res) => {
       "description",
       "etat",
       "lot",
-      "levee_par",
+      "levee_fait_par_email",
       "created_by",
       "modified_by"
     ];
