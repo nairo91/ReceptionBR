@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!rows || rows.length === 0) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 14;
+      cell.colSpan = 13;
       cell.textContent = 'Aucune action enregistrée.';
       row.appendChild(cell);
       tbody.innerHTML = '';
@@ -23,7 +23,6 @@ window.addEventListener('DOMContentLoaded', () => {
         <td>${data.chambre}</td>
         <td>${data.bulle_numero}</td>
         <td>${data.lot}</td>
-        <td>${data.entreprise || ''}</td>
         <td>${data.localisation || ''}</td>
         <td>${data.observation || ''}</td>
         <td>${data.description || ''}</td>
