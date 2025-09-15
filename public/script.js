@@ -861,12 +861,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const selected = getCheckedColumns();
 
-        // Ordre: Photos juste avant le bloc Levée ; Levée = Fait par, Commentaire, (puis Photos de levée)
+        // Ordre: Photos juste avant le bloc Levée ; Levée = Fait par, Commentaire, Fait le
         const ORDER = [
           'created_by_email','modified_by_email',
           'etage','chambre','numero','lot','intitule','description','etat','localisation','observation','date_butoir',
           'photos',
-          'levee_fait_par_email','levee_commentaire','levee_photos','levee_fait_le'
+          'levee_fait_par_email','levee_commentaire','levee_fait_le'
         ];
         let cols = ORDER.filter(c => selected.includes(c));
         // On impose l’ordre exact défini ci-dessus, sans repousser "photos" en dernier
@@ -885,10 +885,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const LABELS = {
           created_by_email:'Créé par',
           modified_by_email:'Modifié par',
-          levee_fait_par_email:'Levée – Fait par',
-          levee_fait_le:'Levée – Fait le',
+          levee_fait_par_email:'Fait par',
+          levee_fait_le:'Fait le',
           levee_commentaire:'Levée – Commentaire',
-          levee_photos:'Levée – Photos',
           etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
           intitule:'Intitulé', description:'Description', etat:'État', localisation:'Localisation',
           observation:'Observation', date_butoir:'Date butoir',
@@ -907,7 +906,6 @@ document.addEventListener('DOMContentLoaded', () => {
           // colonnes "Levée"
           levee_fait_par_email: 120,
           levee_commentaire: 160,
-          levee_photos: 200,
           // on élargit un peu la date pour éviter l'écrasement
           levee_fait_le: 110
         };
@@ -921,20 +919,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return urls.filter(Boolean);
           })
         );
-        const leveeThumbsPerRow = await Promise.all(
-          data.map(async b => {
-            const lev = Array.isArray(b.media) ? b.media.filter(m => m.type==='levee_photo') : [];
-            const subset = lev.slice(0,3);
-            const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
-            return urls.filter(Boolean);
-          })
-        );
 
         // Datasource table
         const head = [cols.map(c => LABELS[c] || c.toUpperCase())];
         const body = data.map((row, idx) => cols.map(c => {
           if (c === 'photos') return (photoThumbsPerRow[idx].length ? ' ' : '—');
-          if (c === 'levee_photos') return (leveeThumbsPerRow[idx].length ? ' ' : '—');
           if (c === 'created_by_email') return resolveCreatedBy(row);
           if (c === 'modified_by_email') return resolveModifiedBy(row);
           if (c === 'levee_fait_par_email') return localPart(row.levee_fait_par_email);
@@ -1012,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', () => {
           rowPageBreak: 'avoid',
           didParseCell: (h) => {
             const colName = cols[h.column.index];
-            if (h.section === 'body' && (colName === 'photos' || colName === 'levee_photos')) {
+            if (h.section === 'body' && colName === 'photos') {
               // hauteur mini pour cas avec vignettes
               h.cell.height = Math.max(h.cell.height, 28 + 8);
             }
@@ -1020,8 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
           didDrawCell: (h) => {
             if (h.section !== 'body') return;
             const colName = cols[h.column.index];
-            if (colName !== 'photos' && colName !== 'levee_photos') return;
-            const thumbs = colName === 'photos' ? photoThumbsPerRow[h.row.index] || [] : leveeThumbsPerRow[h.row.index] || [];
+            if (colName !== 'photos') return;
+            const thumbs = photoThumbsPerRow[h.row.index] || [];
             if (!thumbs.length) return;
             const { x, y, height } = h.cell;
             const W = 34, H = 22, GAP = 6;
