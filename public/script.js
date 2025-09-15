@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
 
   let user = null;
-  let entreprises = [];
 
   async function refresh() {
     try {
@@ -242,13 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     await loadChantiers();
 
-    // Charger les entreprises
-    async function loadEntreprises() {
-      const res = await fetch('/api/entreprises', { credentials: 'include' });
-      entreprises = await res.json();
-    }
-    await loadEntreprises();
-
     // 2) Fonctions utilitaires
     async function loadPlan(etageId) {
       const res = await fetch(`/api/floors/${etageId}/plan`, { credentials:'include' });
@@ -354,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <label>État :
             <select name="etat">
               <option value="a_corriger" ${bulle.etat === 'a_corriger' ? 'selected' : ''}>🔴 À corriger</option>
-              <option value="corrige" ${bulle.etat === 'corrige' ? 'selected' : ''}>🔵 Corrigé</option>
               <option value="levee" ${bulle.etat === 'levee' ? 'selected' : ''}>🟢 Levée</option>
             </select>
           </label><br>
@@ -363,10 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
               <option value="">-- Sélectionner un lot --</option>
               ${lotOptions}
             </select>
-          </label><br>
-          <label>Entreprise :
-            <select name="entreprise_id"></select>
-            ${user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info'].includes(user.email) ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
           </label><br>
           <input type="text" name="localisation" placeholder="Localisation" value="${bulle.localisation || ''}" /><br>
           <input type="text" name="observation" placeholder="Observation" value="${bulle.observation || ''}" /><br>
@@ -409,25 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const leveeBtn = form.querySelector('#leveeBtn');
         if (leveeBtn) leveeBtn.onclick = () => openLeveeDialog(bulle);
 
-        const entrepriseSelect = form.querySelector('select[name="entreprise_id"]');
-        entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}" ${e.id === bulle.entreprise_id ? 'selected' : ''}>${e.nom}</option>`).join('');
-
-        const addEntBtn = form.querySelector('#addEntrepriseBtn');
-        if (addEntBtn) {
-          addEntBtn.onclick = async () => {
-            const nom = prompt('Nom de la nouvelle entreprise');
-            if (!nom) return;
-            await fetch('/api/entreprises', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ nom })
-            });
-            await loadEntreprises();
-            entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
-          };
-        }
-
         form.onsubmit = e => {
           e.preventDefault();
           if (!user) {
@@ -441,8 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const nomBulle = formData.get('intitule');
           const desc = formData.get('description');
           const lot = formData.get('lot');
-          const entrepriseId = formData.get('entreprise_id');
-          const entreprise = entrepriseSelect.selectedOptions[0]?.textContent || '';
           const localisation = formData.get('localisation');
           const observation = formData.get('observation');
           fetch(`/api/bulles/${bulle.id}`, {
@@ -462,7 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 nomBulle: `Bulle ${bulle.numero}`,
                 description: desc,
                 lot,
-                entreprise,
                 localisation,
                 observation
               });
@@ -483,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function getColorByEtat(etat) {
       switch (etat) {
         case 'a_corriger': return '#e74c3c';
-        case 'corrige': return '#3498db';
         case 'levee': return '#2ecc71';
         default: return '#e74c3c';
       }
@@ -585,7 +549,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fd.append('intitule', bulle.intitule ?? '');
         fd.append('etat', bulle.etat ?? '');
         fd.append('lot', bulle.lot ?? '');
-        fd.append('entreprise_id', bulle.entreprise_id ?? '');
         fd.append('localisation', bulle.localisation ?? '');
         fd.append('observation', bulle.observation ?? '');
         fd.append('date_butoir', bulle.date_butoir ? bulle.date_butoir.substring(0,10) : '');
@@ -617,7 +580,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nomBulle: loc.nomBulle || '',
         description: loc.description || '',
         lot: loc.lot || '',
-        entreprise: loc.entreprise || '',
         localisation: loc.localisation || '',
         observation: loc.observation || '',
         timestamp: new Date().toISOString()
@@ -639,7 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
           nomBulle:    loc.nomBulle,
           description: loc.description,
           lot:         loc.lot,
-          entreprise:  loc.entreprise,
           localisation:loc.localisation,
           observation: loc.observation,
           timestamp:   new Date().toISOString()
@@ -662,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function deleteBulle(bulle) {
       fetch(`/api/bulles/${bulle.id}`, { method: 'DELETE', credentials: 'include' })
         .then(() => loadBulles());
-      const { chambre, x, y, numero, lot, entreprise, localisation, observation } = bulle;
+      const { chambre, x, y, numero, lot, localisation, observation } = bulle;
       recordAction('suppression', {
         etage: etageSelect.selectedOptions[0].textContent,
         chambre,
@@ -671,7 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nomBulle: `Bulle ${numero}`,
         description: '',
         lot,
-        entreprise,
         localisation,
         observation
       });
@@ -781,7 +741,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <label>État :
           <select name="etat">
             <option value="a_corriger" selected>🔴 À corriger</option>
-            <option value="corrige">🔵 Corrigé</option>
             <option value="levee">🟢 Levée</option>
           </select>
         </label><br>
@@ -791,10 +750,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ${lotOptions}
           </select>
         </label><br>
-        <label>Entreprise :
-          <select name="entreprise_id"></select>
-          ${user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info'].includes(user.email) ? '<button type="button" id="addEntrepriseBtn">+ Nouvelle entreprise</button>' : ''}
-        </label><br>
         <input type="text" name="localisation" placeholder="Localisation" /><br>
         <input type="text" name="observation" placeholder="Observation" /><br>
         <input type="date" name="date_butoir" /><br>
@@ -802,25 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="submit">✅ Ajouter</button>
         <button type="button" onclick="closePopups()">Annuler</button>
       `;
-
-      const entrepriseSelect = form.querySelector('select[name="entreprise_id"]');
-      entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
-
-      const addEntBtn = form.querySelector('#addEntrepriseBtn');
-      if (addEntBtn) {
-        addEntBtn.onclick = async () => {
-          const nom = prompt('Nom de la nouvelle entreprise');
-          if (!nom) return;
-          await fetch('/api/entreprises', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ nom })
-          });
-          await loadEntreprises();
-          entrepriseSelect.innerHTML = entreprises.map(e => `<option value="${e.id}">${e.nom}</option>`).join('');
-        };
-      }
 
       form.onsubmit = ev => {
         ev.preventDefault();
@@ -844,9 +780,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const nomBulle = formData.get('intitule');
         const desc = formData.get('description');
         const lot = formData.get('lot');
-        const entrepriseSelect2 = form.querySelector('select[name="entreprise_id"]');
-        const entrepriseId = formData.get('entreprise_id');
-        const entreprise = entrepriseSelect2.selectedOptions[0]?.textContent || '';
         const localisation = formData.get('localisation');
         const observation = formData.get('observation');
         fetch('/api/bulles', {
@@ -864,7 +797,6 @@ document.addEventListener('DOMContentLoaded', () => {
               nomBulle: `Bulle ${assignedNumero}`,
               description: desc,
               lot,
-              entreprise,
               localisation,
               observation
             });
@@ -932,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ordre: Photos juste avant le bloc Levée ; Levée = Fait par, Commentaire, (puis Photos de levée)
         const ORDER = [
           'created_by_email','modified_by_email',
-          'etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir',
+          'etage','chambre','numero','lot','intitule','description','etat','localisation','observation','date_butoir',
           'photos',
           'levee_fait_par_email','levee_commentaire','levee_photos','levee_fait_le'
         ];
@@ -958,8 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
           levee_commentaire:'Levée – Commentaire',
           levee_photos:'Levée – Photos',
           etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
-          intitule:'Intitulé', description:'Description', etat:'État',
-          entreprise:'Entreprise', localisation:'Localisation',
+          intitule:'Intitulé', description:'Description', etat:'État', localisation:'Localisation',
           observation:'Observation', date_butoir:'Date butoir',
           photos:'Photos'
         };
@@ -970,7 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
           modified_by_email: 120,
           etage: 50, chambre: 60, numero: 36, lot: 70,
           intitule: 140, description: 260, etat: 72,
-          entreprise: 100, localisation: 120,
+          localisation: 120,
           observation: 160, date_butoir: 86,
           photos: 200,
           // colonnes "Levée"

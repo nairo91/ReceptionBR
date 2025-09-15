@@ -419,13 +419,15 @@ router.get("/export/csv", async (req, res) => {
 });
 
 // GET /api/bulles/stats
-//   renvoie {a_corriger: X, corrige: Y, levee: Z}
+//   renvoie {a_corriger: X, levee: Y}
 router.get('/stats', async (req, res) => {
   try {
     const result = await pool.query("SELECT etat, COUNT(*) FROM bulles GROUP BY etat");
-    const stats = { a_corriger: 0, corrige: 0, levee: 0 };
+    const stats = { a_corriger: 0, levee: 0 };
     result.rows.forEach(r => {
-      stats[r.etat] = parseInt(r.count, 10);
+      if (r.etat in stats) {
+        stats[r.etat] = parseInt(r.count, 10);
+      }
     });
     res.json(stats);
   } catch (err) {
