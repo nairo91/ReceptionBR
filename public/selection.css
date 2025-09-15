@@ -93,7 +93,7 @@ button:focus {
 .status-attente_validation { background: #09f; }
 
 .status-clos { background: #888; }
-.status-valide { background: #0a0; }
+.status-levee { background: #0a0; }
 
 /* États — couleurs plus douces et professionnelles */
 .status-ouvert {
@@ -116,7 +116,7 @@ button:focus {
   color: #37474F;            /* Gris anthracite */
 }
 
-.status-valide {
+.status-levee {
   background-color: #E8F5E9; /* Vert pâle */
   color: #1B5E20;            /* Vert foncé */
 }
