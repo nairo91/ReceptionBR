@@ -99,9 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Calcule des largeurs de colonnes adaptées à la page
-    function computeColumnStyles(cols, baseWidths, pageWidth, marginLeft, marginRight, minW = 36) {
+    function computeColumnStyles(cols, baseWidths, pageWidth, marginLeft, marginRight, minW = 36, minByColumn = {}) {
       const available = pageWidth - marginLeft - marginRight;
-      const base = cols.map(c => baseWidths[c] ?? 90);
+      const getMinWidth = (col) => Math.max(minW, minByColumn[col] ?? 0);
+      const base = cols.map(c => {
+        const bw = baseWidths[c] ?? 90;
+        return Math.max(bw, getMinWidth(c));
+      });
       let sum = base.reduce((a,b)=>a+b,0);
 
       // Toujours garder "Photos" en dernier (si présente)
@@ -110,15 +114,27 @@ document.addEventListener('DOMContentLoaded', () => {
       // Si ça dépasse, on scale uniformément mais en respectant un minimum
       if (sum > available) {
         const scale = available / sum;
-        for (let i=0;i<base.length;i++) base[i] = Math.max(minW, Math.floor(base[i]*scale));
+        for (let i=0;i<base.length;i++) {
+          const col = cols[i];
+          base[i] = Math.max(getMinWidth(col), Math.floor(base[i]*scale));
+        }
         sum = base.reduce((a,b)=>a+b,0);
         // Si malgré tout ça dépasse encore (beaucoup de colonnes), on réitère en forçant le min
         if (sum > available) {
           const overflow = sum - available;
           // Retire quelques pixels proportionnellement
           const k = overflow / base.length;
-          for (let i=0;i<base.length;i++) base[i] = Math.max(minW, base[i] - Math.ceil(k));
+          for (let i=0;i<base.length;i++) {
+            const col = cols[i];
+            base[i] = Math.max(getMinWidth(col), base[i] - Math.ceil(k));
+          }
         }
+      }
+
+      for (let i=0;i<base.length;i++) {
+        const col = cols[i];
+        const min = getMinWidth(col);
+        if (base[i] < min) base[i] = min;
       }
 
       const columnStyles = {};
@@ -894,6 +910,17 @@ document.addEventListener('DOMContentLoaded', () => {
           photos:'Photos'
         };
 
+        const PHOTO_CELL_PADDING = 4;
+        const PHOTO_THUMB_WIDTH  = 60;
+        const PHOTO_THUMB_HEIGHT = 45;
+        const PHOTO_THUMB_GAP    = 8;
+        const MAX_PHOTO_THUMBS   = 3;
+        const PHOTO_COLUMN_MIN_WIDTH =
+          (PHOTO_THUMB_WIDTH * MAX_PHOTO_THUMBS)
+          + (PHOTO_THUMB_GAP * Math.max(0, MAX_PHOTO_THUMBS - 1))
+          + (PHOTO_CELL_PADDING * 2);
+        const PHOTO_ROW_MIN_HEIGHT = PHOTO_THUMB_HEIGHT + (PHOTO_CELL_PADDING * 2) + 4;
+
         // Largeurs de base (ajustées ensuite pour rentrer dans la page)
         const BASE = {
           created_by_email: 120,
@@ -902,7 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
           intitule: 140, description: 260, etat: 72,
           localisation: 120,
           observation: 160, date_butoir: 86,
-          photos: 200,
+          photos: 240,
           // colonnes "Levée"
           levee_fait_par_email: 120,
           levee_commentaire: 160,
@@ -910,11 +937,11 @@ document.addEventListener('DOMContentLoaded', () => {
           levee_fait_le: 110
         };
 
-        // Prépare les vignettes photos (max 3)
+        // Prépare les vignettes photos (max MAX_PHOTO_THUMBS)
         const photoThumbsPerRow = await Promise.all(
           data.map(async b => {
             const photos = Array.isArray(b.media) ? b.media.filter(m => m.type === 'photo') : [];
-            const subset = photos.slice(0, 3);
+            const subset = photos.slice(0, MAX_PHOTO_THUMBS);
             const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
             return urls.filter(Boolean);
           })
@@ -933,7 +960,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 
         // Styles & largeurs adaptées pour tenir dans la page
-        const columnStyles = computeColumnStyles(cols, BASE, pageW, margin, margin, 36);
+        const minWidths = {};
+        if (cols.includes('photos')) {
+          minWidths.photos = PHOTO_COLUMN_MIN_WIDTH;
+        }
+        const columnStyles = computeColumnStyles(cols, BASE, pageW, margin, margin, 36, minWidths);
         // centre la date de levée pour une meilleure lisibilité
         const idxLevDate = cols.indexOf('levee_fait_le');
         if (idxLevDate >= 0) {
@@ -983,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fillColor: undefined,
             textColor: [0,0,0],
             fontSize: 9,
-            cellPadding: 4,
+            cellPadding: PHOTO_CELL_PADDING,
             overflow: 'linebreak',
             lineColor: [230,230,230],
             lineWidth: 0.2,
@@ -1003,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const colName = cols[h.column.index];
             if (h.section === 'body' && colName === 'photos') {
               // hauteur mini pour cas avec vignettes
-              h.cell.height = Math.max(h.cell.height, 28 + 8);
+              h.cell.height = Math.max(h.cell.height, PHOTO_ROW_MIN_HEIGHT);
             }
           },
           didDrawCell: (h) => {
@@ -1013,12 +1044,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const thumbs = photoThumbsPerRow[h.row.index] || [];
             if (!thumbs.length) return;
             const { x, y, height } = h.cell;
-            const W = 34, H = 22, GAP = 6;
-            let cx = x + 4;
-            const cy = y + (height - H) / 2;
+            let cx = x + PHOTO_CELL_PADDING;
+            const cy = y + (height - PHOTO_THUMB_HEIGHT) / 2;
             thumbs.forEach((d) => {
-              try { doc.addImage(d, 'JPEG', cx, cy, W, H); } catch(_){ }
-              cx += W + GAP;
+              try { doc.addImage(d, 'JPEG', cx, cy, PHOTO_THUMB_WIDTH, PHOTO_THUMB_HEIGHT); } catch(_){ }
+              cx += PHOTO_THUMB_WIDTH + PHOTO_THUMB_GAP;
             });
             h.cell.text = []; // pas de texte dans la cellule
           },
