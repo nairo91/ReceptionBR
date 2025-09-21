@@ -367,16 +367,21 @@ function resolvePhaseBoxes(floorId, floorName, meta) {
 function pickConfigBoxes(floorId, floorName) {
   if (!planPhaseConfig) return null;
   const { byFloorId = {}, byFloorName = {}, default: defaultBoxes } = planPhaseConfig;
-  if (floorId != null) {
-    const key = String(floorId);
-    if (byFloorId[key]) return cloneBoxes(byFloorId[key]);
+
+  const floorKey = floorId != null ? String(floorId) : null;
+  if (floorKey && Object.prototype.hasOwnProperty.call(byFloorId, floorKey)) {
+    return cloneBoxes(byFloorId[floorKey]);
   }
+
   if (floorName && typeof floorName === 'string') {
-    const entry = Object.entries(byFloorName || {}).find(([label]) =>
-      label.toLowerCase() === floorName.toLowerCase()
-    );
-    if (entry) return cloneBoxes(entry[1]);
+    const normalizedTarget = normalizeLabel(floorName);
+    for (const [label, boxes] of Object.entries(byFloorName || {})) {
+      if (normalizeLabel(label) === normalizedTarget) {
+        return cloneBoxes(boxes);
+      }
+    }
   }
+
   if (defaultBoxes) return cloneBoxes(defaultBoxes);
   return null;
 }
@@ -386,6 +391,14 @@ function cloneBoxes(boxes) {
   return Object.fromEntries(
     Object.entries(boxes).map(([k, v]) => [k, v ? { ...v } : null])
   );
+}
+
+function normalizeLabel(value) {
+  if (!value) return '';
+  return String(value)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
 }
 
 function convertConfigBoxToAbsolute(box, meta) {
