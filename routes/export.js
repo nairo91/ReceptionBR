@@ -188,14 +188,21 @@ router.get('/', async (req, res) => {
     res.header('Content-Disposition', 'attachment; filename=bulles.pdf');
     doc.pipe(res);
     doc.text('Export des bulles', { align: 'center' }).moveDown();
-    const serialize = r => ({
+    // Normalisation des données pour pdfkit-table
+    const toText = (v) => {
+      if (v == null) return '';
+      if (Array.isArray(v)) return v.join(', ');
+      return String(v);
+    };
+    const serialize = (r) => ({
       ...r,
-      photos: (r.photos || []).join(', '),
-      videos: (r.videos || []).join(', ')
+      photos: Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
+      videos: Array.isArray(r.videos) ? r.videos : (r.videos ? [r.videos] : [])
     });
-    const pdfRows = rows.map(serialize);
-    const table = { headers: cols, rows: pdfRows.map(r => cols.map(c => r[c])) };
-    doc.table(table, { width: 500 });
+    const safeRows = rows.map(serialize).map(r => cols.map(c => toText(r[c])));
+    // pdfkit-table peut recevoir des headers en objets {label}
+    const safeHeaders = cols.map(h => ({ label: toText(h) }));
+    await doc.table({ headers: safeHeaders, rows: safeRows }, { width: 500 });
     doc.end();
     return;
   }
