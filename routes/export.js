@@ -24,14 +24,35 @@ async function getFetchImplementation() {
 router.get('/', async (req, res) => {
   // récupère les filtres chantier/étage/room
   const chantierFilter = req.query.chantier_id || '';
-  const etageFilter = req.query.etage_id || '';
+  const rawEtageId = Array.isArray(req.query.etage_id)
+    ? req.query.etage_id[0]
+    : req.query.etage_id;
+  const etageFilter = rawEtageId || '';
   const rawRoom  = req.query.room_id ?? req.query.chambre ?? '';
+  const rawPhaseParam = Array.isArray(req.query.phase)
+    ? req.query.phase[0]
+    : req.query.phase;
+  const phaseParam =
+    typeof rawPhaseParam === 'string' && rawPhaseParam.trim()
+      ? rawPhaseParam.trim().toLowerCase()
+      : undefined;
 
   let rows = await selectBullesWithEmails({
     chantier_id: chantierFilter,
     etage_id: etageFilter,
     chambre: rawRoom
   });
+
+  if (phaseParam && !PHASE_PARAM_VALUES.has(phaseParam)) {
+    console.warn(
+      `[export bulles] Paramètre phase invalide "${rawPhaseParam}", filtrage ignoré`
+    );
+  } else if (phaseParam) {
+    rows = await filterBullesByPhase(rows, {
+      phase: phaseParam,
+      etageId: rawEtageId
+    });
+  }
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const fullUrl = p => p && /^https?:\/\//.test(p) ? p : `${baseUrl}${p}`;
@@ -497,6 +518,119 @@ function pointInBox(point, box) {
     point.y >= box.top &&
     point.y <= box.top + box.height
   );
+}
+
+async function filterBullesByPhase(rows, { phase, etageId }) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return rows;
+  }
+
+  const floorIdStr = etageId != null ? String(etageId).trim() : '';
+  if (!floorIdStr) {
+    console.info(
+      `[export bulles] Filtrage phase=${phase} ignoré : etage_id manquant`
+    );
+    return rows;
+  }
+
+  const floorId = Number.parseInt(floorIdStr, 10);
+  if (!Number.isFinite(floorId)) {
+    console.info(
+      `[export bulles] Filtrage phase=${phase} ignoré : etage_id invalide (${etageId})`
+    );
+    return rows;
+  }
+
+  try {
+    const floorRes = await pool.query(
+      'SELECT id, name, plan_path FROM floors WHERE id = $1',
+      [floorId]
+    );
+    if (floorRes.rowCount === 0) {
+      console.info(
+        `[export bulles] Filtrage phase=${phase} ignoré : étage ${floorId} introuvable`
+      );
+      return rows;
+    }
+
+    const floor = floorRes.rows[0];
+    if (!floor.plan_path) {
+      console.info(
+        `[export bulles] Filtrage phase=${phase} ignoré : aucun plan pour l'étage ${floorId}`
+      );
+      return rows;
+    }
+
+    let planMeta;
+    try {
+      const planBuffer = await loadPlanBuffer(floor.plan_path);
+      planMeta = await sharp(planBuffer).metadata();
+    } catch (err) {
+      const message = err && err.message ? err.message : String(err);
+      console.warn(
+        `[export bulles] Filtrage phase=${phase} ignoré : échec lecture plan étage ${floorId} (${message})`
+      );
+      return rows;
+    }
+
+    if (!planMeta.width || !planMeta.height) {
+      console.warn(
+        `[export bulles] Filtrage phase=${phase} ignoré : dimensions du plan indisponibles pour l'étage ${floorId}`
+      );
+      return rows;
+    }
+
+    const boxes = resolvePhaseBoxes(floor.id, floor.name, planMeta);
+    if (!boxes) {
+      console.info(
+        `[export bulles] Filtrage phase=${phase} ignoré : aucune configuration de phase pour l'étage ${floorId}`
+      );
+      return rows;
+    }
+
+    const targetBoxes =
+      phase === 'all'
+        ? ['1', '2'].map(key => boxes[key]).filter(Boolean)
+        : [boxes[phase]].filter(Boolean);
+
+    if (targetBoxes.length === 0) {
+      console.info(
+        `[export bulles] Filtrage phase=${phase} ignoré : zone introuvable pour l'étage ${floorId}`
+      );
+      return rows;
+    }
+
+    const filteredRows = [];
+    let skippedForCoords = 0;
+    let skippedOutside = 0;
+
+    for (const bulle of rows) {
+      const coords = toAbsoluteCoordinates(bulle, planMeta);
+      if (!coords) {
+        skippedForCoords += 1;
+        continue;
+      }
+      if (targetBoxes.some(box => pointInBox(coords, box))) {
+        filteredRows.push(bulle);
+      } else {
+        skippedOutside += 1;
+      }
+    }
+
+    console.info(
+      `[export bulles] phase=${phase} étage=${floorId}: ${filteredRows.length}/${rows.length} bulles conservées` +
+        (skippedForCoords ? `, ${skippedForCoords} sans coordonnées` : '') +
+        (skippedOutside ? `, ${skippedOutside} hors zone` : '')
+    );
+
+    return filteredRows;
+  } catch (err) {
+    console.error(
+      `[export bulles] Erreur lors du filtrage phase=${phase} étage=${etageId}`,
+      err
+    );
+    return rows;
+  }
 }
 
 async function buildPhasePages(keys, planBuffer, meta, boxes, categorized) {
