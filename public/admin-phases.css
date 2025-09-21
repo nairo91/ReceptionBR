@@ -1,0 +1,220 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --border: #d9dce3;
+  --text: #1b2a4b;
+  --muted: #5b6887;
+  --accent1: rgba(255, 214, 0, 0.35);
+  --accent1-border: #f1c40f;
+  --accent2: rgba(255, 105, 180, 0.35);
+  --accent2-border: #e84393;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.phase-tool {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.phase-tool__header h1 {
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+}
+
+.phase-tool__floor {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.phase-tool__panel,
+.phase-tool__coordinates,
+.phase-tool__export {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+
+.phase-tool__instructions p {
+  margin: 0 0 12px 0;
+  color: var(--muted);
+}
+
+.phase-tool__status {
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #c0392b;
+}
+
+.phase-tool__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.phase-button {
+  border: 1px solid var(--border);
+  background: #f4f6fb;
+  color: var(--text);
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.phase-button:hover {
+  background: #e7ecfa;
+}
+
+.phase-button--active {
+  background: #1b2a4b;
+  border-color: #1b2a4b;
+  color: #ffffff;
+}
+
+.phase-button--ghost {
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+}
+
+.phase-tool__plan {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 360px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.03);
+}
+
+.plan-container {
+  position: relative;
+  max-width: 100%;
+  display: inline-block;
+}
+
+.plan-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.plan-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.plan-overlay__rect {
+  position: absolute;
+  border-radius: 8px;
+  pointer-events: none;
+  border: 2px solid transparent;
+}
+
+.plan-overlay__rect--phase1 {
+  background: var(--accent1);
+  border-color: var(--accent1-border);
+}
+
+.plan-overlay__rect--phase2 {
+  background: var(--accent2);
+  border-color: var(--accent2-border);
+}
+
+.phase-tool__coordinates {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.phase-card {
+  border-radius: 12px;
+  padding: 16px;
+  background: #f9fafc;
+  border: 1px solid var(--border);
+}
+
+.phase-card h2 {
+  margin-top: 0;
+}
+
+.phase-card__coords {
+  margin: 8px 0 0 0;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.95rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.phase-card--one {
+  border-left: 6px solid var(--accent1-border);
+}
+
+.phase-card--two {
+  border-left: 6px solid var(--accent2-border);
+}
+
+.phase-tool__export h2 {
+  margin-top: 0;
+}
+
+.phase-tool__json {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  min-height: 64px;
+}
+
+.phase-tool__copy {
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #1b2a4b;
+  color: #ffffff;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.phase-tool__copy:hover {
+  background: #24345f;
+}
+
+.phase-tool__copy-status {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .phase-tool {
+    padding: 16px 12px 32px;
+  }
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Définir les phases du plan</title>
+  <link rel="stylesheet" href="/admin-phases.css">
+</head>
+<body>
+  <main class="phase-tool" id="app">
+    <header class="phase-tool__header">
+      <h1>Phases du plan</h1>
+      <p id="floor-label" class="phase-tool__floor">&nbsp;</p>
+    </header>
+
+    <section class="phase-tool__panel">
+      <div class="phase-tool__status" id="status-message"></div>
+      <div class="phase-tool__instructions">
+        <p>
+          Sélectionnez la phase à dessiner puis faites glisser la souris sur le plan pour tracer un
+          rectangle. Les coordonnées affichées correspondent aux pixels de l'image originale.
+        </p>
+      </div>
+      <div class="phase-tool__actions">
+        <button type="button" class="phase-button phase-button--active" data-phase="1">
+          Phase&nbsp;1 (jaune)
+        </button>
+        <button type="button" class="phase-button" data-phase="2">
+          Phase&nbsp;2 (rose)
+        </button>
+        <button type="button" class="phase-button phase-button--ghost" id="reset-phase">
+          Effacer la phase active
+        </button>
+      </div>
+    </section>
+
+    <section class="phase-tool__plan" id="plan-section">
+      <div class="plan-container">
+        <img id="floor-plan" alt="Plan de l'étage" class="plan-image" />
+        <div id="plan-overlay" class="plan-overlay"></div>
+      </div>
+    </section>
+
+    <section class="phase-tool__coordinates">
+      <article class="phase-card phase-card--one">
+        <h2>Phase 1</h2>
+        <p class="phase-card__coords" id="phase1-coords">Cliquez-glissez pour dessiner la zone.</p>
+      </article>
+      <article class="phase-card phase-card--two">
+        <h2>Phase 2</h2>
+        <p class="phase-card__coords" id="phase2-coords">Cliquez-glissez pour dessiner la zone.</p>
+      </article>
+    </section>
+
+    <section class="phase-tool__export">
+      <h2>JSON à copier dans <code>config/planPhases.js</code></h2>
+      <pre id="json-output" class="phase-tool__json">Aucun rectangle défini.</pre>
+      <button type="button" id="copy-json" class="phase-tool__copy">Copier</button>
+      <p class="phase-tool__copy-status" id="copy-status"></p>
+    </section>
+  </main>
+
+  <script type="module" src="/admin-phases.js"></script>
+</body>
+</html>
