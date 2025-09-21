@@ -1,8 +1,13 @@
 const express = require('express');
 const router  = express.Router();
+const path    = require('path');
+const fs      = require('fs/promises');
+const sharp   = require('sharp');
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const pool = require('../db');
+const planPhaseConfig = require('../config/planPhases');
 const { selectBullesWithEmails } = require('./bullesSelect');
 
 router.get('/', async (req, res) => {
@@ -166,5 +171,409 @@ router.get('/', async (req, res) => {
   // Si format inconnu
   return res.status(400).send('Format inconnu');
 });
+
+const PHASE_PARAM_VALUES = new Set(['1', '2', 'all']);
+const DEFAULT_PHASE_LABELS = {
+  '1': 'Phase 1',
+  '2': 'Phase 2',
+  all: 'Toutes phases'
+};
+const LEGEND_ITEMS = [
+  { label: 'À corriger', color: '#e74c3c' },
+  { label: 'Levée', color: '#2ecc71' }
+];
+const WATERMARK_PATH = path.join(__dirname, '..', 'public', 'img', 'brh-logo.png');
+
+router.get('/plan', async (req, res) => {
+  try {
+    const {
+      etage_id: rawFloorId,
+      chantier_id: chantierId,
+      phase: rawPhase = 'all'
+    } = req.query;
+
+    const floorId = parseInt(String(rawFloorId ?? '').trim(), 10);
+    if (!Number.isFinite(floorId)) {
+      return res.status(400).json({ error: 'Paramètre etage_id invalide' });
+    }
+
+    const phase = String(rawPhase || 'all').toLowerCase();
+    if (!PHASE_PARAM_VALUES.has(phase)) {
+      return res.status(400).json({ error: 'Paramètre phase invalide (1, 2 ou all)' });
+    }
+
+    const floorRes = await pool.query(
+      'SELECT id, name, plan_path FROM floors WHERE id = $1',
+      [floorId]
+    );
+    if (floorRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Étage introuvable' });
+    }
+    const floor = floorRes.rows[0];
+    if (!floor.plan_path) {
+      return res.status(404).json({ error: 'Aucun plan enregistré pour cet étage' });
+    }
+
+    const planBuffer = await loadPlanBuffer(floor.plan_path);
+    const planMeta = await sharp(planBuffer).metadata();
+    if (!planMeta.width || !planMeta.height) {
+      throw new Error('Impossible de lire les dimensions du plan');
+    }
+
+    const phaseBoxes = resolvePhaseBoxes(floor.id, floor.name, planMeta);
+    const bulles = await selectBullesWithEmails({
+      chantier_id: chantierId,
+      etage_id: floorId
+    });
+    const categorized = categorizeBullesByPhase(bulles, planMeta, phaseBoxes);
+
+    if (categorized.unmatched.length) {
+      console.warn(
+        `[export plan] ${categorized.unmatched.length} bulle(s) en dehors des zones configurées`
+      );
+    }
+
+    const phasesToRender = phase === 'all' ? ['1', '2'] : [phase];
+    const pages = await buildPhasePages(
+      phasesToRender,
+      planBuffer,
+      planMeta,
+      phaseBoxes,
+      categorized
+    );
+
+    if (!pages.length) {
+      return res.status(404).json({ error: 'Aucune donnée à exporter pour cette sélection' });
+    }
+
+    const watermark = await loadWatermark();
+
+    res.header('Content-Type', 'application/pdf');
+    const safeFloor = (floor.name || `etage-${floor.id}`).replace(/[^a-z0-9_-]+/gi, '_');
+    res.header(
+      'Content-Disposition',
+      `attachment; filename=plan_${safeFloor}_${phase}.pdf`
+    );
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    doc.pipe(res);
+
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) doc.addPage();
+      drawPhasePage(doc, pages[i], {
+        floorName: floor.name,
+        watermark
+      });
+    }
+
+    doc.end();
+  } catch (err) {
+    console.error('Erreur export plan', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erreur lors de la génération du PDF' });
+    } else {
+      res.end();
+    }
+  }
+});
+
+let cachedWatermark = null;
+
+async function loadWatermark() {
+  if (cachedWatermark !== null) {
+    return cachedWatermark;
+  }
+  try {
+    const buffer = await fs.readFile(WATERMARK_PATH);
+    const meta = await sharp(buffer).metadata();
+    cachedWatermark = {
+      buffer,
+      width: meta.width || 0,
+      height: meta.height || 0
+    };
+    return cachedWatermark;
+  } catch (err) {
+    console.warn('Watermark introuvable ou illisible', err.message);
+    cachedWatermark = null;
+    return null;
+  }
+}
+
+async function loadPlanBuffer(planPath) {
+  if (!planPath) throw new Error('Chemin du plan manquant');
+  if (/^https?:\/\//i.test(planPath)) {
+    const response = await fetch(planPath);
+    if (!response.ok) {
+      throw new Error(`Impossible de télécharger le plan (${response.status})`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+  const cleaned = String(planPath).replace(/^\/+/, '');
+  const candidates = [
+    path.join(__dirname, '..', cleaned),
+    path.join(__dirname, '..', 'public', cleaned),
+    path.join(__dirname, '..', '..', cleaned)
+  ];
+  for (const candidate of candidates) {
+    try {
+      return await fs.readFile(candidate);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+  }
+  throw new Error(`Plan introuvable localement (${planPath})`);
+}
+
+function resolvePhaseBoxes(floorId, floorName, meta) {
+  const configBoxes = pickConfigBoxes(floorId, floorName);
+  const boxes = {};
+  boxes['1'] = convertConfigBoxToAbsolute(configBoxes?.['1'], meta) || fallbackBoxForPhase('1', meta);
+  boxes['2'] = convertConfigBoxToAbsolute(configBoxes?.['2'], meta) || fallbackBoxForPhase('2', meta);
+  return boxes;
+}
+
+function pickConfigBoxes(floorId, floorName) {
+  if (!planPhaseConfig) return null;
+  const { byFloorId = {}, byFloorName = {}, default: defaultBoxes } = planPhaseConfig;
+  if (floorId != null) {
+    const key = String(floorId);
+    if (byFloorId[key]) return cloneBoxes(byFloorId[key]);
+  }
+  if (floorName && typeof floorName === 'string') {
+    const entry = Object.entries(byFloorName || {}).find(([label]) =>
+      label.toLowerCase() === floorName.toLowerCase()
+    );
+    if (entry) return cloneBoxes(entry[1]);
+  }
+  if (defaultBoxes) return cloneBoxes(defaultBoxes);
+  return null;
+}
+
+function cloneBoxes(boxes) {
+  if (!boxes) return null;
+  return Object.fromEntries(
+    Object.entries(boxes).map(([k, v]) => [k, v ? { ...v } : null])
+  );
+}
+
+function convertConfigBoxToAbsolute(box, meta) {
+  if (!box) return null;
+  const width = meta.width || 1;
+  const height = meta.height || 1;
+  const isRelative = box.relative === true || box.mode === 'relative';
+  const left = isRelative ? (box.left || 0) * width : box.left || 0;
+  const top = isRelative ? (box.top || 0) * height : box.top || 0;
+  const boxWidth = isRelative ? (box.width || 0) * width : box.width || 0;
+  const boxHeight = isRelative ? (box.height || 0) * height : box.height || 0;
+  const normalized = clampBox({ left, top, width: boxWidth, height: boxHeight }, meta);
+  if (!normalized || normalized.width <= 0 || normalized.height <= 0) return null;
+  return normalized;
+}
+
+function clampBox(box, meta) {
+  if (!box) return null;
+  const maxWidth = meta.width || 1;
+  const maxHeight = meta.height || 1;
+  const left = Math.max(0, Math.min(Math.round(box.left || 0), maxWidth - 1));
+  const top = Math.max(0, Math.min(Math.round(box.top || 0), maxHeight - 1));
+  const width = Math.max(1, Math.min(Math.round(box.width || 0), maxWidth - left));
+  const height = Math.max(1, Math.min(Math.round(box.height || 0), maxHeight - top));
+  return { left, top, width, height };
+}
+
+function fallbackBoxForPhase(phase, meta) {
+  const width = meta.width || 1;
+  const height = meta.height || 1;
+  const overlap = Math.round(width * 0.02);
+  if (phase === '1') {
+    return clampBox({ left: 0, top: 0, width: Math.round(width / 2) + overlap, height }, meta);
+  }
+  if (phase === '2') {
+    const left = Math.max(0, Math.round(width / 2) - overlap);
+    return clampBox({ left, top: 0, width: width - left, height }, meta);
+  }
+  return clampBox({ left: 0, top: 0, width, height }, meta);
+}
+
+function categorizeBullesByPhase(bulles, meta, boxes) {
+  const result = { '1': [], '2': [], all: [], unmatched: [] };
+  for (const bulle of bulles) {
+    const coords = toAbsoluteCoordinates(bulle, meta);
+    if (!coords) continue;
+    const entry = { bulle, x: coords.x, y: coords.y };
+    let assigned = false;
+    if (pointInBox(coords, boxes['1'])) {
+      result['1'].push(entry);
+      assigned = true;
+    }
+    if (!assigned && pointInBox(coords, boxes['2'])) {
+      result['2'].push(entry);
+      assigned = true;
+    }
+    if (!assigned) {
+      result.unmatched.push(entry);
+    }
+    result.all.push(entry);
+  }
+  result['1'].sort(compareEntries);
+  result['2'].sort(compareEntries);
+  result.all.sort(compareEntries);
+  return result;
+}
+
+function toAbsoluteCoordinates(bulle, meta) {
+  const rawX = Number(bulle.x);
+  const rawY = Number(bulle.y);
+  if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) return null;
+  const width = meta.width || 1;
+  const height = meta.height || 1;
+  const isLegacy = rawX > 1 || rawY > 1;
+  const x = isLegacy ? rawX : rawX * width;
+  const y = isLegacy ? rawY : rawY * height;
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
+
+function compareEntries(a, b) {
+  const numA = parseInt(a.bulle?.numero, 10);
+  const numB = parseInt(b.bulle?.numero, 10);
+  if (Number.isFinite(numA) && Number.isFinite(numB) && numA !== numB) {
+    return numA - numB;
+  }
+  if (a.y !== b.y) return a.y - b.y;
+  return a.x - b.x;
+}
+
+function pointInBox(point, box) {
+  if (!box || !point) return false;
+  return (
+    point.x >= box.left &&
+    point.x <= box.left + box.width &&
+    point.y >= box.top &&
+    point.y <= box.top + box.height
+  );
+}
+
+async function buildPhasePages(keys, planBuffer, meta, boxes, categorized) {
+  const pages = [];
+  for (const key of keys) {
+    const box = boxes[key] || fallbackBoxForPhase(key, meta);
+    if (!box) continue;
+    const isFull =
+      box.left === 0 && box.top === 0 && box.width === meta.width && box.height === meta.height;
+    const buffer = isFull ? planBuffer : await sharp(planBuffer).extract(box).toBuffer();
+    const entries = (categorized[key] || []).map(entry => ({
+      ...entry,
+      relativeX: entry.x - box.left,
+      relativeY: entry.y - box.top
+    }));
+    pages.push({
+      key,
+      label: DEFAULT_PHASE_LABELS[key] || `Phase ${key}`,
+      box,
+      image: {
+        buffer,
+        width: box.width,
+        height: box.height
+      },
+      entries
+    });
+  }
+  return pages;
+}
+
+function drawPhasePage(doc, page, { floorName, watermark }) {
+  const margin = 40;
+  const headerHeight = margin + 24;
+  const legendHeight = 40;
+  const usableWidth = doc.page.width - margin * 2;
+  const usableHeight = doc.page.height - headerHeight - legendHeight;
+  const scale = Math.min(
+    usableWidth / page.image.width,
+    (usableHeight > 0 ? usableHeight : doc.page.height) / page.image.height
+  );
+  const drawWidth = page.image.width * scale;
+  const drawHeight = page.image.height * scale;
+  const imageX = margin + (usableWidth - drawWidth) / 2;
+  const imageY = headerHeight;
+
+  const title = floorName ? `${floorName} — ${page.label}` : page.label;
+  doc.fontSize(18).fillColor('#111111').text(title, margin, margin);
+  const countText = `${page.entries.length} réserve${page.entries.length > 1 ? 's' : ''}`;
+  doc.fontSize(10).fillColor('#555555').text(countText, margin, margin + 22);
+
+  doc.image(page.image.buffer, imageX, imageY, {
+    width: drawWidth,
+    height: drawHeight
+  });
+
+  if (watermark && watermark.buffer) {
+    drawWatermark(doc, watermark);
+  }
+
+  const radius = Math.max(7, 14 * Math.min(scale, 1));
+  const strokeWidth = Math.max(1, 1.4 * Math.min(scale, 1));
+
+  for (const entry of page.entries) {
+    const px = imageX + entry.relativeX * scale;
+    const py = imageY + entry.relativeY * scale;
+    const color = getColorForEtat(entry.bulle?.etat);
+    doc.save();
+    doc.lineWidth(strokeWidth);
+    doc.fillColor(color);
+    doc.strokeColor('#ffffff');
+    doc.circle(px, py, radius).fillAndStroke(color, '#ffffff');
+    doc.restore();
+
+    if (entry.bulle?.numero != null) {
+      const fontSize = Math.max(8, 11 * Math.min(scale, 1));
+      doc.save();
+      doc.fontSize(fontSize);
+      doc.fillColor('#ffffff');
+      doc.text(String(entry.bulle.numero), px - radius, py - fontSize / 2, {
+        width: radius * 2,
+        align: 'center'
+      });
+      doc.restore();
+    }
+  }
+
+  drawLegend(doc, margin);
+}
+
+function drawWatermark(doc, watermark) {
+  const ratio = watermark.width && watermark.height ? watermark.height / watermark.width : 1;
+  const targetWidth = doc.page.width * 0.5;
+  const targetHeight = targetWidth * ratio;
+  const x = (doc.page.width - targetWidth) / 2;
+  const y = (doc.page.height - targetHeight) / 2;
+  doc.save();
+  doc.opacity(0.08);
+  doc.image(watermark.buffer, x, y, { width: targetWidth, height: targetHeight });
+  doc.restore();
+}
+
+function drawLegend(doc, margin) {
+  const y = doc.page.height - margin - 16;
+  const size = 10;
+  let x = margin;
+  doc.fontSize(9);
+  for (const item of LEGEND_ITEMS) {
+    doc.save();
+    doc.rect(x, y, size, size).fill(item.color);
+    doc.restore();
+    doc.fillColor('#111111');
+    doc.text(item.label, x + size + 4, y - 2, { lineBreak: false });
+    const labelWidth = doc.widthOfString(item.label);
+    x += size + 4 + labelWidth + 16;
+  }
+  doc.fillColor('#111111');
+}
+
+function getColorForEtat(etat) {
+  if (etat === 'levee') return '#2ecc71';
+  return '#e74c3c';
+}
 
 module.exports = router;
