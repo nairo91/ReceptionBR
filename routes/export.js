@@ -10,6 +10,17 @@ const pool = require('../db');
 const planPhaseConfig = require('../config/planPhases');
 const { selectBullesWithEmails } = require('./bullesSelect');
 
+let cachedFetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
+
+async function getFetchImplementation() {
+  if (cachedFetchImpl) {
+    return cachedFetchImpl;
+  }
+  const mod = await import('node-fetch');
+  cachedFetchImpl = mod.default || mod;
+  return cachedFetchImpl;
+}
+
 router.get('/', async (req, res) => {
   // récupère les filtres chantier/étage/room
   const chantierFilter = req.query.chantier_id || '';
@@ -214,7 +225,15 @@ router.get('/plan', async (req, res) => {
       return res.status(404).json({ error: 'Aucun plan enregistré pour cet étage' });
     }
 
-    const planBuffer = await loadPlanBuffer(floor.plan_path);
+    let planBuffer;
+    try {
+      planBuffer = await loadPlanBuffer(floor.plan_path);
+    } catch (err) {
+      if (err && err.status === 404) {
+        return res.status(404).json({ error: 'Plan introuvable pour cet étage' });
+      }
+      throw err;
+    }
     const planMeta = await sharp(planBuffer).metadata();
     if (!planMeta.width || !planMeta.height) {
       throw new Error('Impossible de lire les dimensions du plan');
@@ -234,6 +253,13 @@ router.get('/plan', async (req, res) => {
     }
 
     const phasesToRender = phase === 'all' ? ['1', '2'] : [phase];
+    const totalEntries = phasesToRender.reduce(
+      (sum, key) => sum + (categorized[key]?.length || 0),
+      0
+    );
+    if (totalEntries === 0) {
+      return res.status(404).json({ error: 'Aucune donnée à exporter pour cette sélection' });
+    }
     const pages = await buildPhasePages(
       phasesToRender,
       planBuffer,
@@ -241,10 +267,6 @@ router.get('/plan', async (req, res) => {
       phaseBoxes,
       categorized
     );
-
-    if (!pages.length) {
-      return res.status(404).json({ error: 'Aucune donnée à exporter pour cette sélection' });
-    }
 
     const watermark = await loadWatermark();
 
@@ -300,11 +322,18 @@ async function loadWatermark() {
 }
 
 async function loadPlanBuffer(planPath) {
-  if (!planPath) throw new Error('Chemin du plan manquant');
+  if (!planPath) {
+    const err = new Error('Chemin du plan manquant');
+    err.status = 400;
+    throw err;
+  }
   if (/^https?:\/\//i.test(planPath)) {
-    const response = await fetch(planPath);
+    const fetchImpl = await getFetchImplementation();
+    const response = await fetchImpl(planPath);
     if (!response.ok) {
-      throw new Error(`Impossible de télécharger le plan (${response.status})`);
+      const error = new Error(`Impossible de télécharger le plan (${response.status})`);
+      error.status = response.status === 404 ? 404 : 500;
+      throw error;
     }
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
@@ -322,7 +351,9 @@ async function loadPlanBuffer(planPath) {
       if (err.code !== 'ENOENT') throw err;
     }
   }
-  throw new Error(`Plan introuvable localement (${planPath})`);
+  const err = new Error(`Plan introuvable localement (${planPath})`);
+  err.status = 404;
+  throw err;
 }
 
 function resolvePhaseBoxes(floorId, floorName, meta) {
