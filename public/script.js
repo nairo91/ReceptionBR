@@ -563,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preserve existing bubble fields to avoid clearing them during PUT
         fd.append('description', bulle.description ?? '');
         fd.append('intitule', bulle.intitule ?? '');
-        fd.append('etat', bulle.etat ?? '');
+        fd.append('etat', 'levee');
         fd.append('lot', bulle.lot ?? '');
         fd.append('localisation', bulle.localisation ?? '');
         fd.append('observation', bulle.observation ?? '');
