@@ -161,6 +161,9 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Toutes les routes suivantes nécessitent l'authentification
 app.use(isAuthenticated);
+app.get('/admin/phases', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-phases.html'));
+});
 // Route pour récupérer la liste des chantiers
 app.use('/api/chantiers', chantiersRoutes);
 

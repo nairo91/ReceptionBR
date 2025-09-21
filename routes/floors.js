@@ -57,6 +57,24 @@ router.post('/:id/plan', upload.single('plan'), async (req, res) => {
   }
 });
 
+// Récupération d'un étage par son identifiant
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, name, plan_path FROM floors WHERE id = $1',
+      [id]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Étage introuvable' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Erreur GET /api/floors/:id', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET du plan
 router.get('/:id/plan', async (req, res) => {
   const { id } = req.params;
