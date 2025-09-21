@@ -32,14 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function initApp() {
-    const chantierSelect  = document.getElementById("chantierSelect");
-    const etageSelect     = document.getElementById("etageSelect");
-    const chambreSelect   = document.getElementById("chambreSelect");
-    const exportBtn    = document.getElementById("exportBtn");
-    const formatSelect = document.getElementById("export-format");
-    const plan            = document.getElementById("plan");
-    const bullesContainer = document.getElementById("bulles-container");
-    const statusFilter    = document.getElementById("statusFilter");
+    const chantierSelect   = document.getElementById("chantierSelect");
+    const etageSelect      = document.getElementById("etageSelect");
+    const chambreSelect    = document.getElementById("chambreSelect");
+    const exportBtn        = document.getElementById("exportBtn");
+    const exportPhaseBtn   = document.getElementById("exportPhaseBtn");
+    const formatSelect     = document.getElementById("export-format");
+    const phaseSelect      = document.getElementById("phaseSelect");
+    const plan             = document.getElementById("plan");
+    const bullesContainer  = document.getElementById("bulles-container");
+    const statusFilter     = document.getElementById("statusFilter");
 
     // Fonction de filtrage des bulles selon l'état sélectionné
     function filterBulles() {
@@ -272,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(`/api/floors?chantier_id=${chantierId}`, { credentials:'include' });
       const etages = await res.json();
       etageSelect.innerHTML = etages.map(e =>
-        `<option value="${e.id}">${e.name}</option>`
+        `<option value="${e.id}" data-floor-id="${e.id}">${e.name}</option>`
       ).join('');
       if (!etages.length) return;
       etageSelect.selectedIndex = 0;
@@ -853,8 +855,29 @@ document.addEventListener('DOMContentLoaded', () => {
       updateRoomOptions(id);
       loadBulles();
     };
-      chambreSelect.onchange = loadBulles;
-      exportBtn.onclick = async () => {
+    chambreSelect.onchange = loadBulles;
+    if (exportPhaseBtn) {
+      exportPhaseBtn.addEventListener('click', () => {
+        const fmt = (formatSelect?.value || 'csv').toLowerCase();
+        const selectedOption = etageSelect?.selectedOptions?.[0];
+        const etageId = selectedOption?.dataset?.floorId
+          || selectedOption?.value
+          || etageSelect?.value;
+        if (!etageId) {
+          console.warn('Impossible de déterminer etage_id pour export phase');
+          return;
+        }
+        const phaseValue = phaseSelect?.value || '';
+        const url = new URL('/api/bulles/export', window.location.origin);
+        url.searchParams.set('format', fmt);
+        url.searchParams.set('etage_id', etageId);
+        if (phaseValue) {
+          url.searchParams.set('phase', phaseValue);
+        }
+        window.open(url.toString(), '_blank');
+      });
+    }
+    exportBtn.onclick = async () => {
         const fmt = (formatSelect.value || 'csv').toLowerCase();
         if (fmt !== 'pdf') {
           const params = new URLSearchParams();

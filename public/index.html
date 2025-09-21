@@ -102,6 +102,14 @@
       <option value="xlsx">Excel</option>
       <option value="pdf">PDF</option>
     </select>
+    <label>Phase :
+      <select id="phaseSelect">
+        <option value="">(Aucune)</option>
+        <option value="1">Phase 1</option>
+        <option value="2">Phase 2</option>
+        <option value="all">Toutes</option>
+      </select>
+    </label>
     <fieldset id="export-columns">
       <legend>Colonnes à inclure :</legend>
       <label><input type="checkbox" name="col" value="id" checked> ID</label>
@@ -123,6 +131,7 @@
       <label><input type="checkbox" name="col" value="levee_fait_le" checked> Fait le</label>
       <label><input type="checkbox" name="col" value="levee_commentaire" checked> Levée – Commentaire</label>
     </fieldset>
+    <button id="exportPhaseBtn">Exporter (par phase)</button>
     <!-- Nouveau bouton Export -->
     <button id="exportBtn">Exporter</button>
 
