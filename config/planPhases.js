@@ -1,3 +1,8 @@
+const ibisRPlus2Boxes = {
+  '1': { left: 92, top: 227, width: 741, height: 507 },
+  '2': { left: 885, top: 233, width: 1333, height: 490 }
+};
+
 module.exports = {
   /**
    * Valeurs par défaut utilisées si aucun réglage spécifique n'est trouvé
@@ -13,20 +18,13 @@ module.exports = {
    * donné en utilisant son identifiant numérique.
    */
   byFloorId: {
-    // Exemple :
-    // '2': {
-    //   '1': { left: 50, top: 200, width: 900, height: 400 },
-    //   '2': { left: 1000, top: 180, width: 1200, height: 450 }
-    // }
+    '5': ibisRPlus2Boxes
   },
   /**
    * Permet de définir des boîtes spécifiques à partir du libellé de l'étage.
-   * Les valeurs ci-dessous reprennent l'exemple fourni (Chambres R+2).
+   * Les valeurs ci-dessous sont maintenues par rétro-compatibilité.
    */
   byFloorName: {
-    'Chambres R+2': {
-      '1': { left: 50, top: 200, width: 900, height: 400 },
-      '2': { left: 1000, top: 180, width: 1200, height: 450 }
-    }
+    'Chambres R+2': ibisRPlus2Boxes
   }
 };
