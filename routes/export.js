@@ -184,10 +184,14 @@ router.get('/', async (req, res) => {
   }
 
   if (format === 'pdf') {
-    const PDFDocument = require('pdfkit-table');
     const doc = new PDFDocument({ size: 'A4', margin: 24 });
     const phase = phaseParam;
-    const phaseTag = phase && phase !== 'all' ? `_phase-${phase}` : (phase === 'all' ? `_phases` : '');
+    const phaseTag =
+      phase && phase !== 'all'
+        ? `_phase-${phase}`
+        : phase === 'all'
+          ? `_phases`
+          : '';
     res.header('Content-Disposition', `attachment; filename=bulles${phaseTag}.pdf`);
     res.header('Content-Type', 'application/pdf');
     doc.pipe(res);
@@ -196,7 +200,7 @@ router.get('/', async (req, res) => {
     const chantierName = chantierFilter || '—';
     const etageName = etageFilter || '—';
     const roomLabel = rawRoom ? String(rawRoom) : 'total';
-    const phaseLabel = phase ? ` — Phase: ${phase}` : '';
+    const phaseLabel = phase && phase !== 'all' ? ` — Phase: ${phase}` : '';
     doc
       .font('Helvetica')
       .fontSize(9)
@@ -204,8 +208,8 @@ router.get('/', async (req, res) => {
       .text(`Chantier: ${chantierName} — Étage: ${etageName} — Chambre: ${roomLabel}${phaseLabel}`)
       .moveDown(0.8);
 
-    const toText = (v) => (v == null ? '' : Array.isArray(v) ? v.join(', ') : String(v));
-    const normalize = (r) => ({
+    const toText = v => (v == null ? '' : Array.isArray(v) ? v.join(', ') : String(v));
+    const normalize = r => ({
       ...r,
       photos: Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
       videos: Array.isArray(r.videos) ? r.videos : (r.videos ? [r.videos] : [])
