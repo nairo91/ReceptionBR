@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const path    = require('path');
 const fs      = require('fs/promises');
+const https   = require('https');
 const sharp   = require('sharp');
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
@@ -39,7 +40,50 @@ const PHOTO_THUMB_CACHE = new Map();
 const PHOTO_THUMB_CACHE_MAX = 200;
 const MAX_THUMBS_PER_CELL = 6;
 const PHOTO_GRID_MAX_PER_ROW = 3;
-const MAX_PARALLEL_MEDIA_JOBS = 8;
+const MAX_PARALLEL_MEDIA_JOBS = 4;
+const HTTPS_AGENT = new https.Agent({ keepAlive: true, timeout: 15000, family: 4 });
+
+function cloudinaryThumb(url, w = 240, h = 240) {
+  try {
+    if (!/^https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(url)) return url;
+    return url.replace(
+      /\/image\/upload\/(?!.*\/image\/upload\/)/,
+      `/image/upload/c_limit,q_auto,f_auto,w_${w},h_${h}/`
+    );
+  } catch {
+    return url;
+  }
+}
+
+async function fetchToBuffer(u, { tries = 2 } = {}) {
+  let lastErr;
+  for (let i = 0; i < tries; i += 1) {
+    try {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 12000);
+      try {
+        const res = await ensureFetch()(u, {
+          signal: ctrl.signal,
+          agent: () => HTTPS_AGENT,
+          headers: { 'User-Agent': 'ReceptionBR/1.0 (+pdf-export)' }
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const ab = await res.arrayBuffer();
+        return Buffer.from(ab);
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) {
+        await new Promise(r => setTimeout(r, i ? 600 : 200));
+      }
+    }
+  }
+  throw lastErr;
+}
 
 async function mapLimit(items, limit, iteratee) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -91,44 +135,14 @@ async function loadImageBuffer(url) {
     return cached;
   }
 
+  const u = cloudinaryThumb(url);
   try {
-    let fetchImplLocal;
-    try {
-      fetchImplLocal = ensureFetch();
-    } catch (e) {
-      console.warn(`[export bulles] fetch failed for ${url}: ${e?.message || e}`);
-      rememberPhotoBuffer(url, null);
-      return null;
-    }
-
-    let response;
-    try {
-      const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 7000);
-      try {
-        response = await fetchImplLocal(url, { signal: ctrl.signal });
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch (e) {
-      console.warn(`[export bulles] fetch failed for ${url}: ${e?.message || e}`);
-      rememberPhotoBuffer(url, null);
-      return null;
-    }
-
-    if (!response.ok) {
-      console.warn(`[export bulles] fetch failed for ${url}: statut ${response.status}`);
-      rememberPhotoBuffer(url, null);
-      return null;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = await fetchToBuffer(u, { tries: 2 });
     rememberPhotoBuffer(url, buffer);
     return buffer;
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
-    console.warn(`[export bulles] Échec chargement miniature ${url} (${message})`);
+    console.warn(`[export bulles] fetch failed for ${u}: ${message}`);
     rememberPhotoBuffer(url, null);
     return null;
   }
@@ -825,7 +839,8 @@ router.get('/', async (req, res) => {
         const entry = {};
         pdfCols.forEach(col => {
           if (PHOTO_COLUMN_KEYS.has(col)) {
-            entry[col] = '';
+            const photos = toArray(row[col]);
+            entry[col] = canRenderThumbs ? '' : photos.join('\n');
           } else {
             entry[col] = toText(row[col]);
           }
@@ -986,7 +1001,23 @@ router.get('/', async (req, res) => {
               return;
             }
 
-            renderPhotoThumbGrid(doc, rectCell, entry.buffers, entry.remaining);
+            const buffers = Array.isArray(entry.buffers) ? entry.buffers : [];
+            if (!buffers.length) {
+              doc.save()
+                .fillColor('#888')
+                .font('Helvetica-Oblique')
+                .fontSize(8);
+              doc.text(
+                '(Photos non chargées)',
+                rectCell.x + 4,
+                rectCell.y + 4,
+                { width: Math.max(0, rectCell.width - 8) }
+              );
+              doc.restore();
+              return;
+            }
+
+            renderPhotoThumbGrid(doc, rectCell, buffers, entry.remaining);
           },
           divider: {
             header: { width: 0.5, color: '#dfe6ee' },
