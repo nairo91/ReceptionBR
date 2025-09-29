@@ -12,6 +12,169 @@ const { selectBullesWithEmails } = require('./bullesSelect');
 
 let cachedFetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
 
+const COLUMN_LABELS = {
+  etage: 'Étage',
+  chambre: 'Chambre',
+  numero: 'N°',
+  lot: 'Lot',
+  intitule: 'Intitulé',
+  description: 'Description',
+  etat: 'État',
+  observation: 'Observation',
+  date_butoir: 'Date butoir',
+  photos: 'Photos',
+  creation_photos: 'Photos (création)',
+  levee_photos: 'Photos (levée)',
+  creation_videos: 'Vidéos (création)',
+  levee_videos: 'Vidéos (levée)',
+  levee_commentaire: 'Commentaire levée',
+  levee_fait_par_email: 'Levée par',
+  levee_fait_le: 'Levée le'
+};
+
+const PHOTO_COLUMN_KEYS = new Set(['photos', 'creation_photos', 'levee_photos']);
+const MIN_COLUMN_WIDTH = 60;
+const PHOTO_THUMB_CACHE = new Map();
+const PHOTO_THUMB_CACHE_MAX = 200;
+const MAX_THUMBS_PER_CELL = 6;
+const PHOTO_GRID_MAX_PER_ROW = 3;
+const MAX_PARALLEL_MEDIA_JOBS = 8;
+
+async function mapLimit(items, limit, iteratee) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return [];
+  }
+
+  const resolvedLimit = Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 1);
+  const results = new Array(items.length);
+  let index = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = index;
+      index += 1;
+      if (currentIndex >= items.length) {
+        return;
+      }
+      results[currentIndex] = await iteratee(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(resolvedLimit, items.length) },
+    () => worker()
+  );
+
+  await Promise.all(workers);
+  return results;
+}
+
+function rememberPhotoBuffer(url, buffer) {
+  if (PHOTO_THUMB_CACHE.has(url)) {
+    PHOTO_THUMB_CACHE.delete(url);
+  }
+  PHOTO_THUMB_CACHE.set(url, buffer);
+  if (PHOTO_THUMB_CACHE.size > PHOTO_THUMB_CACHE_MAX) {
+    const oldestKey = PHOTO_THUMB_CACHE.keys().next().value;
+    if (oldestKey !== undefined) {
+      PHOTO_THUMB_CACHE.delete(oldestKey);
+    }
+  }
+}
+
+async function loadImageBuffer(url) {
+  if (!url) return null;
+  if (PHOTO_THUMB_CACHE.has(url)) {
+    const cached = PHOTO_THUMB_CACHE.get(url);
+    rememberPhotoBuffer(url, cached);
+    return cached;
+  }
+
+  try {
+    const fetchImpl = await getFetchImplementation();
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 7000);
+    let response;
+    try {
+      response = await fetchImpl(url, { signal: ctrl.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!response.ok) {
+      throw new Error(`statut ${response.status}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    rememberPhotoBuffer(url, buffer);
+    return buffer;
+  } catch (err) {
+    const message = err && err.message ? err.message : String(err);
+    console.warn(`[export bulles] Échec chargement miniature ${url} (${message})`);
+    rememberPhotoBuffer(url, null);
+    return null;
+  }
+}
+
+function renderPhotoThumbGrid(doc, rectCell, buffers, remaining = 0) {
+  if (!doc || !rectCell) {
+    return;
+  }
+
+  const validBuffers = Array.isArray(buffers) ? buffers.filter(Boolean) : [];
+  if (validBuffers.length === 0 && remaining <= 0) {
+    return;
+  }
+
+  const padding = 4;
+  const gap = 4;
+  const maxPerRow = PHOTO_GRID_MAX_PER_ROW;
+  const innerWidth = Math.max(0, rectCell.width - padding * 2);
+  const innerHeight = Math.max(0, rectCell.height - padding * 2);
+  const count = validBuffers.length;
+  const colsPerRow = Math.max(1, Math.min(maxPerRow, count));
+  const rowsNeeded = Math.max(1, Math.ceil(count / colsPerRow));
+  const rawThumbWidth = colsPerRow > 0
+    ? (innerWidth - gap * (colsPerRow - 1)) / colsPerRow
+    : innerWidth;
+  const rawThumbHeight = rowsNeeded > 0
+    ? (innerHeight - gap * (rowsNeeded - 1)) / rowsNeeded
+    : innerHeight;
+  const thumbSize = Math.max(32, Math.min(rawThumbWidth, rawThumbHeight > 0 ? rawThumbHeight : rawThumbWidth));
+  const thumbWidth = thumbSize;
+  const thumbHeight = thumbSize;
+  const maxX = rectCell.x + rectCell.width - padding;
+  const maxY = rectCell.y + rectCell.height - padding;
+
+  for (let idx = 0; idx < count; idx += 1) {
+    const buffer = validBuffers[idx];
+
+    const col = idx % colsPerRow;
+    const row = Math.floor(idx / colsPerRow);
+    const baseX = rectCell.x + padding + col * (thumbWidth + gap);
+    const baseY = rectCell.y + padding + row * (thumbHeight + gap);
+    const availableWidth = Math.max(8, Math.min(thumbWidth, maxX - baseX));
+    const availableHeight = Math.max(8, Math.min(thumbHeight, maxY - baseY));
+
+    doc.save();
+    doc.image(buffer, baseX, baseY, {
+      fit: [availableWidth, availableHeight],
+      align: 'left',
+      valign: 'top'
+    });
+    doc.restore();
+  }
+
+  if (remaining > 0) {
+    doc.save();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#333');
+    doc.text(`+${remaining}`, rectCell.x + rectCell.width - 18, rectCell.y + 4, {
+      width: 14,
+      align: 'right'
+    });
+    doc.restore();
+  }
+}
+
 async function getFetchImplementation() {
   if (cachedFetchImpl) {
     return cachedFetchImpl;
@@ -381,18 +544,65 @@ router.get('/', async (req, res) => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
 
-    const includePhotoHyperlinks = cols.includes('photos');
-    const maxPhotos = includePhotoHyperlinks
-      ? Math.max(0, ...rows.map(r => (Array.isArray(r.photos) ? r.photos.length : 0)))
+    const isPhaseExport = !!(phaseParam && phaseParam !== 'all');
+    const includePhotoHyperlinks = isPhaseExport && (
+      cols.includes('creation_photos') ||
+      cols.includes('levee_photos') ||
+      cols.includes('photos')
+    );
+
+    const BASE_ALLOWED = isPhaseExport
+      ? [
+          'etage',
+          'chambre',
+          'numero',
+          'lot',
+          'intitule',
+          'description',
+          'etat',
+          'observation',
+          'date_butoir',
+          'creation_photos',
+          'levee_photos',
+          'levee_commentaire',
+          'levee_fait_par_email',
+          'levee_fait_le'
+        ]
+      : cols;
+    const baseCols = BASE_ALLOWED.filter(c => cols.includes(c));
+
+    const maxCreationPhotos = includePhotoHyperlinks
+      ? Math.max(0, ...rows.map(r => (Array.isArray(r.creation_photos)
+        ? r.creation_photos.length
+        : Array.isArray(r.photos)
+          ? r.photos.length
+          : 0)))
       : 0;
-    const baseCols = cols.slice();
+    const maxLeveePhotos = includePhotoHyperlinks
+      ? Math.max(0, ...rows.map(r => (Array.isArray(r.levee_photos) ? r.levee_photos.length : 0)))
+      : 0;
+
     const photoCols = includePhotoHyperlinks
-      ? Array.from({ length: maxPhotos }, (_, i) => `Photo ${i + 1}`)
+      ? [
+          ...Array.from({ length: maxCreationPhotos }, (_, i) => `creation_photo_${i + 1}`),
+          ...Array.from({ length: maxLeveePhotos }, (_, i) => `levee_photo_${i + 1}`)
+        ]
       : [];
     const finalCols = [...baseCols, ...photoCols];
 
-    // Header stylé
-    const headerRow = ws.addRow(finalCols);
+    const headerRow = ws.addRow(
+      finalCols.map(key => {
+        if (key.startsWith('creation_photo_')) {
+          const index = Number.parseInt(key.split('_').pop(), 10);
+          return `Photo (création) ${Number.isFinite(index) ? index : ''}`.trim();
+        }
+        if (key.startsWith('levee_photo_')) {
+          const index = Number.parseInt(key.split('_').pop(), 10);
+          return `Photo (levée) ${Number.isFinite(index) ? index : ''}`.trim();
+        }
+        return COLUMN_LABELS[key] || key;
+      })
+    );
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = {
       type: 'pattern',
@@ -400,7 +610,15 @@ router.get('/', async (req, res) => {
       fgColor: { argb: 'FF1F497D' }
     };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    ws.columns.forEach(col => { col.width = 20; });
+    ws.columns.forEach(col => { col.width = 22; });
+    const narrowPhotoColumnIndexes = finalCols
+      .map((key, index) => ({ key, index }))
+      .filter(({ key }) => /^creation_photo_|^levee_photo_/.test(key))
+      .map(({ index }) => index + 1);
+    narrowPhotoColumnIndexes.forEach(colIndex => {
+      const column = ws.getColumn(colIndex);
+      column.width = 14;
+    });
 
     const arrayLikeColumns = new Set([
       'creation_photos',
@@ -414,7 +632,7 @@ router.get('/', async (req, res) => {
     rows.forEach((r, idx) => {
       const baseVals = baseCols.map(c => {
         if (arrayLikeColumns.has(c) && Array.isArray(r[c])) {
-          return r[c].join(', ');
+          return r[c].join('\n');
         }
         return r[c] == null ? '' : r[c];
       });
@@ -422,9 +640,15 @@ router.get('/', async (req, res) => {
       const rowValues = [...baseVals];
 
       if (includePhotoHyperlinks) {
-        for (let i = 0; i < maxPhotos; i++) {
-          const url = (Array.isArray(r.photos) ? r.photos[i] : undefined) || '';
-          rowValues.push(url ? { text: `Photo ${i + 1}`, hyperlink: url } : '');
+        for (let i = 0; i < maxCreationPhotos; i += 1) {
+          const url = (Array.isArray(r.creation_photos) ? r.creation_photos[i]
+            : Array.isArray(r.photos) ? r.photos[i]
+              : undefined) || '';
+          rowValues.push(url ? { text: `Photo (création) ${i + 1}`, hyperlink: url } : '');
+        }
+        for (let i = 0; i < maxLeveePhotos; i += 1) {
+          const url = (Array.isArray(r.levee_photos) ? r.levee_photos[i] : undefined) || '';
+          rowValues.push(url ? { text: `Photo (levée) ${i + 1}`, hyperlink: url } : '');
         }
       }
 
@@ -435,6 +659,17 @@ router.get('/', async (req, res) => {
         pattern: 'solid',
         fgColor: { argb: isEven ? 'FFDCE6F1' : 'FFFFFFFF' }
       };
+    });
+
+    ws.eachRow({ includeEmpty: false }, row => {
+      row.eachCell(cell => {
+        const previous = cell.alignment || {};
+        cell.alignment = {
+          ...previous,
+          wrapText: true,
+          vertical: 'top'
+        };
+      });
     });
 
     // Bordures
@@ -454,7 +689,7 @@ router.get('/', async (req, res) => {
   }
 
   if (format === 'pdf') {
-    const doc = new PDFDocument({ size: 'A4', margin: 24 });
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 24 });
     const phase = phaseParam;
     const phaseTag =
       phase && phase !== 'all'
@@ -465,6 +700,9 @@ router.get('/', async (req, res) => {
     res.header('Content-Disposition', `attachment; filename=bulles${phaseTag}.pdf`);
     res.header('Content-Type', 'application/pdf');
     doc.pipe(res);
+    doc.on('end', () => {
+      PHOTO_THUMB_CACHE.clear();
+    });
 
     // --- Title & subtitle -------------------------------------------------
     doc
@@ -537,9 +775,7 @@ router.get('/', async (req, res) => {
       return next;
     });
 
-    const pdfAllowedColumns = new Set([
-      'created_by_email',
-      'modified_by_email',
+    const PDF_ALLOWED = [
       'etage',
       'chambre',
       'numero',
@@ -547,54 +783,15 @@ router.get('/', async (req, res) => {
       'intitule',
       'description',
       'etat',
-      'entreprise',
-      'localisation',
       'observation',
       'date_butoir',
-      'creation_photos',
-      'creation_videos',
-      'photos',
-      'levee_photos',
-      'levee_videos',
-      'levee_fait_par_email',
+      ...(includeLeveeMedia ? ['creation_photos', 'levee_photos'] : ['photos']),
       'levee_commentaire',
-      'levee_fait_le',
-      'videos',
-      'photo'
-    ]);
-    let pdfCols = cols.filter(col => {
-      if (requestedColumns?.has(col)) {
-        return true;
-      }
-      return pdfAllowedColumns.has(col);
-    });
-
-    const desiredHead = [
-      'created_by_email',
-      'modified_by_email',
-      'etage',
-      'chambre',
-      'numero',
-      'lot',
-      'intitule',
-      'description',
-      'etat',
-      'entreprise',
-      'localisation',
-      'observation',
-      'date_butoir',
-      ...(includeLeveeMedia
-        ? ['creation_photos', 'creation_videos', 'photos', 'levee_photos', 'levee_videos']
-        : ['photos']),
       'levee_fait_par_email',
-      'levee_commentaire',
-      'levee_fait_le',
-      'videos',
-      'photo'
+      'levee_fait_le'
     ];
-    const preferred = desiredHead.filter(col => pdfCols.includes(col));
-    const rest = pdfCols.filter(col => !desiredHead.includes(col));
-    pdfCols = [...preferred, ...rest];
+
+    let pdfCols = PDF_ALLOWED.filter(col => cols.includes(col));
 
     if (pdfCols.length === 0) {
       pdfCols = cols.slice();
@@ -603,7 +800,11 @@ router.get('/', async (req, res) => {
     const safeRows = normalizedRows.map(row => {
       const entry = {};
       pdfCols.forEach(col => {
-        entry[col] = toText(row[col]);
+        if (PHOTO_COLUMN_KEYS.has(col)) {
+          entry[col] = '';
+        } else {
+          entry[col] = toText(row[col]);
+        }
       });
       return entry;
     });
@@ -611,8 +812,6 @@ router.get('/', async (req, res) => {
     // --- Column sizing ----------------------------------------------------
     const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const columnWeightMap = new Map([
-      ['created_by_email', 2.6],
-      ['modified_by_email', 2.4],
       ['etage', 1.2],
       ['chambre', 1.2],
       ['numero', 1],
@@ -620,20 +819,14 @@ router.get('/', async (req, res) => {
       ['intitule', 2.6],
       ['description', 2.6],
       ['etat', 1.2],
-      ['entreprise', 1.8],
-      ['localisation', 1.8],
       ['observation', 3.2],
       ['date_butoir', 1.4],
       ['creation_photos', 3.2],
-      ['creation_videos', 3],
       ['photos', 3.2],
       ['levee_photos', 3.2],
-      ['levee_videos', 3],
       ['levee_fait_par_email', 2],
       ['levee_commentaire', 2.8],
-      ['levee_fait_le', 1.4],
-      ['videos', 3],
-      ['photo', 2.4]
+      ['levee_fait_le', 1.4]
     ]);
     const defaultWeight = 1.6;
     const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
@@ -644,12 +837,17 @@ router.get('/', async (req, res) => {
       const ratio = pageWidth / currentTotal;
       columnsSize = columnsSize.map(width => width * ratio);
     }
-    columnsSize = columnsSize.map(width => Math.max(1, Math.floor(width)));
+    columnsSize = columnsSize.map(width => Math.max(MIN_COLUMN_WIDTH, Math.floor(width)));
+    const sumAfterMin = columnsSize.reduce((sum, width) => sum + width, 0);
+    if (sumAfterMin > pageWidth) {
+      const ratio = pageWidth / sumAfterMin;
+      columnsSize = columnsSize.map(width => Math.floor(width * ratio));
+    }
 
     // --- Headers ----------------------------------------------------------
     const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
     const headers = pdfCols.map((key, idx) => ({
-      label: toText(key),
+      label: COLUMN_LABELS[key] || key,
       property: key,
       width: columnsSize[idx] || Math.floor(pageWidth / Math.max(pdfCols.length, 1)),
       headerColor: '#2c3e50',
@@ -661,8 +859,75 @@ router.get('/', async (req, res) => {
     }));
 
     // --- Table rendering --------------------------------------------------
+    const photoBuffersByRowAndKey = new Map();
+    const preloadJobs = [];
+    for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
+      for (const key of pdfCols) {
+        if (!PHOTO_COLUMN_KEYS.has(key)) continue;
+        preloadJobs.push({ rowIndex, key });
+      }
+    }
+
+    await mapLimit(preloadJobs, MAX_PARALLEL_MEDIA_JOBS, async ({ rowIndex, key }) => {
+      const rawValues = toArray(normalizedRows[rowIndex]?.[key]);
+      const uniqueUrls = Array.from(new Set(rawValues.map(u => (u || '').trim()).filter(Boolean)));
+      if (uniqueUrls.length === 0) {
+        photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers: [], remaining: 0 });
+        return;
+      }
+
+      const visibleUrls = uniqueUrls.slice(0, MAX_THUMBS_PER_CELL);
+      const loadedBuffers = await mapLimit(
+        visibleUrls,
+        MAX_PARALLEL_MEDIA_JOBS,
+        async url => loadImageBuffer(url)
+      );
+      const buffers = loadedBuffers.filter(Boolean);
+      const remaining = Math.max(0, uniqueUrls.length - visibleUrls.length);
+      photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers, remaining });
+    });
+
+    const padLinesPerRow = new Array(normalizedRows.length).fill(0);
+    for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
+      let neededRows = 1;
+      for (const key of pdfCols) {
+        if (!PHOTO_COLUMN_KEYS.has(key)) continue;
+        const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
+        if (!entry) continue;
+        const count = Array.isArray(entry.buffers) ? entry.buffers.length : 0;
+        const rowsNeeded = Math.max(1, Math.ceil(count / PHOTO_GRID_MAX_PER_ROW));
+        if (rowsNeeded > neededRows) {
+          neededRows = rowsNeeded;
+        }
+      }
+      padLinesPerRow[rowIndex] = Math.max(0, neededRows - 1);
+    }
+
+    const NBSP = '\u00A0';
+    const paddingTargets = ['observation', 'description', 'intitule'];
+    const paddedSafeRows = safeRows.map((row, rowIndex) => {
+      const extraLines = padLinesPerRow[rowIndex];
+      if (!extraLines) {
+        return row;
+      }
+      const padKey = paddingTargets.find(key => pdfCols.includes(key))
+        || pdfCols.find(key => !PHOTO_COLUMN_KEYS.has(key));
+      if (!padKey) {
+        return row;
+      }
+      const pad = (('\n' + NBSP.repeat(2))).repeat(extraLines);
+      if (!pad) {
+        return row;
+      }
+      const baseValue = row[padKey] ? String(row[padKey]) : '';
+      return {
+        ...row,
+        [padKey]: `${baseValue}${pad}`
+      };
+    });
+
     await doc.table(
-      { headers, datas: safeRows },
+      { headers, datas: paddedSafeRows },
       {
         width: pageWidth,
         columnsSize,
@@ -671,12 +936,27 @@ router.get('/', async (req, res) => {
         prepareHeader: () => {
           doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
         },
-        prepareRow: (row, columnIndex, rowIndex, rectRow) => {
+        prepareRow: (row, columnIndex, rowIndex, rectRow, rectCell) => {
           if (columnIndex === 0 && rowIndex % 2 === 1) {
             const { x, y, width, height } = rectRow;
             doc.save().rect(x, y, width, height).fill('#f7f9fc').restore();
           }
-          doc.font('Helvetica').fontSize(8).fillColor('#111');
+          doc.font('Helvetica').fontSize(8).lineGap(1.2).fillColor('#111');
+
+          const key = pdfCols[columnIndex];
+          if (!PHOTO_COLUMN_KEYS.has(key) || !rectCell) {
+            return;
+          }
+
+          const zebraColor = rowIndex % 2 === 1 ? '#f7f9fc' : '#ffffff';
+          doc.save().rect(rectCell.x, rectCell.y, rectCell.width, rectCell.height).fill(zebraColor).restore();
+
+          const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
+          if (!entry) {
+            return;
+          }
+
+          renderPhotoThumbGrid(doc, rectCell, entry.buffers, entry.remaining);
         },
         divider: {
           header: { width: 0.5, color: '#dfe6ee' },
