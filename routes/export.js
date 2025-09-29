@@ -381,9 +381,14 @@ router.get('/', async (req, res) => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
 
-    const maxPhotos = Math.max(0, ...rows.map(r => Array.isArray(r.photos) ? r.photos.length : 0));
-    const baseCols = cols.filter(c => c !== 'photos');
-    const photoCols = Array.from({ length: maxPhotos }, (_, i) => `Photo ${i + 1}`);
+    const includePhotoHyperlinks = cols.includes('photos');
+    const maxPhotos = includePhotoHyperlinks
+      ? Math.max(0, ...rows.map(r => (Array.isArray(r.photos) ? r.photos.length : 0)))
+      : 0;
+    const baseCols = cols.slice();
+    const photoCols = includePhotoHyperlinks
+      ? Array.from({ length: maxPhotos }, (_, i) => `Photo ${i + 1}`)
+      : [];
     const finalCols = [...baseCols, ...photoCols];
 
     // Header stylé
@@ -404,21 +409,26 @@ router.get('/', async (req, res) => {
       'levee_videos',
       'photos',
       'videos'
-    ].filter(col => cols.includes(col)));
+    ].filter(col => baseCols.includes(col)));
     // Lignes de données avec effet zèbre
     rows.forEach((r, idx) => {
       const baseVals = baseCols.map(c => {
         if (arrayLikeColumns.has(c) && Array.isArray(r[c])) {
           return r[c].join(', ');
         }
-        return r[c];
+        return r[c] == null ? '' : r[c];
       });
-      const photoVals = [];
-      for (let i = 0; i < maxPhotos; i++) {
-        const url = (r.photos || [])[i] || '';
-        photoVals.push(url ? { text: `Photo ${i + 1}`, hyperlink: url } : '');
+
+      const rowValues = [...baseVals];
+
+      if (includePhotoHyperlinks) {
+        for (let i = 0; i < maxPhotos; i++) {
+          const url = (Array.isArray(r.photos) ? r.photos[i] : undefined) || '';
+          rowValues.push(url ? { text: `Photo ${i + 1}`, hyperlink: url } : '');
+        }
       }
-      const row = ws.addRow([...baseVals, ...photoVals]);
+
+      const row = ws.addRow(rowValues);
       const isEven = idx % 2 === 0;
       row.fill = {
         type: 'pattern',
@@ -527,9 +537,72 @@ router.get('/', async (req, res) => {
       return next;
     });
 
+    const pdfAllowedColumns = new Set([
+      'created_by_email',
+      'modified_by_email',
+      'etage',
+      'chambre',
+      'numero',
+      'lot',
+      'intitule',
+      'description',
+      'etat',
+      'entreprise',
+      'localisation',
+      'observation',
+      'date_butoir',
+      'creation_photos',
+      'creation_videos',
+      'photos',
+      'levee_photos',
+      'levee_videos',
+      'levee_fait_par_email',
+      'levee_commentaire',
+      'levee_fait_le',
+      'videos',
+      'photo'
+    ]);
+    let pdfCols = cols.filter(col => {
+      if (requestedColumns?.has(col)) {
+        return true;
+      }
+      return pdfAllowedColumns.has(col);
+    });
+
+    const desiredHead = [
+      'created_by_email',
+      'modified_by_email',
+      'etage',
+      'chambre',
+      'numero',
+      'lot',
+      'intitule',
+      'description',
+      'etat',
+      'entreprise',
+      'localisation',
+      'observation',
+      'date_butoir',
+      ...(includeLeveeMedia
+        ? ['creation_photos', 'creation_videos', 'photos', 'levee_photos', 'levee_videos']
+        : ['photos']),
+      'levee_fait_par_email',
+      'levee_commentaire',
+      'levee_fait_le',
+      'videos',
+      'photo'
+    ];
+    const preferred = desiredHead.filter(col => pdfCols.includes(col));
+    const rest = pdfCols.filter(col => !desiredHead.includes(col));
+    pdfCols = [...preferred, ...rest];
+
+    if (pdfCols.length === 0) {
+      pdfCols = cols.slice();
+    }
+
     const safeRows = normalizedRows.map(row => {
       const entry = {};
-      cols.forEach(col => {
+      pdfCols.forEach(col => {
         entry[col] = toText(row[col]);
       });
       return entry;
@@ -563,7 +636,7 @@ router.get('/', async (req, res) => {
       ['photo', 2.4]
     ]);
     const defaultWeight = 1.6;
-    const weights = cols.map(col => columnWeightMap.get(col) || defaultWeight);
+    const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
     let columnsSize = weights.map(weight => (weight / totalWeight) * pageWidth);
     const currentTotal = columnsSize.reduce((sum, width) => sum + width, 0);
@@ -575,10 +648,10 @@ router.get('/', async (req, res) => {
 
     // --- Headers ----------------------------------------------------------
     const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
-    const headers = cols.map((key, idx) => ({
+    const headers = pdfCols.map((key, idx) => ({
       label: toText(key),
       property: key,
-      width: columnsSize[idx] || Math.floor(pageWidth / Math.max(cols.length, 1)),
+      width: columnsSize[idx] || Math.floor(pageWidth / Math.max(pdfCols.length, 1)),
       headerColor: '#2c3e50',
       headerOpacity: 1,
       align: 'left',
@@ -598,9 +671,10 @@ router.get('/', async (req, res) => {
         prepareHeader: () => {
           doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
         },
-        prepareRow: (row, columnIndex, rowIndex, rectRow, rectCell) => {
+        prepareRow: (row, columnIndex, rowIndex, rectRow) => {
           if (columnIndex === 0 && rowIndex % 2 === 1) {
-            doc.addBackground(rectRow, '#f7f9fc', 1);
+            const { x, y, width, height } = rectRow;
+            doc.save().rect(x, y, width, height).fill('#f7f9fc').restore();
           }
           doc.font('Helvetica').fontSize(8).fillColor('#111');
         },
