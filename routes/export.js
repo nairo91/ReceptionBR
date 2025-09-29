@@ -10,7 +10,8 @@ const pool = require('../db');
 const planPhaseConfig = require('../config/planPhases');
 const { selectBullesWithEmails } = require('./bullesSelect');
 
-let cachedFetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null;
+const hasNativeFetch = typeof fetch === 'function';
+const fetchImpl = hasNativeFetch ? fetch.bind(globalThis) : null;
 
 const COLUMN_LABELS = {
   etage: 'Étage',
@@ -91,18 +92,36 @@ async function loadImageBuffer(url) {
   }
 
   try {
-    const fetchImpl = await getFetchImplementation();
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 7000);
+    let fetchImplLocal;
+    try {
+      fetchImplLocal = ensureFetch();
+    } catch (e) {
+      console.warn(`[export bulles] fetch failed for ${url}: ${e?.message || e}`);
+      rememberPhotoBuffer(url, null);
+      return null;
+    }
+
     let response;
     try {
-      response = await fetchImpl(url, { signal: ctrl.signal });
-    } finally {
-      clearTimeout(timeout);
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 7000);
+      try {
+        response = await fetchImplLocal(url, { signal: ctrl.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (e) {
+      console.warn(`[export bulles] fetch failed for ${url}: ${e?.message || e}`);
+      rememberPhotoBuffer(url, null);
+      return null;
     }
+
     if (!response.ok) {
-      throw new Error(`statut ${response.status}`);
+      console.warn(`[export bulles] fetch failed for ${url}: statut ${response.status}`);
+      rememberPhotoBuffer(url, null);
+      return null;
     }
+
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     rememberPhotoBuffer(url, buffer);
@@ -175,13 +194,11 @@ function renderPhotoThumbGrid(doc, rectCell, buffers, remaining = 0) {
   }
 }
 
-async function getFetchImplementation() {
-  if (cachedFetchImpl) {
-    return cachedFetchImpl;
+function ensureFetch() {
+  if (!fetchImpl) {
+    throw new Error('fetch is not available in this runtime (Node < 18).');
   }
-  const mod = await import('node-fetch');
-  cachedFetchImpl = mod.default || mod;
-  return cachedFetchImpl;
+  return fetchImpl;
 }
 
 router.get('/', async (req, res) => {
@@ -689,285 +706,306 @@ router.get('/', async (req, res) => {
   }
 
   if (format === 'pdf') {
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 24 });
-    const phase = phaseParam;
-    const phaseTag =
-      phase && phase !== 'all'
-        ? `_phase-${phase}`
-        : phase === 'all'
-          ? `_phases`
-          : '';
-    res.header('Content-Disposition', `attachment; filename=bulles${phaseTag}.pdf`);
-    res.header('Content-Type', 'application/pdf');
-    doc.pipe(res);
-    doc.on('end', () => {
-      PHOTO_THUMB_CACHE.clear();
-    });
-
-    // --- Title & subtitle -------------------------------------------------
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .fillColor('#111')
-      .text('Reception compte rendu', { align: 'left' });
-
-    const chantierName = chantierFilter || '—';
-    const etageName = etageFilter || '—';
-    const roomLabel = rawRoom ? String(rawRoom) : 'total';
-    const subtitleParts = [`Chantier: ${chantierName}`, `Étage: ${etageName}`, `Chambre: ${roomLabel}`];
-    if (phase) {
-      const phaseLabel =
-        phase === 'all'
-          ? 'Toutes phases'
-          : /^\d+$/.test(phase)
-            ? `Phase ${phase}`
-            : phase;
-      subtitleParts.push(`Phase: ${phaseLabel}`);
-    }
-
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor('#555')
-      .text(subtitleParts.join(' — '))
-      .moveDown(0.8);
-
-    // --- Data normalisation ----------------------------------------------
-    const toArray = value => {
-      if (Array.isArray(value)) return value.filter(val => val != null && val !== '');
-      if (value == null || value === '') return [];
-      return [value];
-    };
-
-    const toText = value => {
-      if (value == null) return '';
-      if (Array.isArray(value)) {
-        return value
-          .filter(v => v != null && v !== '')
-          .map(v => String(v))
-          .join('\n');
-      }
-      return String(value);
-    };
-
-    const normalizedRows = rows.map(row => {
-      const next = { ...row };
-      const creationPhotos = toArray(row.creation_photos ?? row.photos);
-      const creationVideos = toArray(row.creation_videos ?? row.videos);
-      const leveePhotos = toArray(row.levee_photos);
-      const leveeVideos = toArray(row.levee_videos);
-
-      if (includeLeveeMedia) {
-        next.photos = uniq([...creationPhotos, ...leveePhotos]);
-        next.videos = uniq([...creationVideos, ...leveeVideos]);
-      } else {
-        next.photos = creationPhotos;
-        next.videos = creationVideos;
-      }
-
-      if (includeLeveeMedia) {
-        next.creation_photos = creationPhotos;
-        next.creation_videos = creationVideos;
-        next.levee_photos = leveePhotos;
-        next.levee_videos = leveeVideos;
-      }
-
-      return next;
-    });
-
-    const PDF_ALLOWED = [
-      'etage',
-      'chambre',
-      'numero',
-      'lot',
-      'intitule',
-      'description',
-      'etat',
-      'observation',
-      'date_butoir',
-      ...(includeLeveeMedia ? ['creation_photos', 'levee_photos'] : ['photos']),
-      'levee_commentaire',
-      'levee_fait_par_email',
-      'levee_fait_le'
-    ];
-
-    let pdfCols = PDF_ALLOWED.filter(col => cols.includes(col));
-
-    if (pdfCols.length === 0) {
-      pdfCols = cols.slice();
-    }
-
-    const safeRows = normalizedRows.map(row => {
-      const entry = {};
-      pdfCols.forEach(col => {
-        if (PHOTO_COLUMN_KEYS.has(col)) {
-          entry[col] = '';
-        } else {
-          entry[col] = toText(row[col]);
-        }
+    let doc;
+    try {
+      doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 24 });
+      const phase = phaseParam;
+      const phaseTag =
+        phase && phase !== 'all'
+          ? `_phase-${phase}`
+          : phase === 'all'
+            ? `_phases`
+            : '';
+      res.header('Content-Disposition', `attachment; filename=bulles${phaseTag}.pdf`);
+      res.header('Content-Type', 'application/pdf');
+      doc.pipe(res);
+      doc.on('end', () => {
+        PHOTO_THUMB_CACHE.clear();
       });
-      return entry;
-    });
+      doc.on('error', (e) => {
+        console.error('[pdf stream] error:', e?.stack || e);
+      });
 
-    // --- Column sizing ----------------------------------------------------
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const columnWeightMap = new Map([
-      ['etage', 1.2],
-      ['chambre', 1.2],
-      ['numero', 1],
-      ['lot', 1.6],
-      ['intitule', 2.6],
-      ['description', 2.6],
-      ['etat', 1.2],
-      ['observation', 3.2],
-      ['date_butoir', 1.4],
-      ['creation_photos', 3.2],
-      ['photos', 3.2],
-      ['levee_photos', 3.2],
-      ['levee_fait_par_email', 2],
-      ['levee_commentaire', 2.8],
-      ['levee_fait_le', 1.4]
-    ]);
-    const defaultWeight = 1.6;
-    const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
-    let columnsSize = weights.map(weight => (weight / totalWeight) * pageWidth);
-    const currentTotal = columnsSize.reduce((sum, width) => sum + width, 0);
-    if (currentTotal > pageWidth) {
-      const ratio = pageWidth / currentTotal;
-      columnsSize = columnsSize.map(width => width * ratio);
-    }
-    columnsSize = columnsSize.map(width => Math.max(MIN_COLUMN_WIDTH, Math.floor(width)));
-    const sumAfterMin = columnsSize.reduce((sum, width) => sum + width, 0);
-    if (sumAfterMin > pageWidth) {
-      const ratio = pageWidth / sumAfterMin;
-      columnsSize = columnsSize.map(width => Math.floor(width * ratio));
-    }
+      // --- Title & subtitle -------------------------------------------------
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(14)
+        .fillColor('#111')
+        .text('Reception compte rendu', { align: 'left' });
 
-    // --- Headers ----------------------------------------------------------
-    const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
-    const headers = pdfCols.map((key, idx) => ({
-      label: COLUMN_LABELS[key] || key,
-      property: key,
-      width: columnsSize[idx] || Math.floor(pageWidth / Math.max(pdfCols.length, 1)),
-      headerColor: '#2c3e50',
-      headerOpacity: 1,
-      align: 'left',
-      headerAlign: 'left',
-      padding: [4, 4],
-      options: { ...headerFont }
-    }));
-
-    // --- Table rendering --------------------------------------------------
-    const photoBuffersByRowAndKey = new Map();
-    const preloadJobs = [];
-    for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
-      for (const key of pdfCols) {
-        if (!PHOTO_COLUMN_KEYS.has(key)) continue;
-        preloadJobs.push({ rowIndex, key });
-      }
-    }
-
-    await mapLimit(preloadJobs, MAX_PARALLEL_MEDIA_JOBS, async ({ rowIndex, key }) => {
-      const rawValues = toArray(normalizedRows[rowIndex]?.[key]);
-      const uniqueUrls = Array.from(new Set(rawValues.map(u => (u || '').trim()).filter(Boolean)));
-      if (uniqueUrls.length === 0) {
-        photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers: [], remaining: 0 });
-        return;
+      const chantierName = chantierFilter || '—';
+      const etageName = etageFilter || '—';
+      const roomLabel = rawRoom ? String(rawRoom) : 'total';
+      const subtitleParts = [`Chantier: ${chantierName}`, `Étage: ${etageName}`, `Chambre: ${roomLabel}`];
+      if (phase) {
+        const phaseLabel =
+          phase === 'all'
+            ? 'Toutes phases'
+            : /^\d+$/.test(phase)
+              ? `Phase ${phase}`
+              : phase;
+        subtitleParts.push(`Phase: ${phaseLabel}`);
       }
 
-      const visibleUrls = uniqueUrls.slice(0, MAX_THUMBS_PER_CELL);
-      const loadedBuffers = await mapLimit(
-        visibleUrls,
-        MAX_PARALLEL_MEDIA_JOBS,
-        async url => loadImageBuffer(url)
-      );
-      const buffers = loadedBuffers.filter(Boolean);
-      const remaining = Math.max(0, uniqueUrls.length - visibleUrls.length);
-      photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers, remaining });
-    });
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#555')
+        .text(subtitleParts.join(' — '))
+        .moveDown(0.8);
 
-    const padLinesPerRow = new Array(normalizedRows.length).fill(0);
-    for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
-      let neededRows = 1;
-      for (const key of pdfCols) {
-        if (!PHOTO_COLUMN_KEYS.has(key)) continue;
-        const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
-        if (!entry) continue;
-        const count = Array.isArray(entry.buffers) ? entry.buffers.length : 0;
-        const rowsNeeded = Math.max(1, Math.ceil(count / PHOTO_GRID_MAX_PER_ROW));
-        if (rowsNeeded > neededRows) {
-          neededRows = rowsNeeded;
-        }
-      }
-      padLinesPerRow[rowIndex] = Math.max(0, neededRows - 1);
-    }
-
-    const NBSP = '\u00A0';
-    const paddingTargets = ['observation', 'description', 'intitule'];
-    const paddedSafeRows = safeRows.map((row, rowIndex) => {
-      const extraLines = padLinesPerRow[rowIndex];
-      if (!extraLines) {
-        return row;
-      }
-      const padKey = paddingTargets.find(key => pdfCols.includes(key))
-        || pdfCols.find(key => !PHOTO_COLUMN_KEYS.has(key));
-      if (!padKey) {
-        return row;
-      }
-      const pad = (('\n' + NBSP.repeat(2))).repeat(extraLines);
-      if (!pad) {
-        return row;
-      }
-      const baseValue = row[padKey] ? String(row[padKey]) : '';
-      return {
-        ...row,
-        [padKey]: `${baseValue}${pad}`
+      // --- Data normalisation ----------------------------------------------
+      const toArray = value => {
+        if (Array.isArray(value)) return value.filter(val => val != null && val !== '');
+        if (value == null || value === '') return [];
+        return [value];
       };
-    });
 
-    await doc.table(
-      { headers, datas: paddedSafeRows },
-      {
-        width: pageWidth,
-        columnsSize,
-        columnSpacing: 6,
-        padding: 4,
-        prepareHeader: () => {
-          doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
-        },
-        prepareRow: (row, columnIndex, rowIndex, rectRow, rectCell) => {
-          if (columnIndex === 0 && rowIndex % 2 === 1) {
-            const { x, y, width, height } = rectRow;
-            doc.save().rect(x, y, width, height).fill('#f7f9fc').restore();
+      const toText = value => {
+        if (value == null) return '';
+        if (Array.isArray(value)) {
+          return value
+            .filter(v => v != null && v !== '')
+            .map(v => String(v))
+            .join('\n');
+        }
+        return String(value);
+      };
+
+      const normalizedRows = rows.map(row => {
+        const next = { ...row };
+        const creationPhotos = toArray(row.creation_photos ?? row.photos);
+        const creationVideos = toArray(row.creation_videos ?? row.videos);
+        const leveePhotos = toArray(row.levee_photos);
+        const leveeVideos = toArray(row.levee_videos);
+
+        if (includeLeveeMedia) {
+          next.photos = uniq([...creationPhotos, ...leveePhotos]);
+          next.videos = uniq([...creationVideos, ...leveeVideos]);
+        } else {
+          next.photos = creationPhotos;
+          next.videos = creationVideos;
+        }
+
+        if (includeLeveeMedia) {
+          next.creation_photos = creationPhotos;
+          next.creation_videos = creationVideos;
+          next.levee_photos = leveePhotos;
+          next.levee_videos = leveeVideos;
+        }
+
+        return next;
+      });
+
+      const PDF_ALLOWED = [
+        'etage',
+        'chambre',
+        'numero',
+        'lot',
+        'intitule',
+        'description',
+        'etat',
+        'observation',
+        'date_butoir',
+        ...(includeLeveeMedia ? ['creation_photos', 'levee_photos'] : ['photos']),
+        'levee_commentaire',
+        'levee_fait_par_email',
+        'levee_fait_le'
+      ];
+
+      let pdfCols = PDF_ALLOWED.filter(col => cols.includes(col));
+
+      if (pdfCols.length === 0) {
+        pdfCols = cols.slice();
+      }
+
+      const canRenderThumbs = !!fetchImpl;
+
+      const safeRows = normalizedRows.map(row => {
+        const entry = {};
+        pdfCols.forEach(col => {
+          if (PHOTO_COLUMN_KEYS.has(col)) {
+            entry[col] = '';
+          } else {
+            entry[col] = toText(row[col]);
           }
-          doc.font('Helvetica').fontSize(8).lineGap(1.2).fillColor('#111');
+        });
+        return entry;
+      });
 
-          const key = pdfCols[columnIndex];
-          if (!PHOTO_COLUMN_KEYS.has(key) || !rectCell) {
-            return;
+      // --- Column sizing ----------------------------------------------------
+      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const columnWeightMap = new Map([
+        ['etage', 1.2],
+        ['chambre', 1.2],
+        ['numero', 1],
+        ['lot', 1.6],
+        ['intitule', 2.6],
+        ['description', 2.6],
+        ['etat', 1.2],
+        ['observation', 3.2],
+        ['date_butoir', 1.4],
+        ['creation_photos', 3.2],
+        ['photos', 3.2],
+        ['levee_photos', 3.2],
+        ['levee_fait_par_email', 2],
+        ['levee_commentaire', 2.8],
+        ['levee_fait_le', 1.4]
+      ]);
+      const defaultWeight = 1.6;
+      const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
+      let columnsSize = weights.map(weight => (weight / totalWeight) * pageWidth);
+      const currentTotal = columnsSize.reduce((sum, width) => sum + width, 0);
+      if (currentTotal > pageWidth) {
+        const ratio = pageWidth / currentTotal;
+        columnsSize = columnsSize.map(width => width * ratio);
+      }
+      columnsSize = columnsSize.map(width => Math.max(MIN_COLUMN_WIDTH, Math.floor(width)));
+      const sumAfterMin = columnsSize.reduce((sum, width) => sum + width, 0);
+      if (sumAfterMin > pageWidth) {
+        const ratio = pageWidth / sumAfterMin;
+        columnsSize = columnsSize.map(width => Math.floor(width * ratio));
+      }
+
+      // --- Headers ----------------------------------------------------------
+      const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
+      const headers = pdfCols.map((key, idx) => ({
+        label: COLUMN_LABELS[key] || key,
+        property: key,
+        width: columnsSize[idx] || Math.floor(pageWidth / Math.max(pdfCols.length, 1)),
+        headerColor: '#2c3e50',
+        headerOpacity: 1,
+        align: 'left',
+        headerAlign: 'left',
+        padding: [4, 4],
+        options: { ...headerFont }
+      }));
+
+      // --- Table rendering --------------------------------------------------
+      const photoBuffersByRowAndKey = new Map();
+      const preloadJobs = canRenderThumbs ? [] : null;
+      if (canRenderThumbs) {
+        for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
+          for (const key of pdfCols) {
+            if (!PHOTO_COLUMN_KEYS.has(key)) continue;
+            preloadJobs.push({ rowIndex, key });
           }
-
-          const zebraColor = rowIndex % 2 === 1 ? '#f7f9fc' : '#ffffff';
-          doc.save().rect(rectCell.x, rectCell.y, rectCell.width, rectCell.height).fill(zebraColor).restore();
-
-          const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
-          if (!entry) {
-            return;
-          }
-
-          renderPhotoThumbGrid(doc, rectCell, entry.buffers, entry.remaining);
-        },
-        divider: {
-          header: { width: 0.5, color: '#dfe6ee' },
-          horizontal: { width: 0.5, color: '#dfe6ee' },
-          vertical: { width: 0.5, color: '#dfe6ee', disabled: false }
         }
       }
-    );
 
-    doc.end();
-    return;
+      if (canRenderThumbs && preloadJobs.length) {
+        await mapLimit(preloadJobs, MAX_PARALLEL_MEDIA_JOBS, async ({ rowIndex, key }) => {
+          const rawValues = toArray(normalizedRows[rowIndex]?.[key]);
+          const uniqueUrls = Array.from(new Set(rawValues.map(u => (u || '').trim()).filter(Boolean)));
+          if (uniqueUrls.length === 0) {
+            photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers: [], remaining: 0 });
+            return;
+          }
+
+          const visibleUrls = uniqueUrls.slice(0, MAX_THUMBS_PER_CELL);
+          const loadedBuffers = await mapLimit(
+            visibleUrls,
+            MAX_PARALLEL_MEDIA_JOBS,
+            async url => loadImageBuffer(url)
+          );
+          const buffers = loadedBuffers.filter(Boolean);
+          const remaining = Math.max(0, uniqueUrls.length - visibleUrls.length);
+          photoBuffersByRowAndKey.set(`${rowIndex}|${key}`, { buffers, remaining });
+        });
+      }
+
+      const padLinesPerRow = new Array(normalizedRows.length).fill(0);
+      if (canRenderThumbs) {
+        for (let rowIndex = 0; rowIndex < normalizedRows.length; rowIndex += 1) {
+          let neededRows = 1;
+          for (const key of pdfCols) {
+            if (!PHOTO_COLUMN_KEYS.has(key)) continue;
+            const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
+            if (!entry) continue;
+            const count = Array.isArray(entry.buffers) ? entry.buffers.length : 0;
+            const rowsNeeded = Math.max(1, Math.ceil(count / PHOTO_GRID_MAX_PER_ROW));
+            if (rowsNeeded > neededRows) {
+              neededRows = rowsNeeded;
+            }
+          }
+          padLinesPerRow[rowIndex] = Math.max(0, neededRows - 1);
+        }
+      }
+
+      const NBSP = '\u00A0';
+      const paddingTargets = ['observation', 'description', 'intitule'];
+      const paddedSafeRows = safeRows.map((row, rowIndex) => {
+        const extraLines = padLinesPerRow[rowIndex];
+        if (!extraLines) {
+          return row;
+        }
+        const padKey = paddingTargets.find(key => pdfCols.includes(key))
+          || pdfCols.find(key => !PHOTO_COLUMN_KEYS.has(key));
+        if (!padKey) {
+          return row;
+        }
+        const pad = (('\n' + NBSP.repeat(2))).repeat(extraLines);
+        if (!pad) {
+          return row;
+        }
+        const baseValue = row[padKey] ? String(row[padKey]) : '';
+        return {
+          ...row,
+          [padKey]: `${baseValue}${pad}`
+        };
+      });
+
+      await doc.table(
+        { headers, datas: paddedSafeRows },
+        {
+          width: pageWidth,
+          columnsSize,
+          columnSpacing: 6,
+          padding: 4,
+          prepareHeader: () => {
+            doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
+          },
+          prepareRow: (row, columnIndex, rowIndex, rectRow, rectCell) => {
+            if (columnIndex === 0 && rowIndex % 2 === 1) {
+              const { x, y, width, height } = rectRow;
+              doc.save().rect(x, y, width, height).fill('#f7f9fc').restore();
+            }
+            doc.font('Helvetica').fontSize(8).lineGap(1.2).fillColor('#111');
+
+            const key = pdfCols[columnIndex];
+            if (!canRenderThumbs || !PHOTO_COLUMN_KEYS.has(key) || !rectCell) {
+              return;
+            }
+
+            const zebraColor = rowIndex % 2 === 1 ? '#f7f9fc' : '#ffffff';
+            doc.save().rect(rectCell.x, rectCell.y, rectCell.width, rectCell.height).fill(zebraColor).restore();
+
+            const entry = photoBuffersByRowAndKey.get(`${rowIndex}|${key}`);
+            if (!entry) {
+              return;
+            }
+
+            renderPhotoThumbGrid(doc, rectCell, entry.buffers, entry.remaining);
+          },
+          divider: {
+            header: { width: 0.5, color: '#dfe6ee' },
+            horizontal: { width: 0.5, color: '#dfe6ee' },
+            vertical: { width: 0.5, color: '#dfe6ee', disabled: false }
+          }
+        }
+      );
+
+      doc.end();
+      return;
+    } catch (err) {
+      console.error('[export bulles pdf phase] fatal:', err?.stack || err);
+      if (!res.headersSent) {
+        return res.status(500).send('Erreur lors de la génération du PDF.');
+      }
+      try { res.end(); } catch {}
+      return;
+    }
   }
 
   // Si format inconnu
@@ -1119,13 +1157,36 @@ async function loadPlanBuffer(planPath) {
     throw err;
   }
   if (/^https?:\/\//i.test(planPath)) {
-    const fetchImpl = await getFetchImplementation();
-    const response = await fetchImpl(planPath);
+    let fetchImplLocal;
+    try {
+      fetchImplLocal = ensureFetch();
+    } catch (err) {
+      const error = new Error('fetch is not available in this runtime (Node < 18).');
+      error.status = 500;
+      throw error;
+    }
+
+    let response;
+    try {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 7000);
+      try {
+        response = await fetchImplLocal(planPath, { signal: ctrl.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (err) {
+      const error = new Error(`Impossible de télécharger le plan (${err?.message || err})`);
+      error.status = 502;
+      throw error;
+    }
+
     if (!response.ok) {
       const error = new Error(`Impossible de télécharger le plan (${response.status})`);
       error.status = response.status === 404 ? 404 : 500;
       throw error;
     }
+
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   }
