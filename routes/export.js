@@ -575,6 +575,23 @@ router.get('/', async (req, res) => {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Bulles');
 
+    const toArray = v => Array.isArray(v) ? v.filter(x => x != null && x !== '') : (v == null || v === '' ? [] : [v]);
+
+    const normalizedRows = rows.map(row => {
+      const next = { ...row };
+      const creationPhotos = toArray(row.creation_photos ?? row.photos);
+      const leveePhotos    = toArray(row.levee_photos);
+      const creationVideos = toArray(row.creation_videos ?? row.videos);
+      const leveeVideos    = toArray(row.levee_videos);
+
+      next.creation_photos = creationPhotos;
+      next.levee_photos    = leveePhotos;
+      next.creation_videos = creationVideos;
+      next.levee_videos    = leveeVideos;
+
+      return next;
+    });
+
     const isPhaseExport = !!(phaseParam && phaseParam !== 'all');
     const includePhotoHyperlinks = isPhaseExport && (
       cols.includes('creation_photos') ||
@@ -603,14 +620,12 @@ router.get('/', async (req, res) => {
     const baseCols = BASE_ALLOWED.filter(c => cols.includes(c));
 
     const maxCreationPhotos = includePhotoHyperlinks
-      ? Math.max(0, ...rows.map(r => (Array.isArray(r.creation_photos)
+      ? Math.max(0, ...normalizedRows.map(r => (Array.isArray(r.creation_photos)
         ? r.creation_photos.length
-        : Array.isArray(r.photos)
-          ? r.photos.length
-          : 0)))
+        : 0)))
       : 0;
     const maxLeveePhotos = includePhotoHyperlinks
-      ? Math.max(0, ...rows.map(r => (Array.isArray(r.levee_photos) ? r.levee_photos.length : 0)))
+      ? Math.max(0, ...normalizedRows.map(r => (Array.isArray(r.levee_photos) ? r.levee_photos.length : 0)))
       : 0;
 
     const photoCols = includePhotoHyperlinks
@@ -660,7 +675,7 @@ router.get('/', async (req, res) => {
       'videos'
     ].filter(col => baseCols.includes(col)));
     // Lignes de données avec effet zèbre
-    rows.forEach((r, idx) => {
+    normalizedRows.forEach((r, idx) => {
       const baseVals = baseCols.map(c => {
         if (arrayLikeColumns.has(c) && Array.isArray(r[c])) {
           return r[c].join('\n');
@@ -672,9 +687,7 @@ router.get('/', async (req, res) => {
 
       if (includePhotoHyperlinks) {
         for (let i = 0; i < maxCreationPhotos; i += 1) {
-          const url = (Array.isArray(r.creation_photos) ? r.creation_photos[i]
-            : Array.isArray(r.photos) ? r.photos[i]
-              : undefined) || '';
+          const url = (Array.isArray(r.creation_photos) ? r.creation_photos[i] : undefined) || '';
           rowValues.push(url ? { text: `Photo (création) ${i + 1}`, hyperlink: url } : '');
         }
         for (let i = 0; i < maxLeveePhotos; i += 1) {
@@ -833,7 +846,12 @@ router.get('/', async (req, res) => {
         pdfCols = cols.slice();
       }
 
-      const canRenderThumbs = !!fetchImpl;
+      let canRenderThumbs = true;
+      try {
+        await ensureFetch();
+      } catch {
+        canRenderThumbs = false;
+      }
 
       const safeRows = normalizedRows.map(row => {
         const entry = {};
@@ -977,7 +995,7 @@ router.get('/', async (req, res) => {
           width: pageWidth,
           columnsSize,
           columnSpacing: 6,
-          padding: 4,
+          padding: 3,
           prepareHeader: () => {
             doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
           },
@@ -986,7 +1004,7 @@ router.get('/', async (req, res) => {
               const { x, y, width, height } = rectRow;
               doc.save().rect(x, y, width, height).fill('#f7f9fc').restore();
             }
-            doc.font('Helvetica').fontSize(8).lineGap(1.2).fillColor('#111');
+            doc.font('Helvetica').fontSize(7.5).lineGap(1.0).fillColor('#111');
 
             const key = pdfCols[columnIndex];
             if (!canRenderThumbs || !PHOTO_COLUMN_KEYS.has(key) || !rectCell) {
