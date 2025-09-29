@@ -55,220 +55,280 @@ router.get('/', async (req, res) => {
   }
 
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const fullUrl = p => p && /^https?:\/\//.test(p) ? p : `${baseUrl}${p}`;
+  const isAbs = p => /^([a-z][a-z0-9+\-.]*:|\/\/)/i.test(p);
+  const fullUrl = p => (p && isAbs(p)) ? p : `${baseUrl}${p}`;
+  const uniq = a => Array.from(new Set((a || []).filter(Boolean))).map(fullUrl);
+  const detectIsVideoByExt = ext => ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', 'mpg', 'mpeg'].includes(ext);
+  const detectIsImageByExt = ext => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'heif', 'tiff', 'tif', 'svg'].includes(ext);
   const includeLeveeMedia = !!phaseParam;
+  const normalizeColumnName = c => {
+    if (c === 'modified_by') return 'modified_by_email';
+    if (c === 'levee_fait_par') return 'levee_fait_par_email';
+    return c;
+  };
+  const requestedColumns = req.query.columns
+    ? new Set(
+      (Array.isArray(req.query.columns) ? req.query.columns : [req.query.columns])
+        .map(normalizeColumnName)
+    )
+    : null;
 
-  function collectAllMedia(row) {
-    const list = [];
+  const classifyMediaEntry = (entry, hint) => {
+    const lowerHint = hint ? hint.toLowerCase() : undefined;
+    const rawPath = typeof entry.path === 'string' ? entry.path : '';
+    const typeCandidates = [
+      entry.type,
+      entry.kind,
+      entry.media_type,
+      entry.mediaType,
+      entry.mime,
+      entry.mime_type,
+      entry.mimeType,
+      entry.contentType,
+      entry.content_type
+    ]
+      .map(v => String(v || '').toLowerCase())
+      .filter(Boolean);
 
-    const pushMediaCollection = (value, hintType) => {
-      if (!value) return;
+    if (typeCandidates.some(val => val.includes('video'))) return 'video';
+    if (typeCandidates.some(val => val.includes('photo') || val.includes('image'))) return 'photo';
 
-      const ensureArray = val => {
-        if (!val) return;
-        if (Array.isArray(val)) {
-          val.forEach(item => pushMediaCollection(item, hintType));
-        } else if (typeof val === 'string') {
-          const normalized = { path: val, _hintType: hintType };
-          list.push(normalized);
-        } else if (typeof val === 'object') {
-          const candidate = { ...val };
-          const fallbackPath =
-            candidate.path ||
-            candidate.url ||
-            candidate.uri ||
-            candidate.location ||
-            candidate.media_path ||
-            candidate.mediaPath ||
-            candidate.file_path ||
-            candidate.filePath;
+    if (lowerHint === 'video') return 'video';
+    if (lowerHint === 'photo') return 'photo';
 
-          if (fallbackPath) {
-            const normalized = {
-              ...candidate,
-              path: fallbackPath,
-              _hintType: hintType ?? candidate._hintType
-            };
-            list.push(normalized);
-          }
+    const contextCandidates = [entry.context, entry.category, entry.scope]
+      .map(v => String(v || '').toLowerCase())
+      .filter(Boolean);
+    if (contextCandidates.some(val => val.includes('video'))) return 'video';
+    if (contextCandidates.some(val => val.includes('photo') || val.includes('image'))) return 'photo';
 
-          if (Array.isArray(candidate.media)) {
-            pushMediaCollection(candidate.media, hintType);
-          }
-          if (Array.isArray(candidate.photos)) {
-            pushMediaCollection(candidate.photos, hintType ?? 'photo');
-          }
-          if (Array.isArray(candidate.videos)) {
-            pushMediaCollection(candidate.videos, hintType ?? 'video');
-          }
+    const match = rawPath.split(/[?#]/)[0].match(/\.([a-z0-9]+)$/i);
+    if (match) {
+      const ext = match[1].toLowerCase();
+      if (detectIsVideoByExt(ext)) return 'video';
+      if (detectIsImageByExt(ext)) return 'photo';
+    }
+
+    return undefined;
+  };
+
+  const collectMediaIntoBuckets = (value, hint, buckets) => {
+    if (!value) return;
+
+    const visit = (val, localHint) => {
+      if (!val) return;
+
+      if (Array.isArray(val)) {
+        val.forEach(item => visit(item, localHint));
+        return;
+      }
+
+      if (typeof val === 'string') {
+        const path = val.trim();
+        if (!path) return;
+        const kind = classifyMediaEntry({ path }, localHint);
+        if (kind === 'photo') buckets.photos.push(path);
+        if (kind === 'video') buckets.videos.push(path);
+        return;
+      }
+
+      if (typeof val === 'object') {
+        const candidate = { ...val };
+        const pathCandidate =
+          candidate.path ||
+          candidate.url ||
+          candidate.uri ||
+          candidate.location ||
+          candidate.media_path ||
+          candidate.mediaPath ||
+          candidate.file_path ||
+          candidate.filePath;
+
+        if (typeof pathCandidate === 'string' && pathCandidate.trim()) {
+          const normalizedPath = pathCandidate.trim();
+          const kind = classifyMediaEntry({ ...candidate, path: normalizedPath }, localHint);
+          if (kind === 'photo') buckets.photos.push(normalizedPath);
+          if (kind === 'video') buckets.videos.push(normalizedPath);
         }
-      };
 
-      ensureArray(value);
+        if (candidate.media) visit(candidate.media, localHint);
+        if (candidate.photos) visit(candidate.photos, 'photo');
+        if (candidate.videos) visit(candidate.videos, 'video');
+        return;
+      }
     };
 
-    pushMediaCollection(row.media);
+    visit(value, hint);
+  };
 
-    if (includeLeveeMedia) {
-      const leveeSources = [
-        { value: row.levee_media },
-        { value: row.leveeMedia },
-        { value: row.levee_medias },
-        { value: row.levee_medias_photos, hint: 'photo' },
-        { value: row.levee_photos, hint: 'photo' },
-        { value: row.leveePhotos, hint: 'photo' },
-        { value: row.levee_photo, hint: 'photo' },
-        { value: row.leveePhoto, hint: 'photo' },
-        { value: row.levee_photo_urls, hint: 'photo' },
-        { value: row.levee_videos, hint: 'video' },
-        { value: row.leveeVideos, hint: 'video' },
-        { value: row.levee_video, hint: 'video' },
-        { value: row.leveeVideo, hint: 'video' }
-      ];
+  rows = rows.map(r => {
+    const creationPhotosRaw = [];
+    const creationVideosRaw = [];
+    const leveePhotosRaw = [];
+    const leveeVideosRaw = [];
+    const leveeKeysToDelete = new Set();
+    const hadPhoto = Object.prototype.hasOwnProperty.call(r, 'photo');
 
-      for (const { value, hint } of leveeSources) {
-        if (value !== undefined) {
-          pushMediaCollection(value, hint);
-        }
-      }
+    collectMediaIntoBuckets(r.media, undefined, {
+      photos: creationPhotosRaw,
+      videos: creationVideosRaw
+    });
 
-      if (row.levee && typeof row.levee === 'object') {
-        pushMediaCollection(row.levee.media);
-        pushMediaCollection(row.levee.photos, 'photo');
-        pushMediaCollection(row.levee.videos, 'video');
-      }
+    const leveeMediaBuckets = {
+      photos: leveePhotosRaw,
+      videos: leveeVideosRaw
+    };
 
-      if (Array.isArray(row.levees)) {
-        row.levees.forEach(leveeItem => {
-          if (!leveeItem || typeof leveeItem !== 'object') return;
-          pushMediaCollection(leveeItem.media);
-          pushMediaCollection(leveeItem.photos, 'photo');
-          pushMediaCollection(leveeItem.videos, 'video');
-        });
-      }
+    Object.entries(r).forEach(([key, value]) => {
+      const lowerKey = String(key).toLowerCase();
+      if (!lowerKey.startsWith('levee')) return;
+      if (key === 'levee' || key === 'levees') return;
+      if (!/media|photo|video/.test(lowerKey)) return;
 
-      Object.entries(row).forEach(([key, value]) => {
-        if (!/levee/i.test(key)) return;
-        if (
-          key === 'levee_commentaire' ||
-          key === 'levee_fait_par' ||
-          key === 'levee_fait_par_email' ||
-          key === 'levee_fait_le'
-        ) {
-          return;
-        }
+      const hint = lowerKey.includes('video')
+        ? 'video'
+        : lowerKey.includes('photo')
+          ? 'photo'
+          : undefined;
 
-        const hint = /video/i.test(key)
-          ? 'video'
-          : /photo/i.test(key)
-            ? 'photo'
-            : undefined;
+      collectMediaIntoBuckets(value, hint, leveeMediaBuckets);
+      leveeKeysToDelete.add(key);
+    });
 
-        if (Array.isArray(value) || (value && typeof value === 'object')) {
-          pushMediaCollection(value, hint);
-        }
+    if (r.levee && typeof r.levee === 'object') {
+      collectMediaIntoBuckets(r.levee.media, undefined, leveeMediaBuckets);
+      collectMediaIntoBuckets(r.levee.photos, 'photo', leveeMediaBuckets);
+      collectMediaIntoBuckets(r.levee.videos, 'video', leveeMediaBuckets);
+    }
+
+    if (Array.isArray(r.levees)) {
+      r.levees.forEach(leveeItem => {
+        if (!leveeItem || typeof leveeItem !== 'object') return;
+        collectMediaIntoBuckets(leveeItem.media, undefined, leveeMediaBuckets);
+        collectMediaIntoBuckets(leveeItem.photos, 'photo', leveeMediaBuckets);
+        collectMediaIntoBuckets(leveeItem.videos, 'video', leveeMediaBuckets);
       });
     }
 
-    return list;
-  }
+    const next = { ...r };
+    delete next.media;
+    leveeKeysToDelete.forEach(key => {
+      delete next[key];
+    });
 
-  rows = rows.map(r => {
-    const photos = [];
-    const videos = [];
-    const allMedia = collectAllMedia(r);
-
-    for (const media of allMedia) {
-      if (!media) continue;
-      const entry = typeof media === 'string' ? { path: media } : media;
-      const rawPath =
-        entry.path || entry.url || entry.uri || entry.location || entry.media_path || entry.mediaPath;
-      if (!rawPath) continue;
-
-      const lowerType = String(entry.type || entry.kind || entry.media_type || '').toLowerCase();
-      const lowerContext = String(entry.context || entry.category || entry.scope || '').toLowerCase();
-      const hintType = entry._hintType;
-
-      let isPhoto = false;
-      let isVideo = false;
-
-      if (lowerType.includes('photo')) isPhoto = true;
-      if (lowerType.includes('video')) isVideo = true;
-
-      if (!isPhoto && !isVideo) {
-        const lowerKind = String(entry.category || entry.contentType || entry.mime_type || '').toLowerCase();
-        if (lowerKind.includes('photo') || lowerKind.includes('image')) isPhoto = true;
-        if (lowerKind.includes('video')) isVideo = true;
-      }
-
-      if (!isPhoto && !isVideo && hintType === 'photo') isPhoto = true;
-      if (!isVideo && hintType === 'video') isVideo = true;
-
-      if (!isPhoto && !isVideo) {
-        if (lowerContext.includes('video')) isVideo = true;
-        if (lowerContext.includes('photo') || lowerContext.includes('image')) isPhoto = true;
-        if (lowerContext.includes('levee')) {
-          if (lowerType.includes('video')) {
-            isVideo = true;
-          } else {
-            isPhoto = true;
-          }
-        }
-      }
-
-      if (!isPhoto && !isVideo && lowerType === 'image') {
-        isPhoto = true;
-      }
-
-      if (!isPhoto && !isVideo) {
-        const match = String(rawPath).split('?')[0].match(/\.([a-z0-9]+)$/i);
-        if (match) {
-          const ext = match[1].toLowerCase();
-          const photoExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'heif', 'tiff', 'tif', 'svg'];
-          const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', 'mpg', 'mpeg'];
-          if (photoExts.includes(ext)) isPhoto = true;
-          if (videoExts.includes(ext)) isVideo = true;
-        }
-      }
-
-      if (isPhoto) {
-        photos.push(rawPath);
-      } else if (isVideo) {
-        videos.push(rawPath);
-      }
+    if (next.levee && typeof next.levee === 'object') {
+      const leveeObj = { ...next.levee };
+      delete leveeObj.media;
+      delete leveeObj.photos;
+      delete leveeObj.videos;
+      next.levee = leveeObj;
     }
 
-    const photoArr = Array.from(new Set(photos)).map(fullUrl);
-    const videoArr = Array.from(new Set(videos)).map(fullUrl);
-    return {
-      ...r,
-      photo: fullUrl(r.photo),
-      photos: photoArr,
-      videos: videoArr
-    };
+    if (Array.isArray(next.levees)) {
+      next.levees = next.levees.map(item => {
+        if (!item || typeof item !== 'object') return item;
+        const clone = { ...item };
+        delete clone.media;
+        delete clone.photos;
+        delete clone.videos;
+        return clone;
+      });
+    }
+
+    const creation_photos = uniq(creationPhotosRaw);
+    const creation_videos = uniq(creationVideosRaw);
+    const levee_photos = uniq(leveePhotosRaw);
+    const levee_videos = uniq(leveeVideosRaw);
+
+    // Convenience columns obey the phase-specific merge rules:
+    // without a phase we only expose creation media, with a phase we merge levée media too.
+    const photos = includeLeveeMedia
+      ? uniq([...creation_photos, ...levee_photos])
+      : creation_photos;
+    const videos = includeLeveeMedia
+      ? uniq([...creation_videos, ...levee_videos])
+      : creation_videos;
+
+    const exposeCreationPhotos = includeLeveeMedia || requestedColumns?.has('creation_photos');
+    const exposeCreationVideos = includeLeveeMedia || requestedColumns?.has('creation_videos');
+    const exposeLeveePhotos = includeLeveeMedia || requestedColumns?.has('levee_photos');
+    const exposeLeveeVideos = includeLeveeMedia || requestedColumns?.has('levee_videos');
+
+    next.photos = photos;
+    next.videos = videos;
+
+    if (exposeCreationPhotos) {
+      next.creation_photos = creation_photos;
+    }
+    if (exposeCreationVideos) {
+      next.creation_videos = creation_videos;
+    }
+    if (exposeLeveePhotos) {
+      next.levee_photos = levee_photos;
+    }
+    if (exposeLeveeVideos) {
+      next.levee_videos = levee_videos;
+    }
+
+    if (hadPhoto) {
+      next.photo = creation_photos[0] || null;
+    }
+
+    return next;
   });
-  rows.forEach(r => delete r.media);
 
   // On extrait dynamiquement les noms de colonnes
   let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
   // On retire les identifiants numériques inutiles
-  cols = cols.filter(c => c !== 'created_by' && c !== 'modified_by' && c !== 'levee_fait_par' && c !== 'levee_photos');
+  const legacyColumnBlacklist = new Set([
+    'created_by',
+    'modified_by',
+    'levee_fait_par',
+    'media',
+    'levee_media',
+    'levee_medias',
+    'levee_medias_photos',
+    'levee_media_photos',
+    'leveeMedia',
+    'leveeMedias',
+    'leveeMediasPhotos',
+    'leveeMediaUrls',
+    'levee_medias_photos_urls',
+    'levee_medias_urls',
+    'levee_photos_urls',
+    'leveePhotos',
+    'leveePhoto',
+    'levee_photo',
+    'levee_photo_url',
+    'levee_photo_urls',
+    'leveePhotoUrl',
+    'leveePhotoUrls',
+    'levee_media_url',
+    'leveeMediaUrl',
+    // on ne blacklist plus les colonnes officielles levee_photos / levee_videos
+    'leveeVideos',
+    'levee_video',
+    'levee_video_url',
+    'leveeVideo',
+    'leveeVideoUrl'
+  ]);
+  cols = cols.filter(c => !legacyColumnBlacklist.has(c));
 
   // Rétro-compatibilité : si le client envoie "modified_by", on mappe vers "modified_by_email"
   if (req.query.columns) {
     let sel = Array.isArray(req.query.columns) ? req.query.columns.slice() : [req.query.columns];
-    sel = sel.map(c => {
-      if (c === 'modified_by') return 'modified_by_email';
-      if (c === 'levee_fait_par') return 'levee_fait_par_email';
-      return c;
-    });
+    sel = sel.map(normalizeColumnName);
     cols = sel.filter(c => cols.includes(c)).length ? sel.filter(c => cols.includes(c)) : cols;
   }
-  if (rows[0] && rows[0].photos !== undefined && !cols.includes('photos')) {
-    cols.push('photos');
-  }
-  if (rows[0] && rows[0].videos !== undefined && !cols.includes('videos')) {
-    cols.push('videos');
+  const alwaysExpose = includeLeveeMedia
+    ? ['creation_photos','creation_videos','levee_photos','levee_videos','photos','videos']
+    : ['photos','videos'];
+  if (!req.query.columns) {
+    alwaysExpose.forEach(col => {
+      if (rows[0] && rows[0][col] !== undefined && !cols.includes(col)) {
+        cols.push(col);
+      }
+    });
   }
 
   // --- BEGIN : Réordonnage fixe des colonnes ---
@@ -276,7 +336,10 @@ router.get('/', async (req, res) => {
   const desiredOrder = [
     'created_by_email','modified_by_email',
     'etage','chambre','numero','lot','intitule','description','etat','entreprise','localisation','observation','date_butoir',
-    'photos', // <= juste avant le bloc Levée
+    // En mode non-phase, on conserve uniquement la colonne historique "photos"
+    ...(includeLeveeMedia
+      ? ['creation_photos','creation_videos','photos','levee_photos','levee_videos']
+      : ['photos']),
     'levee_fait_par_email','levee_commentaire','levee_fait_le',
     'videos','photo'
   ];
@@ -290,11 +353,23 @@ router.get('/', async (req, res) => {
 
   const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
-    const serialize = r => ({
-      ...r,
-      photos: (r.photos || []).join(', '),
-      videos: (r.videos || []).join(', ')
-    });
+    const arrayColumns = new Set([
+      'creation_photos',
+      'creation_videos',
+      'levee_photos',
+      'levee_videos',
+      'photos',
+      'videos'
+    ].filter(col => cols.includes(col)));
+    const serialize = r => {
+      const out = { ...r };
+      arrayColumns.forEach(col => {
+        if (Array.isArray(out[col])) {
+          out[col] = out[col].join(', ');
+        }
+      });
+      return out;
+    };
     const parser = new Parser({ fields: cols });
     let csv = '\uFEFF' + parser.parse(rows.map(serialize));
     res.header('Content-Type', 'text/csv; charset=utf-8');
@@ -322,10 +397,20 @@ router.get('/', async (req, res) => {
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
     ws.columns.forEach(col => { col.width = 20; });
 
+    const arrayLikeColumns = new Set([
+      'creation_photos',
+      'creation_videos',
+      'levee_photos',
+      'levee_videos',
+      'photos',
+      'videos'
+    ].filter(col => cols.includes(col)));
     // Lignes de données avec effet zèbre
     rows.forEach((r, idx) => {
       const baseVals = baseCols.map(c => {
-        if (c === 'videos' && Array.isArray(r.videos)) return r.videos.join(', ');
+        if (arrayLikeColumns.has(c) && Array.isArray(r[c])) {
+          return r[c].join(', ');
+        }
         return r[c];
       });
       const photoVals = [];
@@ -413,7 +498,11 @@ router.get('/', async (req, res) => {
       ['localisation', 1.8],
       ['observation', 3.2],
       ['date_butoir', 1.4],
+      ['creation_photos', 3.2],
+      ['creation_videos', 3],
       ['photos', 3.2],
+      ['levee_photos', 3.2],
+      ['levee_videos', 3],
       ['levee_fait_par_email', 2],
       ['levee_commentaire', 2.8],
       ['levee_fait_le', 1.4],
