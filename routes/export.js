@@ -456,25 +456,77 @@ router.get('/', async (req, res) => {
     res.header('Content-Type', 'application/pdf');
     doc.pipe(res);
 
-    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text('Reception compte rendu', { align: 'left' });
+    // --- Title & subtitle -------------------------------------------------
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .fillColor('#111')
+      .text('Reception compte rendu', { align: 'left' });
+
     const chantierName = chantierFilter || '—';
     const etageName = etageFilter || '—';
     const roomLabel = rawRoom ? String(rawRoom) : 'total';
-    const phaseLabel = phase && phase !== 'all' ? ` — Phase: ${phase}` : '';
+    const subtitleParts = [`Chantier: ${chantierName}`, `Étage: ${etageName}`, `Chambre: ${roomLabel}`];
+    if (phase) {
+      const phaseLabel =
+        phase === 'all'
+          ? 'Toutes phases'
+          : /^\d+$/.test(phase)
+            ? `Phase ${phase}`
+            : phase;
+      subtitleParts.push(`Phase: ${phaseLabel}`);
+    }
+
     doc
       .font('Helvetica')
       .fontSize(9)
       .fillColor('#555')
-      .text(`Chantier: ${chantierName} — Étage: ${etageName} — Chambre: ${roomLabel}${phaseLabel}`)
+      .text(subtitleParts.join(' — '))
       .moveDown(0.8);
 
-    const toText = v => (v == null ? '' : Array.isArray(v) ? v.join(', ') : String(v));
-    const normalize = r => ({
-      ...r,
-      photos: Array.isArray(r.photos) ? r.photos : (r.photos ? [r.photos] : []),
-      videos: Array.isArray(r.videos) ? r.videos : (r.videos ? [r.videos] : [])
+    // --- Data normalisation ----------------------------------------------
+    const toArray = value => {
+      if (Array.isArray(value)) return value.filter(val => val != null && val !== '');
+      if (value == null || value === '') return [];
+      return [value];
+    };
+
+    const toText = value => {
+      if (value == null) return '';
+      if (Array.isArray(value)) {
+        return value
+          .filter(v => v != null && v !== '')
+          .map(v => String(v))
+          .join('\n');
+      }
+      return String(value);
+    };
+
+    const normalizedRows = rows.map(row => {
+      const next = { ...row };
+      const creationPhotos = toArray(row.creation_photos ?? row.photos);
+      const creationVideos = toArray(row.creation_videos ?? row.videos);
+      const leveePhotos = toArray(row.levee_photos);
+      const leveeVideos = toArray(row.levee_videos);
+
+      if (includeLeveeMedia) {
+        next.photos = uniq([...creationPhotos, ...leveePhotos]);
+        next.videos = uniq([...creationVideos, ...leveeVideos]);
+      } else {
+        next.photos = creationPhotos;
+        next.videos = creationVideos;
+      }
+
+      if (includeLeveeMedia) {
+        next.creation_photos = creationPhotos;
+        next.creation_videos = creationVideos;
+        next.levee_photos = leveePhotos;
+        next.levee_videos = leveeVideos;
+      }
+
+      return next;
     });
-    const normalizedRows = rows.map(normalize);
+
     const safeRows = normalizedRows.map(row => {
       const entry = {};
       cols.forEach(col => {
@@ -483,6 +535,7 @@ router.get('/', async (req, res) => {
       return entry;
     });
 
+    // --- Column sizing ----------------------------------------------------
     const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const columnWeightMap = new Map([
       ['created_by_email', 2.6],
@@ -520,6 +573,7 @@ router.get('/', async (req, res) => {
     }
     columnsSize = columnsSize.map(width => Math.max(1, Math.floor(width)));
 
+    // --- Headers ----------------------------------------------------------
     const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
     const headers = cols.map((key, idx) => ({
       label: toText(key),
@@ -533,6 +587,7 @@ router.get('/', async (req, res) => {
       options: { ...headerFont }
     }));
 
+    // --- Table rendering --------------------------------------------------
     await doc.table(
       { headers, datas: safeRows },
       {
@@ -543,7 +598,7 @@ router.get('/', async (req, res) => {
         prepareHeader: () => {
           doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
         },
-        prepareRow: (row, columnIndex, rowIndex, rectRow) => {
+        prepareRow: (row, columnIndex, rowIndex, rectRow, rectCell) => {
           if (columnIndex === 0 && rowIndex % 2 === 1) {
             doc.addBackground(rectRow, '#f7f9fc', 1);
           }
