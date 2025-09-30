@@ -4,7 +4,12 @@ const path = require("path");
 const { Pool } = require("pg");
 const ExcelJS = require("exceljs");
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
 
 const pad2 = (n) => String(n).padStart(2, "0");
 function formatDate(val) {
