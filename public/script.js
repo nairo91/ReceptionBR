@@ -10,6 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginError = document.getElementById('login-error');
   const appContainer = document.getElementById('app-container');
   const logoutBtn = document.getElementById('logoutBtn');
+  const body = document.body;
+
+  const setLoginVisible = (isVisible) => {
+    if (isVisible) {
+      body.classList.add('login-page');
+    } else {
+      body.classList.remove('login-page');
+    }
+    loginContainer.style.display = isVisible ? 'block' : 'none';
+    appContainer.style.display = isVisible ? 'none' : 'block';
+  };
 
   let user = null;
   const ADMIN_EMAIL_KEYWORDS = ['launay', 'blot', 'athari', 'mirona'];
@@ -26,15 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ok) {
         const data = await res.json();
         user = data.user;
-        loginContainer.style.display = 'none';
-        appContainer.style.display = 'block';
+        setLoginVisible(false);
         await initApp();
       } else {
-        loginContainer.style.display = 'block';
-        appContainer.style.display = 'none';
+        setLoginVisible(true);
       }
     } catch (err) {
       console.error(err);
+      setLoginVisible(true);
     }
   }
 
@@ -1166,14 +1176,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       user = data.user;
       loginError.textContent = '';
-      loginContainer.style.display = 'none';
-      appContainer.style.display   = 'block';
+      setLoginVisible(false);
       // Render the sidebar now that we are authenticated
       if (window.renderSidebar) {
         try { await window.renderSidebar(); } catch(_){ }
       }
       await initApp();
     } else {
+      setLoginVisible(true);
       loginError.textContent = 'Échec de la connexion';
     }
   });
@@ -1197,5 +1207,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = 'historique.html';
   });
 
+  setLoginVisible(true);
   refresh();
 });
