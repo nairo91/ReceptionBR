@@ -680,6 +680,7 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   min-height: 100svh;   /* hauteur plein écran, fiable sur mobile */
   width: 100%;
   min-width: 100%;
