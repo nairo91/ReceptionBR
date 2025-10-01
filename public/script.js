@@ -12,6 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logoutBtn');
 
   let user = null;
+  const ADMIN_EMAIL_KEYWORDS = ['launay', 'blot', 'athari', 'mirona'];
+  function isAdminUser(targetUser) {
+    if (!targetUser) return false;
+    if ((targetUser.role || '').toLowerCase() === 'admin') return true;
+    const email = (targetUser.email || '').toLowerCase();
+    return ADMIN_EMAIL_KEYWORDS.some(keyword => email.includes(keyword));
+  }
 
   async function refresh() {
     try {
@@ -397,60 +404,99 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" onclick="closePopups()">Fermer</button>
         `;
 
+        const canEditBulle = isAdminUser(user);
         // Refiltrer en live si l'état est modifié dans le formulaire
         const etatSelect = form.querySelector('select[name="etat"]');
         if (etatSelect) {
-          etatSelect.addEventListener('change', (e) => {
-            const v = e.target.value || '';
-            div.dataset.etat = v;
-            div.style.backgroundColor = getColorByEtat(v);
-            if (typeof filterBulles === 'function') filterBulles();
+          if (canEditBulle) {
+            etatSelect.addEventListener('change', (e) => {
+              const v = e.target.value || '';
+              div.dataset.etat = v;
+              div.style.backgroundColor = getColorByEtat(v);
+              if (typeof filterBulles === 'function') filterBulles();
+            });
+          } else {
+            etatSelect.disabled = true;
+          }
+        }
+
+        if (!canEditBulle) {
+          ['intitule', 'localisation', 'observation'].forEach(name => {
+            const input = form.querySelector(`input[name="${name}"]`);
+            if (input) {
+              input.readOnly = true;
+              input.classList.add('readonly-field');
+            }
           });
+          const descField = form.querySelector('textarea[name="description"]');
+          if (descField) {
+            descField.readOnly = true;
+            descField.classList.add('readonly-field');
+          }
+          const lotField = form.querySelector('select[name="lot"]');
+          if (lotField) lotField.disabled = true;
+          const dateField = form.querySelector('input[name="date_butoir"]');
+          if (dateField) dateField.disabled = true;
+          const mediaField = form.querySelector('input[name="media"]');
+          if (mediaField) {
+            mediaField.disabled = true;
+            mediaField.style.display = 'none';
+          }
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) submitBtn.remove();
         }
 
         const deleteBtn = form.querySelector('#deleteBtn');
-        deleteBtn.onclick = () => confirmDelete(bulle);
+        if (deleteBtn) {
+          if (canEditBulle) {
+            deleteBtn.onclick = () => confirmDelete(bulle);
+          } else {
+            deleteBtn.remove();
+          }
+        }
 
         const leveeBtn = form.querySelector('#leveeBtn');
         if (leveeBtn) leveeBtn.onclick = () => openLeveeDialog(bulle);
 
-        form.onsubmit = e => {
-          e.preventDefault();
-          if (!user) {
-            alert('Vous devez être connecté pour modifier.');
-            return;
-          }
-          // new FormData(form) already includes the <input name="media"> files
-          const formData = new FormData(form);
-          formData.append('chantier_id', chantierSelect.value);
-          formData.append('etage_id', etageSelect.value);
-          const nomBulle = formData.get('intitule');
-          const desc = formData.get('description');
-          const lot = formData.get('lot');
-          const localisation = formData.get('localisation');
-          const observation = formData.get('observation');
-          fetch(`/api/bulles/${bulle.id}`, {
-            method: 'PUT',
-            credentials: 'include',
-            body: formData
-          }).then(() => {
-            loadBulles();
-            closePopups();
-            const relX = parseFloat(div.dataset.x);
-            const relY = parseFloat(div.dataset.y);
-              recordAction('modification', {
-                etage: etageSelect.selectedOptions[0].textContent,
-                chambre: bulle.chambre,
-                x: relX,
-                y: relY,
-                nomBulle: `Bulle ${bulle.numero}`,
-                description: desc,
-                lot,
-                localisation,
-                observation
-              });
-          });
-        };
+        if (canEditBulle) {
+          form.onsubmit = e => {
+            e.preventDefault();
+            if (!user) {
+              alert('Vous devez être connecté pour modifier.');
+              return;
+            }
+            const formData = new FormData(form);
+            formData.append('chantier_id', chantierSelect.value);
+            formData.append('etage_id', etageSelect.value);
+            const desc = formData.get('description');
+            const lot = formData.get('lot');
+            const localisation = formData.get('localisation');
+            const observation = formData.get('observation');
+            fetch(`/api/bulles/${bulle.id}`, {
+              method: 'PUT',
+              credentials: 'include',
+              body: formData
+            }).then(() => {
+              loadBulles();
+              closePopups();
+              const relX = parseFloat(div.dataset.x);
+              const relY = parseFloat(div.dataset.y);
+                recordAction('modification', {
+                  etage: etageSelect.selectedOptions[0].textContent,
+                  chambre: bulle.chambre,
+                  x: relX,
+                  y: relY,
+                  nomBulle: `Bulle ${bulle.numero}`,
+                  description: desc,
+                  lot,
+                  localisation,
+                  observation
+                });
+            });
+          };
+        } else {
+          form.addEventListener('submit', e => e.preventDefault());
+        }
 
         const r = plan.getBoundingClientRect();
         const px = parseFloat(div.dataset.x) * r.width;

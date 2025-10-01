@@ -15,6 +15,14 @@ function toNullIfEmpty(v) {
   return (v === '' || v == null) ? null : v;
 }
 
+const ADMIN_EMAIL_KEYWORDS = ['launay', 'blot', 'athari', 'mirona'];
+function isAdminUser(user) {
+  if (!user) return false;
+  if ((user.role || '').toLowerCase() === 'admin') return true;
+  const email = (user.email || '').toLowerCase();
+  return ADMIN_EMAIL_KEYWORDS.some(keyword => email.includes(keyword));
+}
+
 // Middleware d'authentification désactivé (dev)
 function isAuthenticated(req, res, next) {
   // Toujours passer, sans vérifier la session
@@ -23,6 +31,12 @@ function isAuthenticated(req, res, next) {
 
 // POST : création bulle avec created_by = l'utilisateur en session
 router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
+  }
+  if (!isAdminUser(req.session.user)) {
+    return res.status(403).json({ error: 'Création de bulle non autorisée' });
+  }
   try {
     const {
       chantier_id, etage_id,
@@ -96,15 +110,20 @@ router.get("/", async (req, res) => {
   }
 });
 
-// DELETE bulle (sans authentification)
+// DELETE bulle
 router.delete("/:id", async (req, res) => {
+  if (!req.session?.user) return res.status(401).json({ error: 'Authentification requise' });
+  if (!isAdminUser(req.session.user)) return res.status(403).json({ error: 'Suppression non autorisée' });
   const { id } = req.params;
   await pool.query("DELETE FROM bulles WHERE id = $1", [id]);
   res.json({ success: true });
 });
 
-// PUT : modification bulle sans authentification, modified_by et levee_fait_par à null
+// PUT : modification bulle
 router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
+  }
   try {
     const { id } = req.params;
     const {
@@ -112,26 +131,40 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
       description, intitule, etat, lot, entreprise_id, localisation, observation
     } = req.body;
 
-    const userId = req.session.user.id;
+    const sessionUser = req.session.user;
+    const userId = sessionUser.id;
     const leveeFaitLe = toNullIfEmpty(req.body.levee_fait_le);
     const leveeCommentaire = toNullIfEmpty(req.body.levee_commentaire);
     const safeDate = toNullIfEmpty(req.body.date_butoir);
     const files = req.files || [];
-    // ne garder qu’une seule entrée par URL Cloudinary (evite les doublons)
     const uniqueFiles = Array.from(new Map(files.map(f => [f.path, f])).values());
     const leveeFiles = uniqueFiles.filter(f => f.fieldname === 'levee_media' || f.fieldname === 'levee_media[]');
-    const mediaFiles = uniqueFiles.filter(f => f.fieldname !== 'levee_media' && f.fieldname !== 'levee_media[]');
-    const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
-    const photo = firstPhoto ? firstPhoto.path : null;
+    let mediaFiles = uniqueFiles.filter(f => f.fieldname !== 'levee_media' && f.fieldname !== 'levee_media[]');
 
-    // Récupérer l'état actuel complet pour l'historique
     const oldRes = await pool.query('SELECT * FROM bulles WHERE id = $1', [id]);
     if (oldRes.rowCount === 0) return res.status(404).json({ error: 'Bulle non trouvée' });
     const oldRow = oldRes.rows[0];
-    const newEtat = etat ?? oldRow.etat;
+    const canEditCoreFields = isAdminUser(sessionUser);
+    if (!canEditCoreFields) {
+      mediaFiles = [];
+    }
+    const firstPhoto = mediaFiles.find(f => f.mimetype.startsWith('image/'));
+    const photo = firstPhoto ? firstPhoto.path : null;
+
+    let nextEtat = oldRow.etat;
+    if (canEditCoreFields) {
+      nextEtat = etat ?? oldRow.etat;
+    } else if (etat && etat !== oldRow.etat) {
+      if (etat === 'levee') {
+        nextEtat = 'levee';
+      } else {
+        return res.status(403).json({ error: 'Modification de la bulle non autorisée' });
+      }
+    }
+
     let leveeFaitPar = parseIntOrNull(req.body.levee_fait_par);
     if (leveeFaitPar == null) {
-      if (newEtat === 'levee' && oldRow.etat !== 'levee') {
+      if (nextEtat === 'levee' && oldRow.etat !== 'levee') {
         leveeFaitPar = userId;
       } else if (leveeFaitLe || leveeCommentaire || leveeFiles.length) {
         leveeFaitPar = userId;
@@ -140,19 +173,29 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
       }
     }
 
+    const nextChantierId = canEditCoreFields ? parseIntOrNull(chantier_id) : oldRow.chantier_id;
+    const nextEtageId = canEditCoreFields ? parseIntOrNull(etage_id) : oldRow.etage_id;
+    const nextDescription = canEditCoreFields ? toNullIfEmpty(description) : oldRow.description;
+    const nextIntitule = canEditCoreFields ? toNullIfEmpty(intitule) : oldRow.intitule;
+    const nextLot = canEditCoreFields ? toNullIfEmpty(lot) : oldRow.lot;
+    const nextEntrepriseId = canEditCoreFields ? parseIntOrNull(entreprise_id) : oldRow.entreprise_id;
+    const nextLocalisation = canEditCoreFields ? toNullIfEmpty(localisation) : oldRow.localisation;
+    const nextObservation = canEditCoreFields ? toNullIfEmpty(observation) : oldRow.observation;
+    const nextDateButoir = canEditCoreFields ? safeDate : oldRow.date_butoir;
+
     if (photo) {
       await pool.query(
         `UPDATE bulles
          SET chantier_id=$1, etage_id=$2, description = $3, photo = $4, intitule = $5, etat = $6, lot = $7, entreprise_id = $8, localisation = $9, observation = $10, date_butoir = $11, modified_by = $12, levee_fait_par = $13, levee_fait_le = $14, levee_commentaire = $15
          WHERE id = $16`,
-        [chantier_id || null, etage_id || null, description || null, photo, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
+        [nextChantierId, nextEtageId, nextDescription, photo, nextIntitule, nextEtat, nextLot, nextEntrepriseId, nextLocalisation, nextObservation, nextDateButoir, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
       );
     } else {
       await pool.query(
         `UPDATE bulles
          SET chantier_id=$1, etage_id=$2, description = $3, intitule = $4, etat = $5, lot = $6, entreprise_id = $7, localisation = $8, observation = $9, date_butoir = $10, modified_by = $11, levee_fait_par = $12, levee_fait_le = $13, levee_commentaire = $14
          WHERE id = $15`,
-        [chantier_id || null, etage_id || null, description || null, intitule || null, etat, lot || null, entreprise_id || null, localisation || null, observation || null, safeDate, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
+        [nextChantierId, nextEtageId, nextDescription, nextIntitule, nextEtat, nextLot, nextEntrepriseId, nextLocalisation, nextObservation, nextDateButoir, userId, leveeFaitPar, leveeFaitLe, leveeCommentaire, id]
       );
     }
 
@@ -160,13 +203,15 @@ router.put("/:id", /* isAuthenticated, */ upload.any(), async (req, res) => {
       'SELECT path FROM bulle_media WHERE bulle_id = $1', [id]
     );
     const existingPaths = new Set(existing.map(r => r.path));
-    for (const file of mediaFiles) {
-      if (!existingPaths.has(file.path)) {
-        const type = file.mimetype.startsWith('video/') ? 'video' : 'photo';
-        await pool.query(
-          'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
-          [id, type, file.path]
-        );
+    if (canEditCoreFields) {
+      for (const file of mediaFiles) {
+        if (!existingPaths.has(file.path)) {
+          const type = file.mimetype.startsWith('video/') ? 'video' : 'photo';
+          await pool.query(
+            'INSERT INTO bulle_media(bulle_id,type,path) VALUES($1,$2,$3)',
+            [id, type, file.path]
+          );
+        }
       }
     }
     for (const f of leveeFiles) {
