@@ -15,8 +15,10 @@
   <!-- Librairies pour l’export PDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-  <div id="login-container" class="auth-wrapper">
-    <div class="auth-card">
+  <!-- ⚠️ login-container = fond plein écran ; auth-wrapper = largeur contrainte -->
+  <div id="login-container">
+    <div class="auth-wrapper">
+      <div class="auth-card">
       <div class="auth-brand">
         <img src="/img/brh-logo.png" alt="Bâti Rénov Hôtellerie" class="auth-logo" />
         <div class="auth-heading">
@@ -45,7 +47,8 @@
       <div class="auth-footer">
         <small>Assistance : <a href="mailto:support@bati-renov-hotellerie.fr">support@bati-renov-hotellerie.fr</a></small>
       </div>
-    </div>
+      </div><!-- /.auth-card -->
+    </div><!-- /.auth-wrapper -->
   </div>
 
   <div id="app-container" style="display:none;">
