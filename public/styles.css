@@ -674,9 +674,20 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 80px); /* 80px ≈ hauteur d’en-tête, ajuste au besoin */
-  padding: 16px;                  /* évite la coupe côté droit sur mobile */
+  min-height: 100svh;   /* hauteur plein écran, fiable sur mobile */
+  padding: 16px;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  padding-block: max(16px, env(safe-area-inset-top, 0px), env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+
+  /* 🌈 Fond dégradé uniquement pour la page login */
+  background: linear-gradient(135deg, #0b1c2e 0%, #122b45 50%, #143d64 100%);
+}
+
+/* Neutralise les fonds globaux derrière le login */
+body.login-page,
+body.login-page #app-container {
+  background: transparent !important;
 }
 
 #login-container .auth-wrapper {
