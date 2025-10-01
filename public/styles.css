@@ -716,3 +716,113 @@ body.login-page #app-container {
   margin: 0;                      /* la carte suit la largeur max ci-dessus */
   border-radius: 14px;
 }
+
+/* -------------------------------------------------- */
+/* Export modal                                       */
+/* -------------------------------------------------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-dialog {
+  position: relative;
+  background: var(--card-bg, #ffffff);
+  color: inherit;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  width: min(90vw, 520px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+}
+
+.modal-dialog label {
+  display: block;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.modal-dialog select,
+.modal-dialog input[type="checkbox"] {
+  font: inherit;
+}
+
+.modal-dialog select,
+.modal-dialog fieldset {
+  width: 100%;
+}
+
+.modal-dialog fieldset {
+  margin-top: 1.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.modal-dialog fieldset legend {
+  font-weight: 600;
+  padding: 0 0.25rem;
+}
+
+.modal-dialog fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.modal-dialog fieldset label:first-of-type {
+  margin-top: 0;
+}
+
+.modal-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-actions .btn-primary {
+  min-width: 160px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  color: inherit;
+}
+
+#exportModal select {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: var(--input-bg, #fff);
+}
+
+#exportModal fieldset label input[type="checkbox"] {
+  accent-color: #007bff;
+}

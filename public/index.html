@@ -121,45 +121,52 @@
       </div>
     </div>
 
-    <!-- Format d’export -->
-    <label for="export-format">Format :</label>
-    <select id="export-format">
-      <option value="csv">CSV</option>
-      <option value="xlsx">Excel</option>
-      <option value="pdf">PDF</option>
-    </select>
-    <label>Phase :
-      <select id="phaseSelect">
-        <option value="">(Aucune)</option>
-        <option value="1">Phase 1</option>
-        <option value="2">Phase 2</option>
-        <option value="all">Toutes</option>
-      </select>
-    </label>
-    <fieldset id="export-columns">
-      <legend>Colonnes à inclure :</legend>
-      <label><input type="checkbox" name="col" value="id" checked> ID</label>
-      <label><input type="checkbox" name="col" value="created_by_email" checked> Utilisateur</label>
-      <label><input type="checkbox" name="col" value="modified_by_email"> Modifié par (email)</label>
-      <label><input type="checkbox" name="col" value="etage" checked> Étage</label>
-      <label><input type="checkbox" name="col" value="chambre" checked> Chambre</label>
-      <label><input type="checkbox" name="col" value="numero" checked> N°</label>
-      <label><input type="checkbox" name="col" value="lot" checked> Lot</label>
-      <label><input type="checkbox" name="col" value="intitule" checked> Intitulé</label>
-      <label><input type="checkbox" name="col" value="description"> Description</label>
-      <label><input type="checkbox" name="col" value="etat" checked> État</label>
-      <label><input type="checkbox" name="col" value="localisation"> Localisation</label>
-      <label><input type="checkbox" name="col" value="observation" checked> Observation</label>
-      <label><input type="checkbox" name="col" value="date_butoir"> Date butoir</label>
-      <label><input type="checkbox" name="col" value="photos" checked> Photos (tous les liens)</label>
-      <label><input type="checkbox" name="col" value="videos" checked> Vidéos (tous les liens)</label>
-      <label><input type="checkbox" name="col" value="levee_fait_par_email" checked> Fait par</label>
-      <label><input type="checkbox" name="col" value="levee_fait_le" checked> Fait le</label>
-      <label><input type="checkbox" name="col" value="levee_commentaire" checked> Levée – Commentaire</label>
-    </fieldset>
     <button id="exportPhaseBtn">Exporter (par phase)</button>
-    <!-- Nouveau bouton Export -->
-    <button id="exportBtn">Exporter</button>
+    <button id="openExportBtn">Exporter</button>
+
+    <div id="exportModal" class="modal" hidden>
+      <div class="modal-dialog export-modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+        <button type="button" class="close-btn" id="exportCloseBtn" aria-label="Fermer">×</button>
+        <h2 id="exportModalTitle">Exporter les données</h2>
+        <label for="export-format">Format :</label>
+        <select id="export-format">
+          <option value="csv">CSV</option>
+          <option value="xlsx">Excel</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <label for="phaseSelect">Phase :</label>
+        <select id="phaseSelect">
+          <option value="">(Aucune)</option>
+          <option value="1">Phase 1</option>
+          <option value="2">Phase 2</option>
+          <option value="all">Toutes</option>
+        </select>
+        <fieldset id="export-columns">
+          <legend>Colonnes à inclure :</legend>
+          <label><input type="checkbox" name="col" value="id" checked> ID</label>
+          <label><input type="checkbox" name="col" value="created_by_email" checked> Utilisateur</label>
+          <label><input type="checkbox" name="col" value="modified_by_email"> Modifié par (email)</label>
+          <label><input type="checkbox" name="col" value="etage" checked> Étage</label>
+          <label><input type="checkbox" name="col" value="chambre" checked> Chambre</label>
+          <label><input type="checkbox" name="col" value="numero" checked> N°</label>
+          <label><input type="checkbox" name="col" value="lot" checked> Lot</label>
+          <label><input type="checkbox" name="col" value="intitule" checked> Intitulé</label>
+          <label><input type="checkbox" name="col" value="description"> Description</label>
+          <label><input type="checkbox" name="col" value="etat" checked> État</label>
+          <label><input type="checkbox" name="col" value="localisation"> Localisation</label>
+          <label><input type="checkbox" name="col" value="observation" checked> Observation</label>
+          <label><input type="checkbox" name="col" value="date_butoir"> Date butoir</label>
+          <label><input type="checkbox" name="col" value="photos" checked> Photos (tous les liens)</label>
+          <label><input type="checkbox" name="col" value="videos" checked> Vidéos (tous les liens)</label>
+          <label><input type="checkbox" name="col" value="levee_fait_par_email" checked> Fait par</label>
+          <label><input type="checkbox" name="col" value="levee_fait_le" checked> Fait le</label>
+          <label><input type="checkbox" name="col" value="levee_commentaire" checked> Levée – Commentaire</label>
+        </fieldset>
+        <div class="modal-actions">
+          <button id="exportBtn" class="btn-primary">Exporter</button>
+        </div>
+      </div>
+    </div>
 
     <div id="plan-container">
       <img id="plan" src="plan-r5.png" alt="Plan étage" />
