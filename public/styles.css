@@ -1,3 +1,9 @@
+/* Assure qu'il n'y a pas de marge et que 100% hauteur est bien pris */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
 /* === Thème clair/sombre : variables minimales non-intrusives === */
 :root{
   --bg:#ffffff;
@@ -675,6 +681,8 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   align-items: center;
   justify-content: center;
   min-height: 100svh;   /* hauteur plein écran, fiable sur mobile */
+  width: 100%;
+  min-width: 100%;
   padding: 16px;
   padding-inline: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   padding-block: max(16px, env(safe-area-inset-top, 0px), env(safe-area-inset-bottom, 0px));
@@ -690,14 +698,14 @@ body.login-page #app-container {
   background: transparent !important;
 }
 
-#login-container .auth-wrapper {
+.auth-wrapper {
   width: 100%;
   max-width: 480px;               /* largeur carte login */
   margin: 0;                      /* on laisse le parent gérer le centrage */
 }
 
 @media (min-width: 768px) {
-  #login-container .auth-wrapper {
+  .auth-wrapper {
     max-width: 520px;
   }
 }
