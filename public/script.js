@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       body.classList.remove('login-page');
     }
-    loginContainer.style.display = isVisible ? 'block' : 'none';
+    loginContainer.style.display = isVisible ? 'flex' : 'none';
     appContainer.style.display = isVisible ? 'none' : 'block';
   };
 
