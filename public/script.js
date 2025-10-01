@@ -52,11 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chantierSelect   = document.getElementById("chantierSelect");
     const etageSelect      = document.getElementById("etageSelect");
     const chambreSelect    = document.getElementById("chambreSelect");
-    const openExportBtn    = document.getElementById("openExportBtn");
     const exportBtn        = document.getElementById("exportBtn");
     const exportPhaseBtn   = document.getElementById("exportPhaseBtn");
-    const exportModal      = document.getElementById("exportModal");
-    const exportCloseBtn   = document.getElementById("exportCloseBtn");
     const formatSelect     = document.getElementById("export-format");
     const phaseSelect      = document.getElementById("phaseSelect");
     const plan             = document.getElementById("plan");
@@ -915,30 +912,6 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBulles();
     };
     chambreSelect.onchange = loadBulles;
-    const closeExportModal = () => {
-      if (exportModal) {
-        exportModal.hidden = true;
-      }
-    };
-
-    if (openExportBtn && exportModal) {
-      openExportBtn.addEventListener('click', () => {
-        exportModal.hidden = false;
-      });
-    }
-
-    if (exportCloseBtn) {
-      exportCloseBtn.addEventListener('click', closeExportModal);
-    }
-
-    if (exportModal) {
-      exportModal.addEventListener('click', (event) => {
-        if (event.target === exportModal) {
-          closeExportModal();
-        }
-      });
-    }
-
     if (exportPhaseBtn) {
       exportPhaseBtn.addEventListener('click', () => {
         const fmt = (formatSelect?.value || 'csv').toLowerCase();
@@ -960,10 +933,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(url.toString(), '_blank');
       });
     }
-
-    if (exportBtn) {
-      exportBtn.addEventListener('click', async () => {
-        const fmt = (formatSelect?.value || 'csv').toLowerCase();
+    exportBtn.onclick = async () => {
+        const fmt = (formatSelect.value || 'csv').toLowerCase();
         if (fmt !== 'pdf') {
           const params = new URLSearchParams();
           params.set('chantier_id', chantierSelect.value);
@@ -973,7 +944,6 @@ document.addEventListener('DOMContentLoaded', () => {
           document.querySelectorAll('#export-columns input[name="col"]:checked')
             .forEach(cb => params.append('columns', cb.value));
           window.open(`/api/bulles/export?${params.toString()}`, '_blank');
-          closeExportModal();
           return;
         }
 
@@ -998,7 +968,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!window.jspdf || !window.jspdf.jsPDF) {
           alert('Export PDF indisponible (librairies non chargées)');
-          closeExportModal();
           return;
         }
 
@@ -1186,8 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         doc.save('export_bulles_' + new Date().toISOString().slice(0,10) + '.pdf');
-        closeExportModal();
-      });
+      };
 
     window.addEventListener('resize', ajusterTailleBulles);
     window.addEventListener('orientationchange', ajusterTailleBulles);
