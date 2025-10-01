@@ -669,3 +669,30 @@ html[data-theme="dark"], body[data-theme="dark"]{ --card-bg:rgba(255,255,255,0.0
   opacity: 1;
 }
 
+/* --- Fix centrage & marges du formulaire de login --- */
+#login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px); /* 80px ≈ hauteur d’en-tête, ajuste au besoin */
+  padding: 16px;                  /* évite la coupe côté droit sur mobile */
+  box-sizing: border-box;
+}
+
+#login-container .auth-wrapper {
+  width: 100%;
+  max-width: 480px;               /* largeur carte login */
+  margin: 0;                      /* on laisse le parent gérer le centrage */
+}
+
+@media (min-width: 768px) {
+  #login-container .auth-wrapper {
+    max-width: 520px;
+  }
+}
+
+/* Optionnel : assure que la carte ne “colle” pas aux bords très étroits */
+.auth-card {
+  margin: 0;                      /* la carte suit la largeur max ci-dessus */
+  border-radius: 14px;
+}
