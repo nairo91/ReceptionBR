@@ -579,10 +579,21 @@ router.get('/', async (req, res) => {
 
     const normalizedRows = rows.map(row => {
       const next = { ...row };
-      const creationPhotos = toArray(row.creation_photos ?? row.photos);
       const leveePhotos    = toArray(row.levee_photos);
-      const creationVideos = toArray(row.creation_videos ?? row.videos);
       const leveeVideos    = toArray(row.levee_videos);
+      const leveePhotoSet  = new Set(leveePhotos);
+      const leveeVideoSet  = new Set(leveeVideos);
+      const hasCreationPhotos = row.creation_photos != null;
+      const hasCreationVideos = row.creation_videos != null;
+      let creationPhotos  = toArray(hasCreationPhotos ? row.creation_photos : row.photos);
+      let creationVideos  = toArray(hasCreationVideos ? row.creation_videos : row.videos);
+
+      if (!hasCreationPhotos && leveePhotoSet.size) {
+        creationPhotos = creationPhotos.filter(url => !leveePhotoSet.has(url));
+      }
+      if (!hasCreationVideos && leveeVideoSet.size) {
+        creationVideos = creationVideos.filter(url => !leveeVideoSet.has(url));
+      }
 
       next.creation_photos = creationPhotos;
       next.levee_photos    = leveePhotos;
@@ -801,10 +812,21 @@ router.get('/', async (req, res) => {
 
       const normalizedRows = rows.map(row => {
         const next = { ...row };
-        const creationPhotos = toArray(row.creation_photos ?? row.photos);
-        const creationVideos = toArray(row.creation_videos ?? row.videos);
         const leveePhotos = toArray(row.levee_photos);
         const leveeVideos = toArray(row.levee_videos);
+        const leveePhotoSet = new Set(leveePhotos);
+        const leveeVideoSet = new Set(leveeVideos);
+        const hasCreationPhotos = row.creation_photos != null;
+        const hasCreationVideos = row.creation_videos != null;
+        let creationPhotos = toArray(hasCreationPhotos ? row.creation_photos : row.photos);
+        let creationVideos = toArray(hasCreationVideos ? row.creation_videos : row.videos);
+
+        if (!hasCreationPhotos && leveePhotoSet.size) {
+          creationPhotos = creationPhotos.filter(url => !leveePhotoSet.has(url));
+        }
+        if (!hasCreationVideos && leveeVideoSet.size) {
+          creationVideos = creationVideos.filter(url => !leveeVideoSet.has(url));
+        }
 
         if (includeLeveeMedia) {
           next.photos = uniq([...creationPhotos, ...leveePhotos]);
