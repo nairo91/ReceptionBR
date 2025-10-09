@@ -471,8 +471,19 @@ router.get('/', async (req, res) => {
     return next;
   });
 
-  // On extrait dynamiquement les noms de colonnes
-  let cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+  // On extrait dynamiquement les noms de colonnes en conservant l'ordre
+  // d'apparition sur l'ensemble des lignes (et pas uniquement la première)
+  const discoveredColumns = [];
+  const discoveredSet = new Set();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    for (const key of Object.keys(row)) {
+      if (discoveredSet.has(key)) continue;
+      discoveredSet.add(key);
+      discoveredColumns.push(key);
+    }
+  }
+  let cols = discoveredColumns;
   // On retire les identifiants numériques inutiles
   const legacyColumnBlacklist = new Set([
     'created_by',
@@ -507,19 +518,22 @@ router.get('/', async (req, res) => {
     'leveeVideoUrl'
   ]);
   cols = cols.filter(c => !legacyColumnBlacklist.has(c));
+  const availableColumns = cols.slice();
+  const availableColumnSet = new Set(availableColumns);
 
   // Rétro-compatibilité : si le client envoie "modified_by", on mappe vers "modified_by_email"
   if (req.query.columns) {
     let sel = Array.isArray(req.query.columns) ? req.query.columns.slice() : [req.query.columns];
     sel = sel.map(normalizeColumnName);
-    cols = sel.filter(c => cols.includes(c)).length ? sel.filter(c => cols.includes(c)) : cols;
+    const filteredSelection = sel.filter(c => availableColumnSet.has(c));
+    cols = filteredSelection.length ? filteredSelection : cols;
   }
   const alwaysExpose = includeLeveeMedia
     ? ['creation_photos','creation_videos','levee_photos','levee_videos','photos','videos']
     : ['photos','videos'];
   if (!req.query.columns) {
     alwaysExpose.forEach(col => {
-      if (rows[0] && rows[0][col] !== undefined && !cols.includes(col)) {
+      if (availableColumnSet.has(col) && !cols.includes(col)) {
         cols.push(col);
       }
     });
