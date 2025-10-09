@@ -716,3 +716,89 @@ body.login-page #app-container {
   margin: 0;                      /* la carte suit la largeur max ci-dessus */
   border-radius: 14px;
 }
+
+/* ================= Modal export ================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 9999;
+}
+
+.modal[aria-hidden="false"] {
+  display: block;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: saturate(120%) blur(2px);
+}
+
+.modal__panel {
+  position: relative;
+  max-width: 720px;
+  margin: 6vh auto;
+  background: var(--bg);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  padding: 16px 18px;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.modal__header h3 {
+  margin: 0;
+}
+
+.modal__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal__body {
+  max-height: min(60vh, 70svh);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.export-modal__section {
+  margin: 12px 0;
+}
+
+.export-modal__formats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.export-modal__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px 14px;
+  align-items: start;
+}
+
+/* Cache l’ancien panneau d’options (utilisé en interne seulement) */
+#export-columns,
+#export-format {
+  display: none !important;
+}

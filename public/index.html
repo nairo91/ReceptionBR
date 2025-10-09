@@ -158,14 +158,47 @@
       <label><input type="checkbox" name="col" value="levee_commentaire" checked> Levée – Commentaire</label>
     </fieldset>
     <button id="exportPhaseBtn">Exporter (par phase)</button>
-    <!-- Nouveau bouton Export -->
-    <button id="exportBtn">Exporter</button>
+    <!-- Bouton d'export existant conservé (déclenche le flux d'export réel) -->
+    <button id="exportRunBtn" class="btn btn-primary" type="button" style="display: none;">Exporter</button>
+    <!-- Nouveau bouton visible : ouvre la modale -->
+    <button id="exportBtn" class="btn btn-primary" type="button">Exporter</button>
 
     <div id="plan-container">
       <img id="plan" src="plan-r5.png" alt="Plan étage" />
       <div id="bulles-container"></div>
     </div>
   </div>
+
+  <!-- ========= Modale d’export ========= -->
+  <div id="exportModal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" data-export-close></div>
+    <div class="modal__panel export-modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+      <div class="modal__header">
+        <h3 id="exportModalTitle">Exporter</h3>
+        <button class="modal__close" aria-label="Fermer" type="button" data-export-close>✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="export-modal__section">
+          <h4>Format</h4>
+          <div class="export-modal__formats">
+            <label><input type="radio" name="exportFormat" value="csv"> CSV</label>
+            <label><input type="radio" name="exportFormat" value="xlsx"> Excel</label>
+            <label><input type="radio" name="exportFormat" value="pdf"> PDF</label>
+          </div>
+        </div>
+        <div class="export-modal__section">
+          <h4>Colonnes à inclure</h4>
+          <!-- Les cases du fieldset #export-columns sont dupliquées ici par le script -->
+          <div id="exportModalCols" class="export-modal__cols"></div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn-secondary" type="button" data-export-close>Annuler</button>
+        <button id="export-confirm" class="btn btn-primary" type="button">Confirmer</button>
+      </div>
+    </div>
+  </div>
+  <!-- ======== /Modale d’export ======== -->
 
   <script src="script.js"></script>
   <script src="selection.js"></script>

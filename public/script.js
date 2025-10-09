@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const etageSelect      = document.getElementById("etageSelect");
     const chambreSelect    = document.getElementById("chambreSelect");
     const exportBtn        = document.getElementById("exportBtn");
+    const exportRunBtn     = document.getElementById("exportRunBtn");
     const exportPhaseBtn   = document.getElementById("exportPhaseBtn");
     const formatSelect     = document.getElementById("export-format");
     const phaseSelect      = document.getElementById("phaseSelect");
@@ -80,6 +81,112 @@ document.addEventListener('DOMContentLoaded', () => {
         filterBulles();
       });
     }
+
+    // ======== Export modal (UI) ========
+    const exportModal      = document.getElementById('exportModal');
+    const exportModalCols  = document.getElementById('exportModalCols');
+    const exportConfirmBtn = document.getElementById('export-confirm');
+    const modalCloseEls    = Array.from(document.querySelectorAll('[data-export-close]'));
+
+    function populateExportModalColumns() {
+      if (!exportModalCols) return;
+      const sourceFieldset = document.getElementById('export-columns');
+      if (!sourceFieldset) return;
+      exportModalCols.innerHTML = '';
+      const sourceCheckboxes = Array.from(sourceFieldset.querySelectorAll('input[type="checkbox"]'));
+      sourceCheckboxes.forEach((sourceCheckbox, index) => {
+        const sourceLabel = sourceCheckbox.closest('label');
+        let clone;
+        if (sourceLabel) {
+          clone = sourceLabel.cloneNode(true);
+        } else {
+          clone = sourceCheckbox.cloneNode(true);
+        }
+        const cloneCheckbox = clone.querySelector ? clone.querySelector('input[type="checkbox"]') : clone;
+        if (cloneCheckbox) {
+          cloneCheckbox.checked = sourceCheckbox.checked;
+          cloneCheckbox.dataset.exportSourceIndex = String(index);
+          if (cloneCheckbox.id) {
+            cloneCheckbox.removeAttribute('id');
+          }
+        }
+        exportModalCols.appendChild(clone);
+      });
+    }
+
+    function syncModalFormatFromSelect() {
+      if (!exportModal) return;
+      const currentFormat = (formatSelect?.value || 'csv').toLowerCase();
+      const radios = Array.from(exportModal.querySelectorAll('input[name="exportFormat"]'));
+      let matched = false;
+      radios.forEach(radio => {
+        const isMatch = radio.value?.toLowerCase() === currentFormat;
+        radio.checked = isMatch;
+        if (isMatch) matched = true;
+      });
+      if (!matched && radios[0]) {
+        radios[0].checked = true;
+      }
+    }
+
+    function openExportModal() {
+      if (!exportModal) return;
+      populateExportModalColumns();
+      syncModalFormatFromSelect();
+      exportModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeExportModal() {
+      if (!exportModal) return;
+      exportModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    if (exportBtn) {
+      exportBtn.addEventListener('click', openExportModal);
+    }
+
+    modalCloseEls.forEach((el) => {
+      el.addEventListener('click', closeExportModal);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && exportModal?.getAttribute('aria-hidden') === 'false') {
+        closeExportModal();
+      }
+    });
+
+    if (exportConfirmBtn) {
+      exportConfirmBtn.addEventListener('click', () => {
+        const selectedRadio = exportModal?.querySelector('input[name="exportFormat"]:checked');
+        const chosenFormat = (selectedRadio?.value || 'csv').toLowerCase();
+        if (formatSelect) {
+          formatSelect.value = chosenFormat;
+        }
+
+        const sourceFieldset = document.getElementById('export-columns');
+        if (sourceFieldset && exportModalCols) {
+          const sourceCheckboxes = Array.from(sourceFieldset.querySelectorAll('input[type="checkbox"]'));
+          const modalCheckboxes = Array.from(exportModalCols.querySelectorAll('input[type="checkbox"]'));
+          modalCheckboxes.forEach((modalCheckbox) => {
+            const index = Number(modalCheckbox.dataset.exportSourceIndex ?? -1);
+            if (!Number.isNaN(index) && sourceCheckboxes[index]) {
+              sourceCheckboxes[index].checked = modalCheckbox.checked;
+            }
+          });
+        }
+
+        closeExportModal();
+        if (exportRunBtn) {
+          exportRunBtn.click();
+        } else {
+          console.warn('Bouton d\'export principal introuvable, export non déclenché.');
+          alert("Export configuré, mais le déclencheur d'origine est introuvable.");
+        }
+      });
+    }
+    // ======== /Export modal ========
 
     // ---------------- PDF EXPORT HELPERS ----------------
     // Colonnes cochées
@@ -933,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(url.toString(), '_blank');
       });
     }
-    exportBtn.onclick = async () => {
+    if (exportRunBtn) exportRunBtn.onclick = async () => {
         const fmt = (formatSelect.value || 'csv').toLowerCase();
         if (fmt !== 'pdf') {
           const params = new URLSearchParams();
