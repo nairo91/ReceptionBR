@@ -1067,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ORDER = [
           'created_by_email','modified_by_email',
           'etage','chambre','numero','lot','intitule','description','etat','localisation','observation','date_butoir',
-          'photos',
+          'creation_photos','levee_photos','photos',
           'levee_fait_par_email','levee_commentaire','levee_fait_le'
         ];
         let cols = ORDER.filter(c => selected.includes(c));
@@ -1093,7 +1093,9 @@ document.addEventListener('DOMContentLoaded', () => {
           etage:'Étage', chambre:'Chambre', numero:'N°', lot:'Lot',
           intitule:'Intitulé', description:'Description', etat:'État', localisation:'Localisation',
           observation:'Observation', date_butoir:'Date butoir',
-          photos:'Photos'
+          photos:'Photos (tous les liens)',
+          creation_photos:'Photos (création)',
+          levee_photos:'Photos (levée)'
         };
 
         const PHOTO_CELL_PADDING = 4;
@@ -1101,6 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const PHOTO_THUMB_HEIGHT = 45;
         const PHOTO_THUMB_GAP    = 8;
         const MAX_PHOTO_THUMBS   = 3;
+        const PHOTO_COLUMNS = ['photos','creation_photos','levee_photos'];
         const PHOTO_COLUMN_MIN_WIDTH =
           (PHOTO_THUMB_WIDTH * MAX_PHOTO_THUMBS)
           + (PHOTO_THUMB_GAP * Math.max(0, MAX_PHOTO_THUMBS - 1))
@@ -1116,6 +1119,8 @@ document.addEventListener('DOMContentLoaded', () => {
           localisation: 120,
           observation: 160, date_butoir: 86,
           photos: 240,
+          creation_photos: 240,
+          levee_photos: 240,
           // colonnes "Levée"
           levee_fait_par_email: 120,
           levee_commentaire: 160,
@@ -1126,17 +1131,35 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prépare les vignettes photos (max MAX_PHOTO_THUMBS)
         const photoThumbsPerRow = await Promise.all(
           data.map(async b => {
-            const photos = Array.isArray(b.media) ? b.media.filter(m => m.type === 'photo') : [];
-            const subset = photos.slice(0, MAX_PHOTO_THUMBS);
-            const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
-            return urls.filter(Boolean);
+            const media = Array.isArray(b.media) ? b.media : [];
+            const creationMedia = media.filter(m => m.type === 'photo');
+            const leveeMedia = media.filter(m => m.type === 'levee_photo');
+
+            const loadThumbs = async (entries) => {
+              const subset = entries.slice(0, MAX_PHOTO_THUMBS);
+              const urls = await Promise.all(subset.map(p => imageUrlToDataURL(p.path, 220)));
+              return urls.filter(Boolean);
+            };
+
+            const creationThumbs = await loadThumbs(creationMedia);
+            const leveeThumbs = await loadThumbs(leveeMedia);
+            const combinedThumbs = [...creationThumbs, ...leveeThumbs].slice(0, MAX_PHOTO_THUMBS);
+
+            return {
+              creation_photos: creationThumbs,
+              levee_photos: leveeThumbs,
+              photos: combinedThumbs
+            };
           })
         );
 
         // Datasource table
         const head = [cols.map(c => LABELS[c] || c.toUpperCase())];
         const body = data.map((row, idx) => cols.map(c => {
-          if (c === 'photos') return (photoThumbsPerRow[idx].length ? ' ' : '—');
+          if (PHOTO_COLUMNS.includes(c)) {
+            const thumbs = photoThumbsPerRow[idx]?.[c] || [];
+            return thumbs.length ? ' ' : '—';
+          }
           if (c === 'created_by_email') return resolveCreatedBy(row);
           if (c === 'modified_by_email') return resolveModifiedBy(row);
           if (c === 'levee_fait_par_email') return localPart(row.levee_fait_par_email);
@@ -1147,9 +1170,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Styles & largeurs adaptées pour tenir dans la page
         const minWidths = {};
-        if (cols.includes('photos')) {
-          minWidths.photos = PHOTO_COLUMN_MIN_WIDTH;
-        }
+        PHOTO_COLUMNS.forEach(col => {
+          if (cols.includes(col)) {
+            minWidths[col] = PHOTO_COLUMN_MIN_WIDTH;
+          }
+        });
         const columnStyles = computeColumnStyles(cols, BASE, pageW, margin, margin, 36, minWidths);
         // centre la date de levée pour une meilleure lisibilité
         const idxLevDate = cols.indexOf('levee_fait_le');
@@ -1218,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {
           rowPageBreak: 'avoid',
           didParseCell: (h) => {
             const colName = cols[h.column.index];
-            if (h.section === 'body' && colName === 'photos') {
+            if (h.section === 'body' && PHOTO_COLUMNS.includes(colName)) {
               // hauteur mini pour cas avec vignettes
               h.cell.height = Math.max(h.cell.height, PHOTO_ROW_MIN_HEIGHT);
             }
@@ -1226,8 +1251,9 @@ document.addEventListener('DOMContentLoaded', () => {
           didDrawCell: (h) => {
             if (h.section !== 'body') return;
             const colName = cols[h.column.index];
-            if (colName !== 'photos') return;
-            const thumbs = photoThumbsPerRow[h.row.index] || [];
+            if (!PHOTO_COLUMNS.includes(colName)) return;
+            const rowThumbs = photoThumbsPerRow[h.row.index] || {};
+            const thumbs = rowThumbs[colName] || [];
             if (!thumbs.length) return;
             const { x, y, height } = h.cell;
             let cx = x + PHOTO_CELL_PADDING;
