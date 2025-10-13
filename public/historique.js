@@ -1,11 +1,27 @@
 window.addEventListener('DOMContentLoaded', () => {
   const tbody = document.querySelector('#historyTable tbody');
+  const columns = [
+    { label: 'Utilisateur', value: data => data.username || '' },
+    { label: 'Action', value: data => data.action_type || '' },
+    { label: 'Chantier', value: data => data.chantier || '' },
+    { label: 'Intitulé', value: data => data.intitule || '' },
+    { label: 'État', value: data => data.etat || '' },
+    { label: 'Étage', value: data => data.etage || '' },
+    { label: 'Chambre', value: data => data.chambre || '' },
+    { label: 'N°', value: data => data.bulle_numero || '' },
+    { label: 'Lot', value: data => data.lot || '' },
+    { label: 'Localisation', value: data => data.localisation || '' },
+    { label: 'Observation', value: data => data.observation || '' },
+    { label: 'Description', value: data => data.description || '' },
+    { label: 'Date/Heure', value: data => data.created_at ? new Date(data.created_at).toLocaleString() : '' }
+  ];
 
   function renderRows(rows) {
     if (!rows || rows.length === 0) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 13;
+      cell.colSpan = columns.length;
+      cell.dataset.label = 'Information';
       cell.textContent = 'Aucune action enregistrée.';
       row.appendChild(cell);
       tbody.innerHTML = '';
@@ -14,19 +30,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     tbody.innerHTML = rows.map(data => `
       <tr>
-        <td>${data.username}</td>
-        <td>${data.action_type}</td>
-        <td>${data.chantier}</td>
-        <td>${data.intitule || ''}</td>
-        <td>${data.etat || ''}</td>
-        <td>${data.etage}</td>
-        <td>${data.chambre}</td>
-        <td>${data.bulle_numero}</td>
-        <td>${data.lot}</td>
-        <td>${data.localisation || ''}</td>
-        <td>${data.observation || ''}</td>
-        <td>${data.description || ''}</td>
-        <td>${new Date(data.created_at).toLocaleString()}</td>
+        ${columns.map(column => `
+          <td data-label="${column.label}">${column.value(data)}</td>
+        `).join('')}
       </tr>
     `).join('');
   }
