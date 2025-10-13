@@ -103,6 +103,100 @@ html, body {
   --brand-100:#ede9fe;
   --brand-glow:rgba(192,132,252,0.4);
 }
+
+/* ==================== SELECT (thème sombre, lisible) ==================== */
+/* Base vars for selects */
+:root{
+  --sel-bg: rgba(26, 16, 44, 0.95);             /* fond du champ select fermé */
+  --sel-border: rgba(124, 58, 237, 0.45);       /* bord violet doux */
+  --sel-text: #eae9ff;                          /* texte principal */
+  --sel-muted: rgba(234, 233, 255, 0.6);        /* placeholder / disabled */
+  --sel-hover: rgba(124, 58, 237, 0.18);        /* hover option */
+  --sel-focus: 0 0 0 3px rgba(124,58,237,0.35); /* focus ring */
+  --sel-pop-bg: #160d27;                        /* fond de la liste ouverte */
+  --sel-pop-sel: rgba(124,58,237,0.35);         /* option sélectionnée */
+}
+
+/* Champ select fermé (tous les selects de nos formulaires) */
+select,
+.history-filters select,
+.filter-field select,
+#filter-chantier,
+#filter-etage,
+#filter-room,
+#filter-status {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--sel-bg);
+  color: var(--sel-text);
+  border: 1px solid var(--sel-border);
+  border-radius: 12px;
+  padding: 10px 40px 10px 14px;
+  line-height: 1.2;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), var(--panel-shadow, 0 10px 24px rgba(7,0,18,0.25));
+  transition: box-shadow .2s ease, border-color .2s ease, background-color .2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5' stroke='%23c084fc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px 18px;
+}
+
+select:hover {
+  border-color: rgba(168,85,247,0.55);
+}
+
+select:focus {
+  box-shadow: var(--sel-focus);
+}
+
+/* Placeholder / option disabled (ex: “-- Tous les statuts --”) */
+select:required:invalid,
+select option[disabled],
+select option[hidden] {
+  color: var(--sel-muted);
+}
+
+/* Liste ouverte : couleur des options (Chrome/Edge/Firefox) */
+select option {
+  background-color: var(--sel-pop-bg);
+  color: var(--sel-text);
+}
+
+/* Hover/active (supporté sur Chrome/Edge) */
+select option:hover,
+select option:active {
+  background-color: var(--sel-hover);
+}
+
+/* Option sélectionnée dans la liste */
+select option:checked {
+  background-color: var(--sel-pop-sel);
+  color: var(--sel-text);
+}
+
+/* Windows (cache la flèche IE/Edge Legacy) */
+select::-ms-expand {
+  display: none;
+}
+
+/* Accessibilité : contraste du label */
+.filter-field label {
+  color: var(--text, #e5e7eb);
+}
+
+/* Petites tailles: assure un min de lisibilité */
+@media (max-width: 480px){
+  select,
+  .history-filters select,
+  .filter-field select {
+    font-size: 16px;   /* évite le zoom iOS */
+    padding: 12px 40px 12px 14px;
+  }
+}
+/* ================== /SELECT ================== */
+
 .dark-theme{
   --bg:#0b1220;
   --text:#e5e7eb;        /* gris très clair */
