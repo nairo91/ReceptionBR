@@ -4,35 +4,53 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Historique des actions</title>
+  <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="historique.css" />
   <link rel="icon" href="/img/brh-logo.png" type="image/png">
 </head>
-<body>
+<body class="history-page">
   <div id="sidebar-holder"></div>
   <link rel="stylesheet" href="/sidebar.css">
   <script src="/sidebar.js" defer></script>
   <script src="/theme.js" defer></script>
-  <header>
-    <h1>Historique des actions</h1>
-    <button id="backBtn">Retour</button>
-  </header>
-  <form id="history-filters">
-    Chantier :
-    <select id="filter-chantier"><option value="">Tous</option></select>
-    Étage :
-    <select id="filter-etage"><option value="">Tous</option></select>
-    Chambre :
-    <select id="filter-chambre"><option value="">Toutes</option></select>
-    Lot :
-    <input type="text" id="filter-lot" placeholder="Lot" />
-    <button type="submit">Filtrer</button>
-  </form>
-  <main id="tableWrapper">
-    <table id="historyTable">
-      <thead>
-        <tr>
-          <th>Utilisateur</th>
-          <th>Action</th>
+  <div class="history-shell">
+    <header class="history-header">
+      <h1>Historique des actions</h1>
+      <button id="backBtn" class="ghost">Retour</button>
+    </header>
+    <form id="history-filters" class="history-filters" autocomplete="off">
+      <div class="filter-field">
+        <label for="filter-chantier">Chantier</label>
+        <select id="filter-chantier">
+          <option value="">Tous</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filter-etage">Étage</label>
+        <select id="filter-etage">
+          <option value="">Tous</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filter-chambre">Chambre</label>
+        <select id="filter-chambre">
+          <option value="">Toutes</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="filter-lot">Lot</label>
+        <input type="text" id="filter-lot" placeholder="Lot" />
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="primary">Filtrer</button>
+      </div>
+    </form>
+    <main id="tableWrapper" class="history-table-wrapper">
+      <table id="historyTable" class="history-table">
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Action</th>
           <th>Chantier</th>
           <th>Intitulé</th>
           <th>État</th>
@@ -49,7 +67,8 @@
       <tbody>
       </tbody>
     </table>
-  </main>
+    </main>
+  </div>
   <script src="historique.js"></script>
 </body>
 </html>
