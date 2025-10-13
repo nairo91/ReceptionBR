@@ -230,6 +230,7 @@ router.get('/', async (req, res) => {
     typeof rawPhaseParam === 'string' && rawPhaseParam.trim()
       ? rawPhaseParam.trim().toLowerCase()
       : undefined;
+  const format = String(req.query.format || 'csv').toLowerCase();
 
   let rows = await selectBullesWithEmails({
     chantier_id: chantierFilter,
@@ -254,7 +255,7 @@ router.get('/', async (req, res) => {
   const uniq = a => Array.from(new Set((a || []).filter(Boolean))).map(fullUrl);
   const detectIsVideoByExt = ext => ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', 'mpg', 'mpeg'].includes(ext);
   const detectIsImageByExt = ext => ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic', 'heif', 'tiff', 'tif', 'svg'].includes(ext);
-  const includeLeveeMedia = !!phaseParam;
+  const includeLeveeMedia = !!phaseParam || format === 'xlsx';
   const normalizeColumnName = c => {
     if (c === 'modified_by') return 'modified_by_email';
     if (c === 'levee_fait_par') return 'levee_fait_par_email';
@@ -559,7 +560,6 @@ router.get('/', async (req, res) => {
   // --- END : Réordonnage fixe des colonnes ---
   // plus de repositionnement automatique : on respecte desiredOrder
 
-  const format = (req.query.format || 'csv').toLowerCase();
   if (format === 'csv') {
     const arrayColumns = new Set([
       'creation_photos',
@@ -593,21 +593,23 @@ router.get('/', async (req, res) => {
 
     const normalizedRows = rows.map(row => {
       const next = { ...row };
-      const leveePhotos    = toArray(row.levee_photos);
-      const leveeVideos    = toArray(row.levee_videos);
-      const leveePhotoSet  = new Set(leveePhotos);
-      const leveeVideoSet  = new Set(leveeVideos);
-      const hasCreationPhotos = row.creation_photos != null;
-      const hasCreationVideos = row.creation_videos != null;
-      let creationPhotos  = toArray(hasCreationPhotos ? row.creation_photos : row.photos);
-      let creationVideos  = toArray(hasCreationVideos ? row.creation_videos : row.videos);
+      const leveePhotoValues = toArray(row.levee_photos);
+      const leveeVideoValues = toArray(row.levee_videos);
+      const leveePhotoSet  = new Set(leveePhotoValues);
+      const leveeVideoSet  = new Set(leveeVideoValues);
+      const hasCreationPhotos = Array.isArray(row.creation_photos) && row.creation_photos.length > 0;
+      const hasCreationVideos = Array.isArray(row.creation_videos) && row.creation_videos.length > 0;
 
-      if (!hasCreationPhotos && leveePhotoSet.size) {
-        creationPhotos = creationPhotos.filter(url => !leveePhotoSet.has(url));
-      }
-      if (!hasCreationVideos && leveeVideoSet.size) {
-        creationVideos = creationVideos.filter(url => !leveeVideoSet.has(url));
-      }
+      const creationPhotos = hasCreationPhotos
+        ? toArray(row.creation_photos)
+        : toArray(row.photos).filter(url => !leveePhotoSet.has(url));
+
+      const creationVideos = hasCreationVideos
+        ? toArray(row.creation_videos)
+        : toArray(row.videos).filter(url => !leveeVideoSet.has(url));
+
+      const leveePhotos = Array.from(leveePhotoSet);
+      const leveeVideos = Array.from(leveeVideoSet);
 
       next.creation_photos = creationPhotos;
       next.levee_photos    = leveePhotos;
@@ -923,17 +925,24 @@ router.get('/', async (req, res) => {
       ]);
       const defaultWeight = 1.6;
       const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
+      const spacing = 6;
+      const cellPad = 3;
+      const nCols = pdfCols.length;
+      const usableWidth = Math.max(
+        1,
+        pageWidth - Math.max(0, nCols - 1) * spacing - nCols * 2 * cellPad
+      );
       const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
-      let columnsSize = weights.map(weight => (weight / totalWeight) * pageWidth);
+      let columnsSize = weights.map(weight => (weight / totalWeight) * usableWidth);
       const currentTotal = columnsSize.reduce((sum, width) => sum + width, 0);
-      if (currentTotal > pageWidth) {
-        const ratio = pageWidth / currentTotal;
+      if (currentTotal > usableWidth) {
+        const ratio = usableWidth / currentTotal;
         columnsSize = columnsSize.map(width => width * ratio);
       }
       columnsSize = columnsSize.map(width => Math.max(MIN_COLUMN_WIDTH, Math.floor(width)));
       const sumAfterMin = columnsSize.reduce((sum, width) => sum + width, 0);
-      if (sumAfterMin > pageWidth) {
-        const ratio = pageWidth / sumAfterMin;
+      if (sumAfterMin > usableWidth) {
+        const ratio = usableWidth / sumAfterMin;
         columnsSize = columnsSize.map(width => Math.floor(width * ratio));
       }
 
@@ -1030,8 +1039,8 @@ router.get('/', async (req, res) => {
         {
           width: pageWidth,
           columnsSize,
-          columnSpacing: 6,
-          padding: 3,
+          columnSpacing: spacing,
+          padding: cellPad,
           prepareHeader: () => {
             doc.font('Helvetica-Bold').fontSize(9).fillColor('#ffffff');
           },
