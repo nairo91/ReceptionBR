@@ -1,3 +1,4 @@
+/* ====== MOBILE PLAN RIGHT-CUT FIX ====== */
 /* === Full-bleed background to avoid white gutters on wide screens === */
 :root{
   --bg-base: #0b0319; /* fond de secours plein */
@@ -31,6 +32,41 @@ html, body {
   height: 100%;
   margin: 0;
 }
+
+/* === Fix générique “plan/bulles” sur mobile ===
+   - Empêche les médias (image/SVG/canvas) de dépasser
+   - Autorise un scroll horizontal si le cadre a un padding/arrondi
+   - Prend en compte la safe-area iOS à droite
+*/
+@media (max-width: 768px){
+  /* 1) Les médias ne doivent jamais dépasser */
+  .plan-board img,
+  .plan-board svg,
+  .plan-board canvas,
+  .bulle-plan img,
+  .bulle-plan svg,
+  .bulle-plan canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  /* 2) Le conteneur qui cadre le plan ne doit pas clipper en X */
+  .plan-board,
+  .bulle-plan,
+  .plan-canvas-wrapper {
+    overflow-x: auto;          /* au lieu de hidden */
+    overscroll-behavior-x: contain;
+    padding-right: max(0px, env(safe-area-inset-right)); /* iOS notch */
+    max-width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+
+  /* 3) Piège courant: width:100vw dans un parent paddé => remplace par 100% */
+  .plan-board [data-fullwidth],
+  .bulle-plan [data-fullwidth] { width: 100% !important; }
+}
+/* ====== fin du bloc mobile plan ====== */
 
 /* === Thème clair/sombre : variables minimales non-intrusives === */
 :root{
