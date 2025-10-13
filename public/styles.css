@@ -1,3 +1,31 @@
+/* === Full-bleed background to avoid white gutters on wide screens === */
+:root{
+  --bg-base: #0b0319; /* fond de secours plein */
+}
+
+html{ background-color: var(--bg-base); }
+body{ background-color: var(--bg-base); }
+
+/* Un seul décor global fixé derrière tout le contenu */
+body::before{
+  content:"";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Reprends ton fond violet, mais appliqué au viewport entier */
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.35), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.25), transparent 55%),
+    linear-gradient(135deg, #070012 0%, #12021f 35%, #1d0b33 70%, #070012 100%);
+  background-attachment: fixed; /* reste en place au scroll */
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Optionnel: évite tout débordement horizontal parasite */
+html, body { overflow-x: hidden; }
+
 /* Assure qu'il n'y a pas de marge et que 100% hauteur est bien pris */
 html, body {
   height: 100%;
