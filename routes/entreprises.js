@@ -16,8 +16,10 @@ router.get('/', async (req, res) => {
 // POST /api/entreprises -> ajout d'une entreprise
 router.post('/', async (req, res) => {
   try {
-    if (!req.session?.user) {
-      return res.status(401).json({ error: 'Authentification requise' });
+    if (!req.session.user ||
+        !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info']
+          .includes(req.session.user.email)) {
+      return res.status(403).json({ error: 'Interdit' });
     }
     const { nom } = req.body;
     if (!nom) return res.status(400).json({ error: 'Nom manquant' });
