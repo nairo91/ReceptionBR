@@ -925,26 +925,44 @@ router.get('/', async (req, res) => {
       ]);
       const defaultWeight = 1.6;
       const weights = pdfCols.map(col => columnWeightMap.get(col) || defaultWeight);
-      const spacing = 6;
-      const cellPad = 3;
+      const spacing = 6;  // même valeur que dans doc.table
+      const cellPad = 3;  // idem
+      const SAFE_EPS = 2; // marge de sécurité anti-coupe
+
       const nCols = pdfCols.length;
       const usableWidth = Math.max(
         1,
-        pageWidth - Math.max(0, nCols - 1) * spacing - nCols * 2 * cellPad
+        pageWidth - Math.max(0, nCols - 1) * spacing - nCols * 2 * cellPad - SAFE_EPS
       );
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
-      let columnsSize = weights.map(weight => (weight / totalWeight) * usableWidth);
-      const currentTotal = columnsSize.reduce((sum, width) => sum + width, 0);
-      if (currentTotal > usableWidth) {
-        const ratio = usableWidth / currentTotal;
-        columnsSize = columnsSize.map(width => width * ratio);
+
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0) || 1;
+      let columnsSize = weights.map(w => (w / totalWeight) * usableWidth);
+
+      // normalisation et min width
+      columnsSize = columnsSize.map(w => Math.max(MIN_COLUMN_WIDTH, Math.floor(w)));
+
+      // ajuster la dernière colonne pour combler précisément le reste
+      const sumExceptLast = columnsSize.slice(0, -1).reduce((s, w) => s + w, 0);
+      let last = Math.max(MIN_COLUMN_WIDTH, usableWidth - sumExceptLast);
+      if (last < MIN_COLUMN_WIDTH) {
+        const prev = columnsSize.slice(0, -1);
+        const prevSum = prev.reduce((s, w) => s + w, 0) || 1;
+        const over = MIN_COLUMN_WIDTH - last;
+        const scale = (prevSum - over) / prevSum;
+        for (let i = 0; i < prev.length; i++) {
+          prev[i] = Math.max(MIN_COLUMN_WIDTH, Math.floor(prev[i] * scale));
+        }
+        columnsSize = [...prev, MIN_COLUMN_WIDTH];
+      } else {
+        columnsSize[columnsSize.length - 1] = last;
       }
-      columnsSize = columnsSize.map(width => Math.max(MIN_COLUMN_WIDTH, Math.floor(width)));
-      const sumAfterMin = columnsSize.reduce((sum, width) => sum + width, 0);
-      if (sumAfterMin > usableWidth) {
-        const ratio = usableWidth / sumAfterMin;
-        columnsSize = columnsSize.map(width => Math.floor(width * ratio));
-      }
+
+      // recalculer largeur réelle (colonnes + padding + spacing)
+      const realColumnsSum = columnsSize.reduce((s, w) => s + w, 0);
+      const tableWidth =
+        realColumnsSum +
+        Math.max(0, nCols - 1) * spacing +
+        nCols * 2 * cellPad;
 
       // --- Headers ----------------------------------------------------------
       const headerFont = { fontFamily: 'Helvetica-Bold', fontSize: 9, color: '#ffffff' };
@@ -1037,7 +1055,7 @@ router.get('/', async (req, res) => {
       await doc.table(
         { headers, datas: paddedSafeRows },
         {
-          width: pageWidth,
+          width: tableWidth,
           columnsSize,
           columnSpacing: spacing,
           padding: cellPad,
