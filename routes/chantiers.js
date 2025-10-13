@@ -13,12 +13,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/chantiers - réservé à l'admin
+// POST /api/chantiers - accessible à tout utilisateur authentifié
 router.post('/', async (req, res) => {
-  if (!req.session.user ||
-      !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info']
-        .includes(req.session.user.email)) {
-    return res.status(403).json({ error: 'Interdit' });
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
   }
   const { nom } = req.body;
   try {

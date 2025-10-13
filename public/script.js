@@ -289,8 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return s.length > max ? s.slice(0, max) + '…' : s;
     }
 
-    // Boutons d'ajout visibles pour Jeremy Launay, Valentin Blot et Keivan Athari
-    if (user && ['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info'].includes(user.email)) {
+    // Boutons d'ajout désormais disponibles pour tout utilisateur connecté
+    if (user) {
       const chBtn = document.getElementById('addChantierBtn');
       const etBtn = document.getElementById('addEtageBtn');
       const roomBtn = document.getElementById('addRoomBtn');

@@ -21,10 +21,8 @@ router.get('/', async (req, res) => {
 
 // POST /api/floors - créer un étage
 router.post('/', async (req, res) => {
-  if (!req.session.user ||
-      !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info']
-        .includes(req.session.user.email)) {
-    return res.status(403).json({ error: 'Interdit' });
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
   }
   const { chantier_id, name } = req.body;
   try {
@@ -41,10 +39,8 @@ router.post('/', async (req, res) => {
 
 // Upload d'un plan pour un étage
 router.post('/:id/plan', upload.single('plan'), async (req, res) => {
-  if (!req.session.user ||
-      !['launay.jeremy@batirenov.info','blot.valentin@batirenov.info','athari.keivan@batirenov.info']
-        .includes(req.session.user.email)) {
-    return res.status(403).json({ error: 'Interdit' });
+  if (!req.session?.user) {
+    return res.status(401).json({ error: 'Authentification requise' });
   }
   const { id } = req.params;
   const path = req.file ? req.file.path : null;
