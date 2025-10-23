@@ -639,9 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const popup = document.createElement('div');
       popup.className = 'popup';
       const isMobile = window.innerWidth <= 768;
+      const wantsFullscreen =
+        content instanceof HTMLElement && content.dataset?.fullscreen === 'true';
+      const shouldFullscreen = isMobile || wantsFullscreen;
       const vp = window.visualViewport;
-      if (isMobile) {
+      if (shouldFullscreen) {
         popup.style.position = 'fixed';
+        if (!isMobile) popup.classList.add('popup--fullscreen');
         if (vp) {
           popup.style.left = vp.offsetLeft + 'px';
           popup.style.top = vp.offsetTop + 'px';
@@ -654,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
           popup.style.top = '0';
           popup.style.width = '100vw';
           popup.style.height = '100vh';
+          popup.style.transform = 'none';
         }
       } else {
         popup.style.left = `${x + 40}px`;
@@ -911,7 +916,9 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
 
       const form = document.createElement('form');
+      form.className = 'popup-content';
       form.enctype = 'multipart/form-data';
+      form.dataset.fullscreen = 'true';
 
       const lotOptions = lotsListe.map(lot => `<option value="${lot}">${lot}</option>`).join('');
 
