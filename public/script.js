@@ -1037,6 +1037,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (phaseValue) {
           url.searchParams.set('phase', phaseValue);
         }
+        // 🔽 Colonnes par défaut pour l’export PAR PHASE (mets ici celles de ta capture)
+        const PHASE_DEFAULT_COLUMNS = [
+          'etage',
+          'chambre',
+          'numero',
+          'lot',
+          'intitule',
+          'description',
+          'etat',
+          'entreprise',
+          'localisation',
+          'observation',
+          'date_butoir',
+          // médias utiles en export phase
+          'creation_photos',
+          'levee_photos',
+          // auteurs & levée (à désactiver si tu n’en veux pas)
+          'created_by_email',
+          'modified_by_email',
+          'levee_fait_par_email',
+          'levee_commentaire',
+          'levee_fait_le'
+        ];
+        PHASE_DEFAULT_COLUMNS.forEach(c => url.searchParams.append('columns', c));
         window.open(url.toString(), '_blank');
       });
     }
