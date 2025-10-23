@@ -4,7 +4,7 @@
      '2': { left: 0.5, top: 0, width: 0.5, height: 1, relative: true }
    },
    byFloorId: {
-    '1': {
+    '3': {
      // R+1 — Phase 1 (bloc gauche validé sur le plan 2339x1654)
      '1': { left: 120, top: 200, width: 720, height: 430 }
     // Tu pourras ajouter '2' ici pour la Phase 2 si besoin
