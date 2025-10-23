@@ -215,19 +215,7 @@ function ensureFetch() {
   return fetchImpl;
 }
 
-function parseColumnParams(value) {
-  if (value == null) return null;
-  const source = Array.isArray(value) ? value : [value];
-  const entries = source
-    .flatMap((entry) => String(entry ?? '')
-      .split(',')
-      .map(part => part.trim())
-      .filter(Boolean)
-    );
-  return entries.length ? entries : null;
-}
-
-async function handleExport(req, res, { formatOverride } = {}) {
+router.get('/', async (req, res) => {
   // récupère les filtres chantier/étage/room
   const chantierFilter = req.query.chantier_id || '';
   const rawEtageId = Array.isArray(req.query.etage_id)
@@ -242,8 +230,7 @@ async function handleExport(req, res, { formatOverride } = {}) {
     typeof rawPhaseParam === 'string' && rawPhaseParam.trim()
       ? rawPhaseParam.trim().toLowerCase()
       : undefined;
-  const rawFormat = formatOverride != null ? formatOverride : req.query.format;
-  const format = String(rawFormat || 'csv').toLowerCase();
+  const format = String(req.query.format || 'csv').toLowerCase();
 
   let rows = await selectBullesWithEmails({
     chantier_id: chantierFilter,
@@ -274,9 +261,11 @@ async function handleExport(req, res, { formatOverride } = {}) {
     if (c === 'levee_fait_par') return 'levee_fait_par_email';
     return c;
   };
-  const rawColumnParams = parseColumnParams(req.query.columns);
-  const requestedColumns = rawColumnParams
-    ? new Set(rawColumnParams.map(normalizeColumnName))
+  const requestedColumns = req.query.columns
+    ? new Set(
+      (Array.isArray(req.query.columns) ? req.query.columns : [req.query.columns])
+        .map(normalizeColumnName)
+    )
     : null;
 
   const classifyMediaEntry = (entry, hint) => {
@@ -534,15 +523,16 @@ async function handleExport(req, res, { formatOverride } = {}) {
   const availableColumnSet = new Set(availableColumns);
 
   // Rétro-compatibilité : si le client envoie "modified_by", on mappe vers "modified_by_email"
-  if (rawColumnParams) {
-    let sel = rawColumnParams.map(normalizeColumnName);
+  if (req.query.columns) {
+    let sel = Array.isArray(req.query.columns) ? req.query.columns.slice() : [req.query.columns];
+    sel = sel.map(normalizeColumnName);
     const filteredSelection = sel.filter(c => availableColumnSet.has(c));
     cols = filteredSelection.length ? filteredSelection : cols;
   }
   const alwaysExpose = includeLeveeMedia
     ? ['creation_photos','creation_videos','levee_photos','levee_videos','photos','videos']
     : ['photos','videos'];
-  if (!rawColumnParams) {
+  if (!req.query.columns) {
     alwaysExpose.forEach(col => {
       if (availableColumnSet.has(col) && !cols.includes(col)) {
         cols.push(col);
@@ -1132,22 +1122,6 @@ async function handleExport(req, res, { formatOverride } = {}) {
 
   // Si format inconnu
   return res.status(400).send('Format inconnu');
-}
-
-router.get('/', async (req, res, next) => {
-  try {
-    await handleExport(req, res);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get('/:format(csv|xlsx|pdf)', async (req, res, next) => {
-  try {
-    await handleExport(req, res, { formatOverride: req.params.format });
-  } catch (err) {
-    next(err);
-  }
 });
 
 const PHASE_PARAM_VALUES = new Set(['1', '2', 'all']);
