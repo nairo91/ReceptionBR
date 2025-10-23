@@ -1020,49 +1020,106 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     chambreSelect.onchange = loadBulles;
     if (exportPhaseBtn) {
-      exportPhaseBtn.addEventListener('click', () => {
-        const fmt = (formatSelect?.value || 'csv').toLowerCase();
-        const selectedOption = etageSelect?.selectedOptions?.[0];
-        const etageId = selectedOption?.dataset?.floorId
-          || selectedOption?.value
-          || etageSelect?.value;
-        if (!etageId) {
-          console.warn('Impossible de déterminer etage_id pour export phase');
-          return;
-        }
-        const phaseValue = phaseSelect?.value || '';
-        const url = new URL('/api/bulles/export', window.location.origin);
-        url.searchParams.set('format', fmt);
-        url.searchParams.set('etage_id', etageId);
-        if (phaseValue) {
-          url.searchParams.set('phase', phaseValue);
-        }
-        // 🔽 Colonnes par défaut pour l’export PAR PHASE (mets ici celles de ta capture)
+      // === Export PAR PHASE : popup format dédiée (sans impacter l’export classique) ===
+      (function () {
+        const phaseBtn        = document.getElementById('exportPhaseBtn');
+        const phaseSelect     = document.getElementById('phaseSelect');
+        const formatSelect    = document.getElementById('export-format'); // fallback si besoin
+        const chantierSelect  = document.getElementById('chantierSelect');
+        const etageSelect     = document.getElementById('etageSelect');
+        const chambreSelect   = document.getElementById('chambreSelect');
+        const colsFieldset    = document.getElementById('export-columns');
+
+        // Si tu as un preset de colonnes pour la phase, mets-le ici (values exactes des <input name="col" value="...">)
         const PHASE_DEFAULT_COLUMNS = [
-          'etage',
-          'chambre',
-          'numero',
-          'lot',
-          'intitule',
-          'description',
-          'etat',
-          'entreprise',
-          'localisation',
-          'observation',
-          'date_butoir',
-          // médias utiles en export phase
-          'creation_photos',
-          'levee_photos',
-          // auteurs & levée (à désactiver si tu n’en veux pas)
-          'created_by_email',
-          'modified_by_email',
-          'levee_fait_par_email',
-          'levee_commentaire',
-          'levee_fait_le'
+          'etage','chambre','numero','lot','intitule','description','etat','entreprise',
+          'localisation','observation','date_butoir',
+          'creation_photos','levee_photos',
+          'created_by_email','modified_by_email','levee_fait_par_email','levee_commentaire','levee_fait_le'
         ];
-        PHASE_DEFAULT_COLUMNS.forEach(c => url.searchParams.append('columns', c));
-        window.open(url.toString(), '_blank');
-      });
+
+        function openPhaseFormatPopup(defaultFmt) {
+          return new Promise((resolve, reject) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;';
+            const modal = document.createElement('div');
+            modal.style.cssText = 'background:#fff;max-width:360px;width:90%;border-radius:12px;padding:16px 16px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;';
+            modal.innerHTML = `
+        <h3 style="margin:0 0 10px;font-size:18px;">Exporter <span style="color:#6c5ce7">par phase</span></h3>
+        <p style="margin:0 0 12px;color:#555;font-size:14px;">Choisis le format du fichier :</p>
+        <div style="display:flex;gap:12px;margin-bottom:16px;font-size:14px;">
+          <label><input type="radio" name="phaseFmt" value="csv"> CSV</label>
+          <label><input type="radio" name="phaseFmt" value="xlsx"> Excel</label>
+          <label><input type="radio" name="phaseFmt" value="pdf"> PDF</label>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button data-cancel style="padding:8px 12px;border:1px solid #ccc;border-radius:8px;background:#f7f7f7;cursor:pointer">Annuler</button>
+          <button data-ok style="padding:8px 12px;border:0;border-radius:8px;background:#6c5ce7;color:#fff;cursor:pointer">Exporter</button>
+        </div>
+      `;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // pré-sélection (si select global existe)
+            const initial = (defaultFmt || 'csv').toLowerCase();
+            const radio = modal.querySelector(`input[name="phaseFmt"][value="${initial}"]`) || modal.querySelector(`input[name="phaseFmt"][value="csv"]`);
+            if (radio) radio.checked = true;
+
+            const close = () => { document.body.removeChild(overlay); };
+            modal.querySelector('[data-cancel]').addEventListener('click', () => { close(); reject(new Error('cancel')); });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) { close(); reject(new Error('cancel')); }});
+            modal.querySelector('[data-ok]').addEventListener('click', () => {
+              const chosen = modal.querySelector('input[name="phaseFmt"]:checked')?.value || 'csv';
+              close();
+              resolve(chosen.toLowerCase());
+            });
+
+            // ESC pour fermer
+            document.addEventListener('keydown', function esc(e){
+              if (e.key === 'Escape') { document.removeEventListener('keydown', esc); close(); reject(new Error('cancel')); }
+            });
+          });
+        }
+
+        // ⚠️ Remplace le handler existant de Exporter (par phase) par celui-ci :
+        phaseBtn?.addEventListener('click', async () => {
+          // Phase obligatoire
+          const phaseValue = phaseSelect?.value || '';
+          if (!phaseValue) { alert('Sélectionne d’abord une phase'); return; }
+
+          // Identifie l’étage (comme dans ton code actuel)
+          const selectedOption = etageSelect?.selectedOptions?.[0];
+          const etageId = selectedOption?.dataset?.floorId || selectedOption?.value || etageSelect?.value;
+          if (!etageId) { console.warn('Impossible de déterminer etage_id pour export phase'); return; }
+
+          // Ouvre la mini-popup et récupère le format (CSV/XLSX/PDF)
+          let defaultFmt = (formatSelect?.value || 'csv').toLowerCase();
+          let fmt;
+          try {
+            fmt = await openPhaseFormatPopup(defaultFmt); // 'csv' | 'xlsx' | 'pdf'
+          } catch { return; } // cancel/esc
+
+          // Construit l’URL /api/bulles/export?format=...&phase=...&columns=...
+          const url = new URL('/api/bulles/export', window.location.origin);
+          url.searchParams.set('format', fmt);
+          url.searchParams.set('etage_id', etageId);
+          url.searchParams.set('phase', phaseValue);
+
+          // Filtres optionnels (si utiles)
+          if (chantierSelect?.value) url.searchParams.set('chantier_id', chantierSelect.value);
+          if (chambreSelect?.value && chambreSelect.value !== 'total') url.searchParams.set('chambre', chambreSelect.value);
+
+          // Colonnes : preset de la phase (ou sinon, coche ce qui est présent à l’écran)
+          if (Array.isArray(PHASE_DEFAULT_COLUMNS) && PHASE_DEFAULT_COLUMNS.length) {
+            PHASE_DEFAULT_COLUMNS.forEach(c => url.searchParams.append('columns', c));
+          } else if (colsFieldset) {
+            colsFieldset.querySelectorAll('input[name="col"]:checked').forEach(cb => url.searchParams.append('columns', cb.value));
+          }
+
+          // Téléchargement
+          window.open(url.toString(), '_blank');
+        });
+      })();
     }
     if (exportRunBtn) exportRunBtn.onclick = async () => {
         const fmt = (formatSelect.value || 'csv').toLowerCase();
