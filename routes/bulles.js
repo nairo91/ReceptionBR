@@ -73,7 +73,9 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
           AND COALESCE(intitule,'') = COALESCE($5,'')
           AND COALESCE(description,'') = COALESCE($6,'')
           AND COALESCE(entreprise_id,0) = COALESCE($7,0)
-          AND COALESCE(etat,'') = COALESCE($8,''),
+          AND COALESCE(etat,'') = COALESCE($8,'')
+          AND created_at > now() - interval '2 minutes'`,
+          AND COALESCE(etat,'') = COALESCE($8,'')`,
           
       [
         chantier_id || null,
