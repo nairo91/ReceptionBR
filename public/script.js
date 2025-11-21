@@ -946,49 +946,55 @@ document.addEventListener('DOMContentLoaded', () => {
         <button type="button" onclick="closePopups()">Annuler</button>
       `;
 
-      form.onsubmit = ev => {
+      form.onsubmit = async ev => {
         ev.preventDefault();
         if (!user) {
           alert('Vous devez être connecté pour ajouter une bulle.');
           return;
         }
-        // FormData(form) already contains all file inputs including media
-        const formData = new FormData(form);
-        formData.append('chantier_id', chantierSelect.value);
-        formData.append('etage_id', etageSelect.value);
-        formData.append('chambre', chambreSelect.value);
-        const rect = plan.getBoundingClientRect();
-        const xRatio = x / rect.width;
-        const yRatio = y / rect.height;
-        formData.append('x', xRatio);
-        formData.append('y', yRatio);
-        formData.append('numero', nextNumero);
-        const assignedNumero = nextNumero;
-        nextNumero++;
-        const nomBulle = formData.get('intitule');
-        const desc = formData.get('description');
-        const lot = formData.get('lot');
-        const localisation = formData.get('localisation');
-        const observation = formData.get('observation');
-        fetch('/api/bulles', {
-          method: 'POST',
-          credentials: 'include',
-          body: formData
-        }).then(() => {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && submitBtn.disabled) return;
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+          // FormData(form) already contains all file inputs including media
+          const formData = new FormData(form);
+          formData.append('chantier_id', chantierSelect.value);
+          formData.append('etage_id', etageSelect.value);
+          formData.append('chambre', chambreSelect.value);
+          const rect = plan.getBoundingClientRect();
+          const xRatio = x / rect.width;
+          const yRatio = y / rect.height;
+          formData.append('x', xRatio);
+          formData.append('y', yRatio);
+          formData.append('numero', nextNumero);
+          const assignedNumero = nextNumero;
+          nextNumero++;
+          const nomBulle = formData.get('intitule');
+          const desc = formData.get('description');
+          const lot = formData.get('lot');
+          const localisation = formData.get('localisation');
+          const observation = formData.get('observation');
+          await fetch('/api/bulles', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+          });
           loadBulles();
           closePopups();
-            recordAction('creation', {
-              etage: etageSelect.selectedOptions[0].textContent,
-              chambre: chambreSelect.value,
-              x: xRatio,
-              y: yRatio,
-              nomBulle: `Bulle ${assignedNumero}`,
-              description: desc,
-              lot,
-              localisation,
-              observation
-            });
-        });
+          recordAction('creation', {
+            etage: etageSelect.selectedOptions[0].textContent,
+            chambre: chambreSelect.value,
+            x: xRatio,
+            y: yRatio,
+            nomBulle: `Bulle ${assignedNumero}`,
+            description: desc,
+            lot,
+            localisation,
+            observation
+          });
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
       };
 
       showPopup(x, y, form);

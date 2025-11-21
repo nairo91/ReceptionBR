@@ -62,6 +62,35 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
       }
     }
 
+    // Anti-doublon : vérifier si une bulle identique existe déjà très récemment
+    const { rows: existing } = await pool.query(
+      `SELECT id
+         FROM bulles
+        WHERE chantier_id IS NOT DISTINCT FROM $1
+          AND etage_id  IS NOT DISTINCT FROM $2
+          AND chambre = $3
+          AND COALESCE(lot,'') = COALESCE($4,'')
+          AND COALESCE(intitule,'') = COALESCE($5,'')
+          AND COALESCE(description,'') = COALESCE($6,'')
+          AND COALESCE(entreprise_id,0) = COALESCE($7,0)
+          AND COALESCE(etat,'') = COALESCE($8,'')
+          AND created_at > now() - interval '2 minutes'`,
+      [
+        chantier_id || null,
+        etage_id || null,
+        chambre,
+        lot || null,
+        intitule || null,
+        description || null,
+        entreprise_id || null,
+        etat || 'a_corriger'
+      ]
+    );
+
+    if (existing.length > 0) {
+      return res.json({ success: true, duplicatedOf: existing[0].id });
+    }
+
     const insertRes = await pool.query(
       `INSERT INTO bulles
       (chantier_id, etage_id, chambre, x, y, numero, description, photo, intitule, etat, lot, entreprise_id, localisation, observation, date_butoir, created_by, levee_fait_par, levee_fait_le, levee_commentaire)
