@@ -62,7 +62,7 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
       }
     }
 
-    // Anti-doublon : vérifier si une bulle identique existe déjà très récemment
+     // Anti-doublon : vérifier si une bulle identique existe déjà
     const { rows: existing } = await pool.query(
       `SELECT id
          FROM bulles
@@ -73,10 +73,7 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
           AND COALESCE(intitule,'') = COALESCE($5,'')
           AND COALESCE(description,'') = COALESCE($6,'')
           AND COALESCE(entreprise_id,0) = COALESCE($7,0)
-          AND COALESCE(etat,'') = COALESCE($8,'')
-          AND created_at > now() - interval '2 minutes'`,
           AND COALESCE(etat,'') = COALESCE($8,'')`,
-          
       [
         chantier_id || null,
         etage_id || null,
@@ -92,6 +89,7 @@ router.post("/", /* isAuthenticated, */ upload.any(), async (req, res) => {
     if (existing.length > 0) {
       return res.json({ success: true, duplicatedOf: existing[0].id });
     }
+
 
     const insertRes = await pool.query(
       `INSERT INTO bulles
